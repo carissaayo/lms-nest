@@ -9,6 +9,8 @@ import {
   Get,
   Query,
   UseGuards,
+  Put,
+  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from '../domain/dto/auth.dto';
@@ -18,6 +20,7 @@ import { Public } from '../domain/middleware/public.decorator';
 import { RolesGuard } from '../domain/middleware/role.guard';
 import { Role } from '../domain/enums/roles.enum';
 import { Roles } from '../domain/middleware/role.decorator';
+import { Request } from 'express';
 
 @Controller('auth')
 @UsePipes(
@@ -60,35 +63,6 @@ export class AuthController {
     if (!token) throw new UnauthorizedException('Invalid credentials');
     return token;
   }
-  // @Post('sender-id/request')
-  // @UseGuards(RolesGuard)
-  // @Roles(Role.ADMIN)
-  // async requestSenderId() {
-  //   const response = await this.termiiService.requestForSenderId();
-  //   return { message: 'request sent', response };
-  // }
-
-  // @Get('sender-id')
-  // @UseGuards(RolesGuard)
-  // @Roles(Role.ADMIN)
-  // async fetchSenderId() {
-  //   const response = await this.termiiService.fetchSenderId();
-  //   return { message: 'sender id fetched', response };
-  // }
-
-  // @Post('verify-phone')
-  // @UseGuards(RolesGuard)
-  // @Roles(Role.ADMIN)
-  // async verifyPhone(
-  //   @Body('phoneNumber') phoneNumber: string,
-  //   @Body('code') code: string,
-  // ) {
-  //   const response = await this.termiiService.sendVerificationCode(
-  //     phoneNumber,
-  //     code,
-  //   );
-  //   return { message: 'request sent', response };
-  // }
 
   @Public()
   @Get('verify-email')
@@ -103,5 +77,50 @@ export class AuthController {
     } catch (error) {
       throw new BadRequestException(error.message);
     }
+  }
+
+  @Post('logout')
+  async logout(@Req() req: Request) {
+    return await this.authService.logout(req);
+  }
+
+  @Put('change-password')
+  async changePassword(
+    @Req() req: Request,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return await this.authService.changePassword(
+      req.user,
+      body.currentPassword,
+      body.newPassword,
+    );
+  }
+
+  @Put('request-reset')
+  async requestResetPasswordLink(@Req() req: Request) {
+    return await this.authService.requestResetPasswordLink(req.user.email);
+  }
+
+  @Public()
+  @Get('reset-password')
+  async createNewPassword(@Query('token') token: string) {
+    return await this.authService.createNewPassword(token);
+  }
+
+  @Public()
+  @Post('reset-password')
+  async resetPassword(
+    @Body()
+    body: {
+      token: string;
+      newPassword: string;
+      confirmPassword: string;
+    },
+  ) {
+    return await this.authService.resetPassword(
+      body.token,
+      body.newPassword,
+      body.confirmPassword,
+    );
   }
 }
