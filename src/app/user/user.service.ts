@@ -1,106 +1,144 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { User, UserDocument } from './user.schema';
-import { Role } from '../domain/enums/roles.enum';
-import { RedisService } from '../domain/services/redis.service';
+import * as jwt from 'jsonwebtoken';
+import { User, UserDocument } from './user.schema'; // path based on your folder structure
+import { CreateUserDto, UpdateUserDto, LoginUserDto } from './user.dto'; // Assume you have these DTOs
+import { generateToken, transporter } from '../middlewares/emailVerification'; // adjust import if needed
 
 @Injectable()
-export class UsersService {
+export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private readonly redisService: RedisService,
   ) {}
 
-  async assignRole(
-    requestingUser: User,
-    userId: string,
-    newRole: Role,
-  ): Promise<any> {
-    // Check if the requesting user is actually an admin
-    if (requestingUser.role !== Role.ADMIN) {
-      throw new ForbiddenException('Only an admin can change user roles');
+
+
+  async makeUserAdmin(id: string, currentUser: User) {
+    const existingUser = await this.userModel.findOne({ _id: id, deleted: false });
+    if (!existingUser) throw new NotFoundException('User not found');
+
+    const mainAdmin = await this.userModel.findOne({ email: process.env.ADMIN_EMAIL });
+    if (mainAdmin.id !== currentUser.id) {
+      throw new UnauthorizedException('Access Denied, only the super admin can make a user an admin');
+    }
+    if (mainAdmin.id === id) {
+      throw new UnauthorizedException('You are the super admin');
     }
 
-    // Find the user whose role is being changed
-    const user = await this.userModel.findById(userId);
+    const updatedUser = await this.userModel.findByIdAndUpdate(id, { isAdmin: true, role: 'moderator' }, { new: true });
+    return { message: 'User role updated successfully', user: updatedUser };
+  }
+
+  async assignRole(id: string, role: string, currentUser: User) {
+    if (!currentUser.isAdmin) {
+      throw new UnauthorizedException('Access Denied, only an admin can change roles');
+    }
+
+    const user = await this.userModel.findOne({ _id: id, isVerified: true, deleted: false });
     if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (!newRole) {
-      throw new ForbiddenException('new role has to be provided');
+      throw new NotFoundException('User not verified or found');
     }
 
-    // Update role
-    user.role = newRole;
-    const userRoleChanged = await user.save();
-    return {
-      message: 'Role has been changed',
-      user: userRoleChanged,
-    };
+    const updatedUser = await this.userModel.findByIdAndUpdate(id, { role }, { new: true });
+    return { message: 'User role updated successfully', user: updatedUser };
   }
 
-  async getUserById(userId: string): Promise<any> {
-    const cacheKey = `user:${userId}`;
+  async verifyUser(token: string) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY) as any;
 
-    // Try getting data from Redis cache
-    const cachedUser = await this.redisService.get(cacheKey);
-    if (cachedUser) return JSON.parse(cachedUser);
+      const deletedUser = await this.userModel.findOne({ email: decoded.email, deleted: true });
+      if (deletedUser) throw new UnauthorizedException('User has been deleted');
 
-    // Fetch from MongoDB if not cached
-    const user = await this.userModel.findById(userId).lean();
+      const existingUser = await this.userModel.findOne({ email: decoded.email, deleted: false });
+      if (!existingUser) throw new UnauthorizedException('User does not exist');
+
+      existingUser.isVerified = true;
+      await existingUser.save();
+      return '<h1>Email verified successfully!</h1>';
+    } catch (error) {
+      console.error('Verification error:', error);
+      throw new BadRequestException('<h1>Invalid or expired token</h1>');
+    }
+  }
+
+
+
+  async logoutUser() {
+    // In NestJS, usually logout is handled on frontend by clearing token from client
+    return { message: 'You have been logged out' };
+  }
+
+  async getSingleUser(id: string, currentUser: User) {
+    const user = await this.userModel.findOne({ _id: id });
     if (!user) throw new NotFoundException('User not found');
-    const userDetails = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      isVerified: user.isVerified,
-      ownedAmount: user.ownedAmount,
-      loans: user.loans,
-      role: user.role,
-      banks: user.banks,
-    };
 
-    // Cache the user data for 1 hour (3600 seconds)
-    await this.redisService.set(cacheKey, userDetails, 3600);
-
-    return userDetails;
-  }
-  async findUser(userId: string): Promise<any> {
-    const user = await this.userModel.findById(userId).exec();
-
-    if (user) {
-      const { password, ...userDetails } = user.toObject();
-
-      return userDetails;
+    if (!currentUser.isAdmin && user.role !== 'instructor') {
+      throw new UnauthorizedException('No Instructor found');
     }
 
-    throw new NotFoundException('User not found');
+    const { name, _id, courses, role } = existingUser;
+    return { message: 'User details fetched successfully', user: { name, _id, courses, role } };
   }
-  async getAllUsers(): Promise<any> {
-    const users = await this.userModel.find({ role: 'user' }).exec();
 
-    if (!users) {
-      throw new NotFoundException('no users found');
+  async getSingleUserByAdmin(id: string, currentUser: User) {
+    if (!currentUser.isAdmin) {
+      throw new UnauthorizedException("Access Denied, you don't have the permission");
     }
-    return { message: 'all users fetched successfully', users };
+
+    const deletedUser = await this.userModel.findOne({ _id: id, deleted: true });
+    if (deletedUser) throw new UnauthorizedException('User has been deleted');
+
+    const existingUser = await this.userModel.findOne({ _id: id, deleted: false });
+    if (!existingUser) throw new NotFoundException('User not found');
+
+    const { password, ...userDetails } = existingUser.toObject();
+    return { message: 'User details fetched successfully', userDetails };
   }
 
-  async findUserByEmail(email: string) {
-    return this.userModel.findOne({ email }).exec();
-  }
-
-  async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.findUserByEmail(email);
-    if (user && (await bcrypt.compare(password, user.password))) {
-      return user;
+  async getAllUsers(currentUser: User) {
+    if (!currentUser.isAdmin) {
+      throw new UnauthorizedException('Access Denied, you are not allowed');
     }
-    return null;
+
+    const users = await this.userModel.aggregate([
+      { $match: { email: { $ne: process.env.ADMIN_EMAIL }, deleted: false } },
+    ]);
+
+    return { message: 'All users fetched successfully', users };
+  }
+
+  async updateUserProfile(id: string, updateUserDto: UpdateUserDto, currentUser: User) {
+    const deletedUser = await this.userModel.findOne({ _id: id, deleted: true });
+    if (deletedUser) throw new UnauthorizedException('User has been deleted');
+
+    const existingUser = await this.userModel.findOne({ _id: id, deleted: false });
+    if (!existingUser) throw new NotFoundException('User not found');
+
+    if (id !== currentUser.id) {
+      throw new UnauthorizedException('Access Denied, you can only update your account');
+    }
+
+    if (updateUserDto.email) {
+      const emailExists = await this.userModel.findOne({ email: updateUserDto.email });
+      if (emailExists) throw new UnauthorizedException('Email has already been used');
+    }
+
+    const updatedUser = await this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true });
+    return { message: 'User details updated successfully', user: updatedUser };
+  }
+
+  async deleteUser(id: string, currentUser: User) {
+    const existingUser = await this.userModel.findById(id);
+    if (!existingUser) throw new NotFoundException('User not found');
+
+    if (!currentUser.isAdmin && currentUser.id !== id) {
+      throw new UnauthorizedException('Access Denied, you can only delete your own account');
+    }
+
+    await this.userModel.findByIdAndUpdate(id, { deleted: true }, { new: true });
+    return { message: 'User account has been deleted successfully' };
   }
 }
