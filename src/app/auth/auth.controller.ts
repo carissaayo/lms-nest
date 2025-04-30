@@ -11,16 +11,25 @@ import {
   UseGuards,
   Put,
   Req,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from '../domain/dto/auth.dto';
 
 import { Public } from '../domain/middleware/public.decorator';
 // import { TermiiService } from '../domain/services/termii.service';
-import { RolesGuard } from '../domain/middleware/role.guard';
+import {
+  AuthenticatedRequest,
+  RolesGuard,
+} from '../domain/middleware/role.guard';
 import { Role } from '../domain/enums/roles.enum';
 import { Roles } from '../domain/middleware/role.decorator';
-import { Request } from 'express';
+import { Request, Response } from 'express';
+import {
+  ChangePasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './auth.dto';
 
 @Controller('auth')
 @UsePipes(
@@ -29,6 +38,7 @@ import { Request } from 'express';
     transform: true,
   }),
 )
+@UseGuards(RolesGuard)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -39,21 +49,9 @@ export class AuthController {
   @Post('register')
   async register(
     @Body()
-    body: {
-      email: string;
-      password: string;
-      confirmPassword: string;
-      phone: string;
-      name: string;
-    },
+    body: RegisterDto,
   ) {
-    return this.authService.register(
-      body.email,
-      body.password,
-      body.confirmPassword,
-      body.phone,
-      body.name,
-    );
+    return this.authService.register(body);
   }
 
   @Public()
@@ -79,48 +77,34 @@ export class AuthController {
     }
   }
 
-  @Post('logout')
-  async logout(@Req() req: Request) {
-    return await this.authService.logout(req);
-  }
-
   @Put('change-password')
   async changePassword(
-    @Req() req: Request,
-    @Body() body: { currentPassword: string; newPassword: string },
+    @Req() req: AuthenticatedRequest,
+    @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    return await this.authService.changePassword(
-      req.user,
-      body.currentPassword,
-      body.newPassword,
-    );
+    return await this.authService.changePassword(req, changePasswordDto);
   }
 
   @Put('request-reset')
-  async requestResetPasswordLink(@Req() req: Request) {
-    return await this.authService.requestResetPasswordLink(req.user.email);
+  async requestResetPasswordLink(
+    @Req() req: AuthenticatedRequest,
+    @Body() userEmail: string,
+  ) {
+    return await this.authService.requestResetPasswordLink(req, userEmail);
   }
 
   @Public()
   @Get('reset-password')
-  async createNewPassword(@Query('token') token: string) {
-    return await this.authService.createNewPassword(token);
+  async createNewPassword(@Query('token') token: string, @Res() res: Response) {
+    return await this.authService.createNewPassword(res, token);
   }
 
   @Public()
   @Post('reset-password')
   async resetPassword(
     @Body()
-    body: {
-      token: string;
-      newPassword: string;
-      confirmPassword: string;
-    },
+    resetPasswordDto: ResetPasswordDto,
   ) {
-    return await this.authService.resetPassword(
-      body.token,
-      body.newPassword,
-      body.confirmPassword,
-    );
+    return await this.authService.resetPassword(resetPasswordDto);
   }
 }

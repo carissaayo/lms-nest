@@ -51,4 +51,24 @@ export class EmailService {
       );
     }
   }
+
+  async sendResetPasswordEmail(email: string, token: string) {
+    const resetPasswordLink = `${this.configService.get<string>('APP_URL')}/auth/verify-email?token=${token}`;
+
+    const mailOptions = {
+      from: this.configService.get<string>('EMAIL_USERNAME'),
+      to: email,
+      subject: 'Reset Password',
+      text: `Click the link below to reset your password:\n\n${resetPasswordLink}`,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new InternalServerErrorException(
+        'Failed to send verification email',
+      );
+    }
+  }
 }
