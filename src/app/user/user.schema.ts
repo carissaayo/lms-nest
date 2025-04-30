@@ -90,6 +90,16 @@ const autoExcludeDeleted = function (next) {
   next();
 };
 
+// transform _id to id
+UserSchema.set('toJSON', {
+  virtuals: true,
+  versionKey: false,
+  transform: (_, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+  },
+});
+
 UserSchema.pre('find', autoExcludeDeleted);
 UserSchema.pre('findOne', autoExcludeDeleted);
 UserSchema.pre('findOneAndUpdate', autoExcludeDeleted);
