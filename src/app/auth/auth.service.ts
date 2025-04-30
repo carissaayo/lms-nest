@@ -11,10 +11,16 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { User, UserDocument } from '../user/user.schema';
-import { LoginDto } from '../domain/dto/auth.dto';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
 import { Response } from 'express';
+import {
+  ChangePasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './auth.dto';
+import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 
 @Injectable()
 export class AuthService {
@@ -25,13 +31,8 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
-  async register(
-    email: string,
-    password: string,
-    confirmPassword: string,
-    phone: string,
-    name: string,
-  ) {
+  async register(body: RegisterDto) {
+    const { email, password, confirmPassword, phone, name } = body;
     const existingUser = await this.userModel.findOne({ email });
     if (existingUser) {
       throw new ConflictException('User already exists');
@@ -143,16 +144,16 @@ export class AuthService {
   }
 
   async changePassword(
-    userId: string,
-    currentPassword: string,
-    newPassword: string,
-    confirmNewPassword: string,
+    req: AuthenticatedRequest,
+    changePasswordDto: ChangePasswordDto,
   ): Promise<string> {
+    const { currentPassword, newPassword, confirmNewPassword } =
+      changePasswordDto;
     if (!currentPassword || !newPassword || !confirmNewPassword) {
       throw new UnauthorizedException('Password(s) not provided');
     }
 
-    const user = await this.userModel.findById(userId);
+    const user = await this.userModel.findById(req.user.id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -163,14 +164,14 @@ export class AuthService {
     }
 
     if (newPassword !== confirmNewPassword) {
-      throw new UnauthorizedException('Passwords do not match');
+      throw new UnauthorizedException('New passwords do not match');
     }
 
     const hashedPassword = await bcrypt.hash(
       newPassword,
       Number(this.configService.get<string>('SALTROUNDS')),
     );
-    await this.userModel.findByIdAndUpdate(userId, {
+    await this.userModel.findByIdAndUpdate(req.user.id, {
       password: hashedPassword,
     });
 
@@ -178,9 +179,11 @@ export class AuthService {
   }
 
   async requestResetPasswordLink(
-    email: string,
+    req: AuthenticatedRequest,
     userEmail: string,
   ): Promise<string> {
+    const email = req.user.email;
+
     if (email !== userEmail) {
       throw new UnauthorizedException(
         'Email is different from the registered one',
@@ -196,19 +199,13 @@ export class AuthService {
       { email },
       { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '1h' },
     );
-    const port = this.configService.get<string>('PORT') || '8080';
-    const resetLink = `http://localhost:${port}/api/reset-password?token=${token}`;
 
-    await this.emailService.sendGenericEmail(
-      email,
-      'Reset your password',
-      `<h2>Password Reset</h2><p>Click the link below to reset your password:</p><a href="${resetLink}">Reset Password</a>`,
-    );
+    await this.emailService.sendResetPasswordEmail(email, token);
 
     return 'Password reset email sent';
   }
 
-  async createNewPasswordHtml(token: string, res: Response): Promise<any> {
+  async createNewPassword(res: Response, token: string): Promise<any> {
     try {
       const decoded = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
@@ -219,22 +216,34 @@ export class AuthService {
         throw new NotFoundException('No user found with the email');
       }
 
-      return res.send(`
-        <h1>Reset Password</h1>
-        <form action="/api/reset-password" method="POST">
-          <input type="hidden" name="token" value="${token}" />
-          <label for="password">New Password:</label>
-          <input type="password" name="password" required />
-          <button type="submit">Reset Password</button>
-        </form>
-      `);
+      // Return raw HTML
+      return `
+      <h1>Reset Password</h1>
+      <form action="/api/reset-password" method="POST">
+        <input type="hidden" name="token" value="${token}" />
+        <label for="password">New Password:</label>
+        <input type="password" name="password" required />
+        <input type="password" name="confirmPassword" required />
+        <button type="submit">Reset Password</button>
+      </form>
+    `;
     } catch (error) {
       throw new BadRequestException('Invalid or expired token');
     }
   }
 
-  async resetPassword(token: string, password: string): Promise<string> {
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<string> {
     try {
+      const { token, newPassword, confirmNewPassword } = resetPasswordDto;
+
+      if (!token || !newPassword || !confirmNewPassword) {
+        throw new BadRequestException('All fields are required.');
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        throw new BadRequestException('Passwords do not match.');
+      }
+
       const decoded = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
@@ -245,7 +254,7 @@ export class AuthService {
       }
 
       const hashedPassword = await bcrypt.hash(
-        password,
+        newPassword,
         Number(this.configService.get<string>('SALTROUNDS')),
       );
       await this.userModel.findByIdAndUpdate(user._id, {
