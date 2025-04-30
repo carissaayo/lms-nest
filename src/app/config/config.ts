@@ -34,5 +34,8 @@ export default () => {
       api_secret: env.CLOUDINARY_API_SECRET,
     },
     client_url: env.CLIENT_URL,
+    admin: {
+      email: env.ADMIN_EMAIL,
+    },
   };
 };
