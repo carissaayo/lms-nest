@@ -57,8 +57,7 @@ export class CourseController {
     return this.lectureService.getAllLecturesInACourse(id);
   }
 
-  // Instructors
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @Post('create')
   @UseInterceptors(FileInterceptor('image', { storage: diskStorage({}) }))
   createCourse(
@@ -79,7 +78,6 @@ export class CourseController {
     return this.courseService.updateCourse(req, body, id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Roles(Role.INSTRUCTOR)
   @Post(':id/submission')
   submitCourseForApproval(
@@ -89,10 +87,10 @@ export class CourseController {
     return this.courseService.submitCourseForApproval(req, id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @Put(':id/delete-course')
-  deleteCourse(@Param('id') id: string, @Request() req) {
-    return this.courseService.deleteCourse(id, req.user);
+  deleteCourse(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.courseService.deleteCourse(req, id);
   }
 
   @UseGuards(JwtAuthGuard)
