@@ -11,6 +11,7 @@ import { User } from '../user/user.schema';
 import { CloudinaryService } from '../domain/services/cloudinary.service';
 import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 import { UploadApiResponse } from 'cloudinary';
+import { CreateLectureDto } from './lecture.dto';
 
 @Injectable()
 export class LectureService {
@@ -25,6 +26,7 @@ export class LectureService {
     req: any,
     courseId: string,
     files: { video: Express.Multer.File[]; notes?: Express.Multer.File[] },
+    body: CreateLectureDto,
   ) {
     const course = await this.courseModel.findOne({
       _id: courseId,
@@ -53,8 +55,8 @@ export class LectureService {
 
     // Save Lecture
     const newLecture = new this.lectureModel({
-      title: req.body.title,
-      duration: req.body.duration,
+      title: body.title,
+      duration: body.duration,
       video: uploadedVideo.public_id,
       notes: uploadedNotes?.public_id,
       instructor: req.user.id,

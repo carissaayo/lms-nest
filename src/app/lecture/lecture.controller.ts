@@ -36,7 +36,7 @@ export class LectureController {
     @Param('courseId') courseId: string,
     @UploadedFiles()
     files: {
-      video?: Express.Multer.File[];
+      video: Express.Multer.File[];
       notes?: Express.Multer.File[];
     },
     @Req() req: AuthenticatedRequest,
