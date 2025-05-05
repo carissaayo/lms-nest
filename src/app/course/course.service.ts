@@ -204,14 +204,4 @@ export class CourseService {
 
     return { message: 'Course deleted successfully' };
   }
-
-  async deleteCoursesByInstructor(instructorId: string, user: User) {
-    if (!user.isAdmin && instructorId !== user._id.toString()) {
-      throw new UnauthorizedException('Access denied');
-    }
-
-    await this.courseModel.deleteMany({ instructor: instructorId });
-
-    return { message: 'Courses deleted successfully' };
-  }
 }
