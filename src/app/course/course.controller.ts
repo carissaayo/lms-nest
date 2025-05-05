@@ -93,15 +93,6 @@ export class CourseController {
     return this.courseService.deleteCourse(req, id);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Put('instructor/:instructor')
-  deleteCoursesByAnInstructor(
-    @Param('instructor') instructor: string,
-    @Request() req,
-  ) {
-    return this.courseService.deleteCoursesByAnInstructor(instructor, req.user);
-  }
-
   @Roles(Role.INSTRUCTOR)
   @Put('publish-course/:id')
   publishCourseByInstructor(
