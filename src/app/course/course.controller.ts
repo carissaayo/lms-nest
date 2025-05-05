@@ -12,10 +12,12 @@ import {
   Request,
 } from '@nestjs/common';
 import { CourseService } from './course.service';
-import { LectureService } from '../lecture/lecture.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import { LectureService } from '../lecture/lecture.service';
+import { CreateCourseDto } from './course.dto';
+import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 
 @Controller('courses')
 export class CourseController {
@@ -52,11 +54,11 @@ export class CourseController {
   @Post('create')
   @UseInterceptors(FileInterceptor('image', { storage: diskStorage({}) }))
   createCourse(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: CreateCourseDto,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body,
-    @Request() req,
   ) {
-    return this.courseService.createCourse(req.user, file, body);
+    return this.courseService.createCourse(req, body, file);
   }
 
   @UseGuards(JwtAuthGuard)

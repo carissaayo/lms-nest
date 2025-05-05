@@ -37,7 +37,7 @@ export class Course {
   isSubmitted: boolean;
 
   @Prop({ required: true })
-  price: string;
+  price: number;
 
   @Prop({
     type: {
