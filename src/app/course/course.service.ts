@@ -91,24 +91,14 @@ export class CourseService {
   }
 
   async getSingleCourse(id: string) {
-    const isItDeleted = await this.courseModel.findOne({
-      _id: id,
-      deleted: true,
-    });
-    if (isItDeleted) throw new ForbiddenException('Course has been deleted');
-
     const course = await this.courseModel.findById(id);
     if (!course) throw new NotFoundException("Such course isn't available");
 
     return { message: 'Course fetched successfully', course };
   }
 
-  async approveCourse(id: string, user: User) {
-    if (user.role !== 'moderator') {
-      throw new UnauthorizedException('Access denied');
-    }
-
-    const course = await this.courseModel.findOne({ _id: id, deleted: false });
+  async approveCourse(req: AuthenticatedRequest, id: string) {
+    const course = await this.courseModel.findOne({ _id: id });
     if (!course) throw new NotFoundException('Course not found');
 
     if (course.isApproved) {
@@ -116,11 +106,11 @@ export class CourseService {
     }
 
     course.isApproved = true;
-    course.approvedBy = user._id;
+    course.approvedBy = new Types.ObjectId(req.user.id);
     course.approvalDate = new Date();
     await course.save();
 
-    return { message: 'Course has been approved successfully', course };
+    return { message: 'Course has been approved successfully' };
   }
 
   async publishCourse(id: string, user: User) {
