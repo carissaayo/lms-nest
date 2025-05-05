@@ -17,12 +17,18 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { LectureService } from '../lecture/lecture.service';
 import { CreateCourseDto } from './course.dto';
-import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+import {
+  AuthenticatedRequest,
+  RolesGuard,
+} from '../domain/middleware/role.guard';
 import { JwtAuthGuard } from '../domain/middleware/jwt.guard';
 import { Roles } from '../domain/middleware/role.decorator';
 import { Role } from '../domain/enums/roles.enum';
+import { Public } from '../domain/middleware/public.decorator';
 
 @Controller('courses')
+@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class CourseController {
   constructor(
     private readonly courseService: CourseService,
@@ -30,11 +36,12 @@ export class CourseController {
   ) {}
 
   // Public routes
+  @Public()
   @Get('filter')
   filterCourses(@Query() query: any) {
     return this.courseService.filterCourses(query);
   }
-
+  @Public()
   @Get(':id')
   getSingleCourse(@Param('id') id: string) {
     return this.courseService.getSingleCourse(id);
@@ -45,7 +52,6 @@ export class CourseController {
     return this.courseService.getAllCoursesByAnInstructor(instructor);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('course/:id')
   getAllLecturesInACourse(@Param('id') id: string) {
     return this.lectureService.getAllLecturesInACourse(id);
@@ -107,10 +113,13 @@ export class CourseController {
   }
 
   // Admin/Moderator
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.MODERATOR)
   @Put('approve-course/:id')
-  approveCourseByModerator(@Param('id') id: string, @Request() req) {
-    return this.courseService.approveCourseByModerator(id, req.user);
+  approveCourseByModerator(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.courseService.approveCourse(req, id);
   }
 
   @UseGuards(JwtAuthGuard)
