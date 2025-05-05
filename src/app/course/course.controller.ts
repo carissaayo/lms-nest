@@ -18,6 +18,7 @@ import { diskStorage } from 'multer';
 import { LectureService } from '../lecture/lecture.service';
 import { CreateCourseDto } from './course.dto';
 import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+import { JwtAuthGuard } from '../domain/middleware/jwt.guard';
 
 @Controller('courses')
 export class CourseController {
@@ -42,7 +43,6 @@ export class CourseController {
     return this.courseService.getAllCoursesByAnInstructor(instructor);
   }
 
-  // Students
   @UseGuards(JwtAuthGuard)
   @Get('course/:id')
   getAllLecturesInACourse(@Param('id') id: string) {
