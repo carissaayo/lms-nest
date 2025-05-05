@@ -5,10 +5,11 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Lecture } from '../schemas/lecture.schema';
-import { Course } from '../schemas/course.schema';
-import { User } from '../schemas/user.schema';
-import { uploadDocs, uploadVideo } from '../utils/file-upload';
+import { Lecture } from './lecture.schema';
+import { Course } from '../course/course.schema';
+import { User } from '../user/user.schema';
+import { CloudinaryService } from '../domain/services/cloudinary.service';
+import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 
 @Injectable()
 export class LectureService {
@@ -16,12 +17,12 @@ export class LectureService {
     @InjectModel(Lecture.name) private lectureModel: Model<Lecture>,
     @InjectModel(Course.name) private courseModel: Model<Course>,
     @InjectModel(User.name) private userModel: Model<User>,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async createLecture(req: any, courseId: string, files: any) {
     const user = await this.userModel.findOne({
       _id: req.user.id,
-      deleted: false,
       role: 'instructor',
     });
     if (!user) throw new UnauthorizedException('Access Denied');
@@ -32,8 +33,16 @@ export class LectureService {
     });
     if (!course) throw new NotFoundException("Course can't be found");
 
-    const video = await uploadVideo(req, null, files['video'][0]);
-    const notes = await uploadDocs(req, null, files['notes'][0]);
+    const video = await this.cloudinaryService.uploadVideo(
+      req,
+      null,
+      files['video'][0],
+    );
+    const notes = await this.cloudinaryService.uploadVideo(
+      req,
+      null,
+      files['notes'][0],
+    );
 
     const newLecture = new this.lectureModel({
       title: req.body.title,
@@ -114,17 +123,19 @@ export class LectureService {
     return { message: 'Lecture deleted successfully' };
   }
 
-  async deleteAllLectureInACourse(courseId: string) {
-    const course = await this.courseModel.findById(courseId);
+  async deleteAllLectureInACourse(req: AuthenticatedRequest, id: string) {
+    const course = await this.courseModel.findById(id);
     if (!course) throw new NotFoundException('Course does not exist');
-    if (course.deleted)
-      throw new UnauthorizedException('Course has been deleted');
+
+    if (req.user.id.toString() !== course.instructor.toString()) {
+      throw new UnauthorizedException('You are not authorized');
+    }
 
     await this.lectureModel.updateMany(
       { _id: { $in: course.lectures } },
       { $set: { deleted: true } },
     );
-    await this.courseModel.findByIdAndUpdate(courseId, { lectures: [] });
+    await this.courseModel.findByIdAndUpdate(id, { lectures: [] });
 
     return { message: 'Lectures deleted successfully' };
   }

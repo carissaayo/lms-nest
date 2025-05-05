@@ -102,10 +102,13 @@ export class CourseController {
     return this.courseService.publishCourse(req, id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @Put(':id/lectures')
-  deleteAllLectureInACourse(@Param('id') id: string, @Request() req) {
-    return this.lectureService.deleteAllLectureInACourse(id, req.user);
+  deleteAllLectureInACourse(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.lectureService.deleteAllLectureInACourse(req, id);
   }
 
   // Admin/Moderator
