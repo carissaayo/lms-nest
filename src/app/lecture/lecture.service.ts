@@ -4,12 +4,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Lecture } from './lecture.schema';
 import { Course } from '../course/course.schema';
 import { User } from '../user/user.schema';
 import { CloudinaryService } from '../domain/services/cloudinary.service';
 import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class LectureService {
@@ -20,44 +21,54 @@ export class LectureService {
     private cloudinaryService: CloudinaryService,
   ) {}
 
-  async createLecture(req: any, courseId: string, files: any) {
-    const user = await this.userModel.findOne({
-      _id: req.user.id,
-      role: 'instructor',
-    });
-    if (!user) throw new UnauthorizedException('Access Denied');
-
+  async createLecture(
+    req: any,
+    courseId: string,
+    files: { video: Express.Multer.File[]; notes?: Express.Multer.File[] },
+  ) {
     const course = await this.courseModel.findOne({
       _id: courseId,
-      deleted: false,
     });
+
     if (!course) throw new NotFoundException("Course can't be found");
 
-    const video = await this.cloudinaryService.uploadVideo(
-      req,
-      null,
-      files['video'][0],
-    );
-    const notes = await this.cloudinaryService.uploadVideo(
-      req,
-      null,
-      files['notes'][0],
+    if (req.user.id.toString() !== course.instructor.toString()) {
+      throw new UnauthorizedException('You are not authorized');
+    }
+
+    if (courseId.toString() !== course.id.toString())
+      throw new UnauthorizedException(
+        'You are not authorized to add lecturee to this course',
+      );
+
+    // Upload video file
+    const uploadedVideo = await this.cloudinaryService.uploadVideo(
+      files.video[0],
     );
 
+    let uploadedNotes: UploadApiResponse | null = null;
+    if (files.notes && files.notes[0]) {
+      uploadedNotes = await this.cloudinaryService.uploadVideo(files.notes[0]);
+    }
+
+    // Save Lecture
     const newLecture = new this.lectureModel({
       title: req.body.title,
       duration: req.body.duration,
-      video: video.uploadVideo._id,
-      notes: notes.file._id,
+      video: uploadedVideo.public_id,
+      notes: uploadedNotes?.public_id,
       instructor: req.user.id,
       course: courseId,
     });
 
-    course.lectures.push(newLecture._id);
+    course.lectures.push(newLecture._id as Types.ObjectId);
     await newLecture.save();
     await course.save();
 
-    return { message: 'Lecture created successfully', lecture: newLecture };
+    return {
+      message: 'Lecture created successfully',
+      lecture: newLecture,
+    };
   }
 
   async getSingleLecture(id: string) {

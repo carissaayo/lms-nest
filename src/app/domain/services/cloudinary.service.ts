@@ -6,6 +6,8 @@ import {
 } from 'cloudinary';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class CloudinaryService {
@@ -87,6 +89,14 @@ export class CloudinaryService {
       return result;
     } catch (error) {
       throw new InternalServerErrorException('File deletion failed');
+    }
+  }
+  deleteLocalFile(filePath: string): void {
+    try {
+      const resolvedPath = path.resolve(filePath);
+      fs.unlinkSync(resolvedPath);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to delete local file');
     }
   }
 }

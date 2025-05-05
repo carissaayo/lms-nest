@@ -10,17 +10,22 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { LectureService } from '../services/lecture.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
+import { LectureService } from './lecture.service';
+import { JwtAuthGuard } from '../domain/middleware/jwt.guard';
+import { Roles } from '../domain/middleware/role.decorator';
+import { Role } from '../domain/enums/roles.enum';
+import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+import { CreateLectureDto } from './lecture.dto';
 
 @Controller('lectures')
 export class LectureController {
   constructor(private readonly lectureService: LectureService) {}
 
   @Post(':courseId/lecture')
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'video', maxCount: 1 },
@@ -34,10 +39,10 @@ export class LectureController {
       video?: Express.Multer.File[];
       notes?: Express.Multer.File[];
     },
-    @Req() req: Request,
-    @Body() body: any,
+    @Req() req: AuthenticatedRequest,
+    @Body() body: CreateLectureDto,
   ) {
-    return this.lectureService.createLecture(courseId, files, req.user, body);
+    return this.lectureService.createLecture(req, courseId, files, body);
   }
 
   @Put(':id/delete-lecture')

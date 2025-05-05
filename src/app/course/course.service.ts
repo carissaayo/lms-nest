@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import {
   Injectable,
   UnauthorizedException,
@@ -188,7 +187,6 @@ export class CourseService {
   async deleteCourse(req: AuthenticatedRequest, id: string) {
     const existingCourse = await this.courseModel.findOne({
       _id: id,
-      deleted: false,
     });
     if (!existingCourse) throw new NotFoundException('Course not found');
 
