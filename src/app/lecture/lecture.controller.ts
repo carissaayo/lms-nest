@@ -18,7 +18,7 @@ import { JwtAuthGuard } from '../domain/middleware/jwt.guard';
 import { Roles } from '../domain/middleware/role.decorator';
 import { Role } from '../domain/enums/roles.enum';
 import { AuthenticatedRequest } from '../domain/middleware/role.guard';
-import { CreateLectureDto } from './lecture.dto';
+import { CreateLectureDto, UpdateLectureDto } from './lecture.dto';
 
 @Controller('lectures')
 export class LectureController {
@@ -66,10 +66,10 @@ export class LectureController {
       video?: Express.Multer.File[];
       notes?: Express.Multer.File[];
     },
-    @Body() body: any,
-    @Req() req: Request,
+    @Body() body: UpdateLectureDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.lectureService.updateLecture(id, files, body);
+    return this.lectureService.updateLecture(req, id, files, body);
   }
 
   @Get('course/lectures/:id')

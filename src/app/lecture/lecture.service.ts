@@ -11,7 +11,7 @@ import { User } from '../user/user.schema';
 import { CloudinaryService } from '../domain/services/cloudinary.service';
 import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 import { UploadApiResponse } from 'cloudinary';
-import { CreateLectureDto } from './lecture.dto';
+import { CreateLectureDto, UpdateLectureDto } from './lecture.dto';
 
 @Injectable()
 export class LectureService {
@@ -76,10 +76,8 @@ export class LectureService {
   async getSingleLecture(id: string) {
     const lecture = await this.lectureModel.findOne({
       _id: id,
-      deleted: false,
     });
-    if (!lecture)
-      throw new NotFoundException("Lecture can't be found or has been deleted");
+    if (!lecture) throw new NotFoundException("Lecture can't be found");
     return { message: 'Lecture found successfully', lecture };
   }
 
@@ -97,25 +95,30 @@ export class LectureService {
     return { message: 'Lectures found successfully', lectures, course };
   }
 
-  async updateLecture(req: any, id: string, files: any) {
+  async updateLecture(
+    req: AuthenticatedRequest,
+    id: string,
+    files: any,
+    body: UpdateLectureDto,
+  ) {
     const lecture = await this.lectureModel.findOne({ _id: id });
     if (!lecture || lecture.deleted)
       throw new NotFoundException('Lecture not found or has been deleted');
 
     const updatedFields: any = {};
 
-    if (files['video'] && files['video'][0]) {
-      const video = await uploadVideo(req, null, files['video'][0]);
-      updatedFields.video = video.uploadVideo._id;
+    let uploadedVideo: UploadApiResponse | null = null;
+    let uploadedNotes: UploadApiResponse | null = null;
+    if (files.video && files.video[0]) {
+      uploadedVideo = await this.cloudinaryService.uploadVideo(files.video[0]);
     }
 
-    if (files['notes'] && files['notes'][0]) {
-      const notes = await uploadDocs(req, null, files['notes'][0]);
-      updatedFields.notes = notes.file._id;
+    if (files.notes && files.notes[0]) {
+      uploadedNotes = await this.cloudinaryService.uploadVideo(files.notes[0]);
     }
 
-    if (req.body.title) updatedFields.title = req.body.title;
-    if (req.body.duration) updatedFields.duration = req.body.duration;
+    if (body.title) updatedFields.title = body.title;
+    if (body.duration) updatedFields.duration = body.duration;
 
     const updatedLecture = await this.lectureModel.findByIdAndUpdate(
       id,
