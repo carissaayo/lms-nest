@@ -113,24 +113,17 @@ export class CourseService {
     return { message: 'Course has been approved successfully' };
   }
 
-  async publishCourse(id: string, user: User) {
-    const isItDeleted = await this.courseModel.findOne({
-      _id: id,
-      deleted: true,
-    });
-    if (isItDeleted) throw new ForbiddenException('Course has been deleted');
-
-    if (user.role !== 'instructor') {
-      throw new UnauthorizedException('Access denied');
-    }
-
+  async publishCourse(req: AuthenticatedRequest, id: string) {
     const course = await this.courseModel.findById(id);
     if (!course) throw new NotFoundException('Course not found');
+    if (req.user.id.toString() !== course.instructor.toString()) {
+      throw new UnauthorizedException('You are not authorized');
+    }
 
     course.isPublished = !course.isPublished;
     await course.save();
 
-    return { message: 'Course publish status updated', course };
+    return { message: 'Course publish status updated' };
   }
 
   async getAllCourses(user: User) {

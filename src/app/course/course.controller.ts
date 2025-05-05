@@ -100,10 +100,13 @@ export class CourseController {
     return this.courseService.deleteCoursesByAnInstructor(instructor, req.user);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @Put('publish-course/:id')
-  publishCourseByInstructor(@Param('id') id: string, @Request() req) {
-    return this.courseService.publishCourseByInstructor(id, req.user);
+  publishCourseByInstructor(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.courseService.publishCourse(req, id);
   }
 
   @UseGuards(JwtAuthGuard)
