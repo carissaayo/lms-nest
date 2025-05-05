@@ -19,6 +19,8 @@ import { LectureService } from '../lecture/lecture.service';
 import { CreateCourseDto } from './course.dto';
 import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 import { JwtAuthGuard } from '../domain/middleware/jwt.guard';
+import { Roles } from '../domain/middleware/role.decorator';
+import { Role } from '../domain/enums/roles.enum';
 
 @Controller('courses')
 export class CourseController {
@@ -68,9 +70,13 @@ export class CourseController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @Post(':id/submission')
-  submitCourseForApproval(@Param('id') id: string, @Request() req) {
-    return this.courseService.submitCourseForApproval(id, req.user);
+  submitCourseForApproval(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.courseService.submitCourseForApproval(req, id);
   }
 
   @UseGuards(JwtAuthGuard)

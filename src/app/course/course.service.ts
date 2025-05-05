@@ -72,14 +72,11 @@ export class CourseService {
     };
   }
 
-  async submitCourseForApproval(id: string, user: User) {
+  async submitCourseForApproval(req: AuthenticatedRequest, id: string) {
     const course = await this.courseModel.findOne({ _id: id, deleted: false });
     if (!course) throw new NotFoundException("Such course isn't available");
 
-    if (
-      user.role !== 'instructor' ||
-      user._id.toString() !== course.instructor.toString()
-    ) {
+    if (req.user.id.toString() !== course.instructor.toString()) {
       throw new UnauthorizedException('You are not authorized');
     }
 
@@ -90,7 +87,7 @@ export class CourseService {
     course.isSubmitted = true;
     await course.save();
 
-    return { message: 'Course has been submitted for approval', course };
+    return { message: 'Course has been submitted for approval' };
   }
 
   async getSingleCourse(id: string) {
