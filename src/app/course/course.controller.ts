@@ -16,7 +16,7 @@ import { CourseService } from './course.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { LectureService } from '../lecture/lecture.service';
-import { CreateCourseDto } from './course.dto';
+import { CreateCourseDto, UpdateCourseDto } from './course.dto';
 import {
   AuthenticatedRequest,
   RolesGuard,
@@ -69,10 +69,14 @@ export class CourseController {
     return this.courseService.createCourse(req, body, file);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @Put(':id/update-course')
-  updateCourse(@Param('id') id: string, @Body() body, @Request() req) {
-    return this.courseService.updateCourse(id, body, req.user);
+  updateCourse(
+    @Param('id') id: string,
+    @Body() body: UpdateCourseDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.courseService.updateCourse(req, body, id);
   }
 
   @UseGuards(JwtAuthGuard)

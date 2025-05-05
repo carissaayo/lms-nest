@@ -11,7 +11,7 @@ import { Model, Types } from 'mongoose';
 import { UploadApiResponse } from 'cloudinary';
 import { Course, CourseDocument } from './course.schema';
 import { User, UserDocument } from '../user/user.schema';
-import { CreateCourseDto } from './course.dto';
+import { CreateCourseDto, UpdateCourseDto } from './course.dto';
 import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 import { CloudinaryService } from '../domain/services/cloudinary.service';
 
@@ -101,6 +101,9 @@ export class CourseService {
     const course = await this.courseModel.findOne({ _id: id });
     if (!course) throw new NotFoundException('Course not found');
 
+    if (!course.isSubmitted) {
+      throw new UnauthorizedException('Course has to be submitted first');
+    }
     if (course.isApproved) {
       throw new UnauthorizedException('Course has been approved already');
     }
@@ -134,47 +137,42 @@ export class CourseService {
 
   async filterCourses(query: any) {
     const { category, instructor } = query;
-    const filter: any = { deleted: false, isPublished: true, isApproved: true };
+    const filter: any = { isApproved: true };
 
     if (category) filter.category = category;
     if (instructor) filter.instructor = instructor;
 
     const courses = await this.courseModel.find(filter);
-    const count = await this.courseModel.countDocuments(filter);
+    const count = await this.courseModel.countDocuments(courses);
 
     return { message: 'Courses fetched successfully', courses, count };
   }
 
-  async getInstructorCourses(instructorId: string) {
+  async getAllCoursesByAnInstructor(instructorId: string) {
     const instructor = await this.userModel.findOne({
       _id: instructorId,
-      deleted: true,
       role: 'instructor',
     });
-    if (instructor) throw new ForbiddenException('Instructor has been deleted');
+    if (!instructor) throw new ForbiddenException('Instructor not found');
 
     const courses = await this.courseModel.find({
       instructor: instructorId,
-      deleted: false,
     });
 
     return { message: 'Courses fetched successfully', courses };
   }
 
-  async updateCourse(id: string, updateDto: UpdateCourseDto, user: User) {
-    const deletedCourse = await this.courseModel.findOne({
-      _id: id,
-      deleted: true,
-    });
-    if (deletedCourse) throw new ForbiddenException('Course has been deleted');
-
+  async updateCourse(
+    req: AuthenticatedRequest,
+    updateDto: UpdateCourseDto,
+    id: string,
+  ) {
     const existingCourse = await this.courseModel.findOne({
       _id: id,
-      deleted: false,
     });
     if (!existingCourse) throw new NotFoundException('Course not found');
 
-    if (existingCourse.instructor.toString() !== user._id.toString()) {
+    if (existingCourse.instructor.toString() !== req.user.id.toString()) {
       throw new UnauthorizedException('You can only update your course');
     }
 
