@@ -125,9 +125,9 @@ export class CourseController {
     return this.courseService.approveCourse(req, id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN)
   @Get()
-  getAllCoursesAvailable(@Request() req) {
-    return this.courseService.getAllCoursesAvailable(req.user);
+  getAllCoursesAvailable(@Request() req: AuthenticatedRequest) {
+    return this.courseService.getAllCourses(req);
   }
 }

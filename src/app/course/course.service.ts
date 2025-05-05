@@ -126,10 +126,9 @@ export class CourseService {
     return { message: 'Course publish status updated' };
   }
 
-  async getAllCourses(user: User) {
-    if (!user.isAdmin) throw new UnauthorizedException('Access Denied');
-
-    const courses = await this.courseModel.find({ deleted: false });
+  async getAllCourses() {
+    const courses = await this.courseModel.find();
+    if (!courses) throw new NotFoundException('No course found');
     return { message: 'Courses fetched successfully', courses };
   }
 
