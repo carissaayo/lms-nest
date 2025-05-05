@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import {
   Injectable,
   UnauthorizedException,
@@ -7,10 +8,12 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Course, CourseDocument } from '../schemas/course.schema';
-import { User, UserDocument } from '../schemas/user.schema';
-import { CreateCourseDto, UpdateCourseDto } from '../dto/course.dto';
-import { CloudinaryService } from '../utils/cloudinary.service';
+import { UploadApiResponse } from 'cloudinary';
+import { Course, CourseDocument } from './course.schema';
+import { User, UserDocument } from '../user/user.schema';
+import { CreateCourseDto } from './course.dto';
+import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+import { CloudinaryService } from '../domain/services/cloudinary.service';
 
 @Injectable()
 export class CourseService {
@@ -21,34 +24,32 @@ export class CourseService {
   ) {}
 
   async createCourse(
-    file: Express.Multer.File,
+    req: AuthenticatedRequest,
     body: CreateCourseDto,
-    userId: string,
+    file: Express.Multer.File,
   ) {
-    const user = await this.userModel.findOne({
-      _id: userId,
-      deleted: false,
-      role: 'instructor',
-    });
-    if (!user)
+    const userId = req.user.id;
+
+    const user = await this.userModel.findById(userId);
+    if (!user) {
       throw new UnauthorizedException(
         "You don't have the permissions to create a course",
       );
+    }
 
-    let uploadedImage = null;
+    let uploadedImage: UploadApiResponse | null = null;
+
     if (file) {
-      uploadedImage = await this.cloudinaryService.uploadImage(
-        file.path,
-        'courses',
-      );
+      // Upload image using Cloudinary service
+      uploadedImage = await this.cloudinaryService.uploadImage(file, 'course');
     }
 
     const courseData: Partial<Course> = {
       ...body,
       image: uploadedImage
         ? {
-            url: uploadedImage.secure_url,
-            imageName: uploadedImage.public_id,
+            url: uploadedImage?.secure_url,
+            imageName: uploadedImage?.public_id,
             caption: body.caption || '',
           }
         : null,
@@ -57,13 +58,16 @@ export class CourseService {
     };
 
     const newCourse = new this.courseModel(courseData);
+
+    // Add course ID to the user's courses array (if that array exists)
+    if (!user.courses) user.courses = [];
     user.courses.push(newCourse._id);
 
     await newCourse.save();
     await user.save();
 
     return {
-      message: 'course has been created successfully',
+      message: 'Course has been created successfully',
       course: newCourse,
     };
   }
