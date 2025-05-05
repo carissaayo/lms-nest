@@ -185,24 +185,14 @@ export class CourseService {
     return { message: 'Course updated successfully', course: updatedCourse };
   }
 
-  async deleteCourse(id: string, user: User) {
-    const deletedCourse = await this.courseModel.findOne({
-      _id: id,
-      deleted: true,
-    });
-    if (deletedCourse)
-      throw new UnauthorizedException('Course already deleted');
-
+  async deleteCourse(req: AuthenticatedRequest, id: string) {
     const existingCourse = await this.courseModel.findOne({
       _id: id,
       deleted: false,
     });
     if (!existingCourse) throw new NotFoundException('Course not found');
 
-    if (
-      !user.isAdmin &&
-      existingCourse.instructor.toString() !== user._id.toString()
-    ) {
+    if (existingCourse.instructor.toString() !== req.user.id.toString()) {
       throw new UnauthorizedException('You can only delete your course');
     }
 
