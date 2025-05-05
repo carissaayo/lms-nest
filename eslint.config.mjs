@@ -40,6 +40,7 @@ export default tseslint.config(
       '@typescript-eslint/await-thenable': 'off',
       '/no-useless-catch/': 'off',
       '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/no-redundant-type-constituents': 'off',
     },
   },
 );

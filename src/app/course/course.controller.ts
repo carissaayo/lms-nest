@@ -124,6 +124,6 @@ export class CourseController {
   @Roles(Role.ADMIN)
   @Get()
   getAllCoursesAvailable(@Request() req: AuthenticatedRequest) {
-    return this.courseService.getAllCourses(req);
+    return this.courseService.getAllCourses();
   }
 }
