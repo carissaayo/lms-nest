@@ -8,6 +8,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Types } from 'mongoose';
 
 class ImageDto {
   @IsString()
@@ -35,7 +36,7 @@ export class CreateCourseDto {
   duration: number;
 
   @IsMongoId()
-  instructor: string;
+  instructor: Types.ObjectId;
 
   @IsString()
   category: string;
@@ -49,9 +50,12 @@ export class CreateCourseDto {
 
   @IsOptional()
   @IsMongoId({ each: true })
-  lectures?: string[];
+  lectures?: Types.ObjectId[];
 
   @IsOptional()
   @IsMongoId()
-  quizz?: string;
+  quizz?: Types.ObjectId;
+
+  @IsString()
+  caption: string;
 }

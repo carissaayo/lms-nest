@@ -7,7 +7,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UploadApiResponse } from 'cloudinary';
 import { Course, CourseDocument } from './course.schema';
 import { User, UserDocument } from '../user/user.schema';
@@ -48,12 +48,12 @@ export class CourseService {
       ...body,
       image: uploadedImage
         ? {
-            url: uploadedImage?.secure_url,
-            imageName: uploadedImage?.public_id,
+            url: uploadedImage.secure_url,
+            imageName: uploadedImage.public_id,
             caption: body.caption || '',
           }
-        : null,
-      instructor: userId,
+        : undefined,
+      instructor: new Types.ObjectId(userId),
       isSubmitted: true,
     };
 
@@ -61,7 +61,7 @@ export class CourseService {
 
     // Add course ID to the user's courses array (if that array exists)
     if (!user.courses) user.courses = [];
-    user.courses.push(newCourse._id);
+    user.courses.push(newCourse._id as Types.ObjectId);
 
     await newCourse.save();
     await user.save();
