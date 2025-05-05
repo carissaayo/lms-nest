@@ -16,7 +16,7 @@ export class CreateLectureDto {
 
   @IsOptional()
   @IsMongoId()
-  notes?: string;
+  notes: string;
 
   @IsNumber()
   duration: number;
@@ -26,4 +26,22 @@ export class CreateLectureDto {
 
   @IsMongoId()
   instructor: string;
+}
+
+export class UpdateLectureDto {
+  @IsString()
+  @IsOptional()
+  title: string;
+
+  @IsMongoId()
+  @IsOptional()
+  video: string;
+
+  @IsOptional()
+  @IsMongoId()
+  notes: string;
+
+  @IsOptional()
+  @IsNumber()
+  duration: number;
 }
