@@ -12,14 +12,19 @@ import {
 } from '@nestjs/common';
 
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { Request } from 'express';
 import { LectureService } from './lecture.service';
-import { JwtAuthGuard } from '../domain/middleware/jwt.guard';
+
 import { Roles } from '../domain/middleware/role.decorator';
 import { Role } from '../domain/enums/roles.enum';
-import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+import {
+  AuthenticatedRequest,
+  RolesGuard,
+} from '../domain/middleware/role.guard';
 import { CreateLectureDto, UpdateLectureDto } from './lecture.dto';
+import { JwtAuthGuard } from '../domain/middleware/jwt.guard';
 
+@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('lectures')
 export class LectureController {
   constructor(private readonly lectureService: LectureService) {}
@@ -46,13 +51,13 @@ export class LectureController {
   }
 
   @Put(':id/delete-lecture')
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   async deleteSingleLecture(@Param('id') id: string) {
     return this.lectureService.deleteSingleLecture(id);
   }
 
   @Put(':id/update-lecture')
-  @UseGuards(JwtAuthGuard)
+  @Roles(Role.INSTRUCTOR)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'video', maxCount: 1 },
