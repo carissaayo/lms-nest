@@ -11,14 +11,14 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Course } from '../schemas/course.schema';
-import { User } from '../schemas/user.schema';
-import { Quizz } from '../schemas/quizz.schema';
-import { Assignment } from '../schemas/assignment.schema';
-import { uploadDocs } from '../utils/fileUpload';
+import { Course } from '../course/course.schema';
+import { User } from '../user/user.schema';
+import { Quizz } from '../quizz/quizz.schema';
+import { Assignment } from '../assignment/assignment.schema';
+import { AuthenticatedRequest } from '../domain/middleware/role.guard';
 
 @Injectable()
-export class CourseService {
+export class StudentService {
   constructor(
     @InjectModel('Course') private courseModel: Model<Course>,
     @InjectModel('User') private userModel: Model<User>,
@@ -26,15 +26,13 @@ export class CourseService {
     @InjectModel('Assignment') private assignmentModel: Model<Assignment>,
   ) {}
 
-  async registerForCourse(courseId: string, user: User) {
-    if (!user.isVerified) {
+  async registerForCourse(req: AuthenticatedRequest, courseId: string) {
+    if (!req.user.isVerified) {
       throw new UnauthorizedException('You have not verified your email');
     }
 
-    const student = await this.userModel.findOne({
-      _id: user._id,
-      deleted: false,
-      role: 'student',
+    const student = await this.userModel.findById({
+      _id: req.user.id,
     });
 
     if (!student) {
@@ -52,12 +50,12 @@ export class CourseService {
       throw new NotFoundException("Course isn't available");
     }
 
-    student.enrolledCourses.push(course);
+    student.enrolledCourses.push(course.id);
     student.completedLectures ??= {};
     student.progress ??= {};
     student.completedLectures[courseId] = [];
     student.progress[courseId] = 0;
-    course.studentsEnrolled.push(student);
+    course.studentsEnrolled.push(student.id);
 
     await course.save();
     await student.save();
@@ -68,13 +66,9 @@ export class CourseService {
     };
   }
 
-  async getStudentDetails(userId: string, user: User) {
-    if (user._id.toString() !== userId) {
-      throw new ForbiddenException('You are not allowed');
-    }
-
+  async getStudentDetails(req: AuthenticatedRequest) {
     const student = await this.userModel
-      .findOne({ _id: userId, deleted: false, role: 'student' })
+      .findById({ _id: req.user.id })
       .populate('enrolledCourses assignments quizz');
 
     if (!student) {
@@ -84,30 +78,6 @@ export class CourseService {
     return {
       message: 'Student details fetched successfully',
       student,
-    };
-  }
-
-  async getSingleCourse(courseId: string) {
-    const deletedCourse = await this.courseModel.findOne({
-      _id: courseId,
-      deleted: true,
-    });
-
-    if (deletedCourse) {
-      throw new HttpException(
-        { message: 'Course has been deleted', deletedCourse },
-        HttpStatus.GONE,
-      );
-    }
-
-    const course = await this.courseModel.findById(courseId);
-    if (!course) {
-      throw new NotFoundException("Such course isn't available");
-    }
-
-    return {
-      message: 'Course has been fetched successfully',
-      course,
     };
   }
 
@@ -259,11 +229,13 @@ export class CourseService {
     return { message: 'Assignment submitted successfully' };
   }
 
-  async addCompletedLecture(lectureId: string, courseId: string, user: User) {
+  async addCompletedLecture(
+    req: AuthenticatedRequest,
+    lectureId: string,
+    courseId: string,
+  ) {
     const student = await this.userModel.findOne({
-      _id: user._id,
-      deleted: false,
-      role: 'student',
+      _id: req.user.id,
     });
 
     if (!student || !student.isVerified) {

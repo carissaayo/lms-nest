@@ -102,8 +102,7 @@ export class LectureService {
     body: UpdateLectureDto,
   ) {
     const lecture = await this.lectureModel.findOne({ _id: id });
-    if (!lecture || lecture.deleted)
-      throw new NotFoundException('Lecture not found or has been deleted');
+    if (!lecture) throw new NotFoundException('Lecture not found');
 
     const updatedFields: any = {};
 
