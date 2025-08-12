@@ -1,74 +1,74 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+// import { Injectable, InternalServerErrorException } from '@nestjs/common';
+// import { ConfigService } from '@nestjs/config';
+// import * as nodemailer from 'nodemailer';
 
-@Injectable()
-export class EmailService {
-  private transporter;
+// @Injectable()
+// export class EmailService {
+//   private transporter;
 
-  constructor(private readonly configService: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: this.configService.get<string>('EMAIL_USERNAME'),
-        pass: this.configService.get<string>('EMAIL_PASSWORD'),
-      },
-    });
-  }
+//   constructor(private readonly configService: ConfigService) {
+//     this.transporter = nodemailer.createTransport({
+//       service: 'gmail',
+//       auth: {
+//         user: this.configService.get<string>('EMAIL_USERNAME'),
+//         pass: this.configService.get<string>('EMAIL_PASSWORD'),
+//       },
+//     });
+//   }
 
-  async sendEmail(to: string, subject: string, text: string) {
-    try {
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to,
-        subject,
-        text,
-      };
+//   async sendEmail(to: string, subject: string, text: string) {
+//     try {
+//       const mailOptions = {
+//         from: process.env.EMAIL_USER,
+//         to,
+//         subject,
+//         text,
+//       };
 
-      await this.transporter.sendMail(mailOptions);
-      console.log('Email sent successfully');
-    } catch (error) {
-      console.error('Error sending email:', error);
-      throw new Error('Email sending failed');
-    }
-  }
-  async sendVerificationEmail(email: string, token: string) {
-    const verificationLink = `${this.configService.get<string>('APP_URL')}/auth/verify-email?token=${token}`;
+//       await this.transporter.sendMail(mailOptions);
+//       console.log('Email sent successfully');
+//     } catch (error) {
+//       console.error('Error sending email:', error);
+//       throw new Error('Email sending failed');
+//     }
+//   }
+//   async sendVerificationEmail(email: string, token: string) {
+//     const verificationLink = `${this.configService.get<string>('APP_URL')}/auth/verify-email?token=${token}`;
 
-    const mailOptions = {
-      from: this.configService.get<string>('EMAIL_USERNAME'),
-      to: email,
-      subject: 'Email Verification',
-      text: `Click the link below to verify your email:\n\n${verificationLink}`,
-    };
+//     const mailOptions = {
+//       from: this.configService.get<string>('EMAIL_USERNAME'),
+//       to: email,
+//       subject: 'Email Verification',
+//       text: `Click the link below to verify your email:\n\n${verificationLink}`,
+//     };
 
-    try {
-      await this.transporter.sendMail(mailOptions);
-    } catch (error) {
-      console.error('Error sending email:', error);
-      throw new InternalServerErrorException(
-        'Failed to send verification email',
-      );
-    }
-  }
+//     try {
+//       await this.transporter.sendMail(mailOptions);
+//     } catch (error) {
+//       console.error('Error sending email:', error);
+//       throw new InternalServerErrorException(
+//         'Failed to send verification email',
+//       );
+//     }
+//   }
 
-  async sendResetPasswordEmail(email: string, token: string) {
-    const resetPasswordLink = `${this.configService.get<string>('APP_URL')}/auth/verify-email?token=${token}`;
+//   async sendResetPasswordEmail(email: string, token: string) {
+//     const resetPasswordLink = `${this.configService.get<string>('APP_URL')}/auth/verify-email?token=${token}`;
 
-    const mailOptions = {
-      from: this.configService.get<string>('EMAIL_USERNAME'),
-      to: email,
-      subject: 'Reset Password',
-      text: `Click the link below to reset your password:\n\n${resetPasswordLink}`,
-    };
+//     const mailOptions = {
+//       from: this.configService.get<string>('EMAIL_USERNAME'),
+//       to: email,
+//       subject: 'Reset Password',
+//       text: `Click the link below to reset your password:\n\n${resetPasswordLink}`,
+//     };
 
-    try {
-      await this.transporter.sendMail(mailOptions);
-    } catch (error) {
-      console.error('Error sending email:', error);
-      throw new InternalServerErrorException(
-        'Failed to send verification email',
-      );
-    }
-  }
-}
+//     try {
+//       await this.transporter.sendMail(mailOptions);
+//     } catch (error) {
+//       console.error('Error sending email:', error);
+//       throw new InternalServerErrorException(
+//         'Failed to send verification email',
+//       );
+//     }
+//   }
+// }
