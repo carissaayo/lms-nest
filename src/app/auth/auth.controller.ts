@@ -16,10 +16,10 @@ import {
 import { AuthService } from './auth.service';
 
 import {
-  ChangePasswordDto,
-  LoginDto,
+  //   ChangePasswordDto,
+  //   LoginDto,
   RegisterDto,
-  ResetPasswordDto,
+  //   ResetPasswordDto,
 } from './auth.dto';
 import { RolesGuard } from '../common/guards/role.guard';
 

@@ -17,6 +17,7 @@ export const envSchema = z.object({
   // PAYSTACK_BASE_URL: z.string().url('Invalid Paystack base URL'),
   // PAYSTACK_SECRET: z.string().min(10, 'PAYSTACK_SECRET is required'),
   ADMIN_EMAIL: z.string().min(10, 'ADMIN_EMAIL is required for sending mails'),
+  APP_NAME: z.string().min(1, 'APP_NAME is required for sending mails'),
   // EMAIL_USERNAME: z
   //   .string()
   //   .min(10, 'EMAIL_USERNAME is required for sending mails'),

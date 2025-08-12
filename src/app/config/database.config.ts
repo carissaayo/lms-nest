@@ -12,7 +12,7 @@ const AppDataSource = new DataSource({
   database: appConfig.database.name,
   entities: [__dirname + '/../**/*.entity.{ts,js}'],
   migrations: [join(__dirname, 'src/migrations/*.{ts,js}')],
-  synchronize: false, // NEVER true in production
+  synchronize: true, // NEVER true in production
   logging: true,
 });
 
