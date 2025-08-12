@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '../user/user.schema';
-import { UserModule } from '../user/user.module';
-import { EmailModule } from '../email/email.module';
-import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtStrategy } from './jwt.strategy';
+import { AuthController } from './auth.controller';
+import { PassportModule } from '@nestjs/passport';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -18,13 +17,12 @@ import { AuthService } from './auth.service';
         signOptions: { expiresIn: '1d' },
       }),
     }),
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     UserModule,
-    EmailModule,
+    PassportModule,
   ],
 
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

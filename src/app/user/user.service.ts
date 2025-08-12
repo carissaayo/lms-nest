@@ -5,166 +5,169 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
-import { User, UserDocument } from './user.schema';
-import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+
 import { ConfigService } from '@nestjs/config';
-import { Role } from '../domain/enums/roles.enum';
-import { UpdateUserDto } from './user.dto';
+import { Repository } from 'typeorm';
+import { User } from './user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { RegisterDto } from '../auth/auth.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectRepository(User) private usersRepo: Repository<User>,
     private readonly configService: ConfigService,
   ) {}
 
-  async makeUserAdmin(req: AuthenticatedRequest, userId: string) {
-    const user = await this.userModel.findOne({
-      _id: userId,
-    });
-    if (!user) throw new NotFoundException('User not found');
-
-    const mainAdmin = await this.userModel.findOne({
-      email: this.configService.get<string>('admin.email'),
-    });
-    if (mainAdmin?.id !== req.user.id) {
-      throw new UnauthorizedException(
-        'Access Denied, only the super admin can make a user an admin',
-      );
-    }
-    if (mainAdmin.id === req.user.id) {
-      throw new UnauthorizedException('You are the super admin');
-    }
-
-    const updatedUser = await this.userModel.findByIdAndUpdate(
-      userId,
-      { isAdmin: true, role: 'moderator' },
-      { new: true },
-    );
-    return { message: 'User role updated successfully', user: updatedUser };
+  async create(dto: RegisterDto) {
+    const user = this.usersRepo.create(dto);
+    return this.usersRepo.save(user);
   }
+  // async makeUserAdmin(req: AuthenticatedRequest, userId: string) {
+  //   const user = await this.userModel.findOne({
+  //     _id: userId,
+  //   });
+  //   if (!user) throw new NotFoundException('User not found');
 
-  async assignRole(req: AuthenticatedRequest, userId: string, newRole: string) {
-    try {
-      if (!req.user.isAdmin) {
-        throw new UnauthorizedException(
-          'Access Denied, only an admin can change roles',
-        );
-      }
+  //   const mainAdmin = await this.userModel.findOne({
+  //     email: this.configService.get<string>('admin.email'),
+  //   });
+  //   if (mainAdmin?.id !== req.user.id) {
+  //     throw new UnauthorizedException(
+  //       'Access Denied, only the super admin can make a user an admin',
+  //     );
+  //   }
+  //   if (mainAdmin.id === req.user.id) {
+  //     throw new UnauthorizedException('You are the super admin');
+  //   }
 
-      const user = await this.userModel.findOne({
-        _id: userId,
-        isVerified: true,
-      });
-      if (!user) {
-        throw new NotFoundException('User not verified or found');
-      }
+  //   const updatedUser = await this.userModel.findByIdAndUpdate(
+  //     userId,
+  //     { isAdmin: true, role: 'moderator' },
+  //     { new: true },
+  //   );
+  //   return { message: 'User role updated successfully', user: updatedUser };
+  // }
 
-      const updatedUser = await this.userModel.findByIdAndUpdate(
-        userId,
-        { role: newRole },
-        { new: true },
-      );
-      return { message: 'User role updated successfully', user: updatedUser };
-    } catch (error) {
-      throw new InternalServerErrorException('Assigning new role failed');
-    }
-  }
+  // async assignRole(req: AuthenticatedRequest, userId: string, newRole: string) {
+  //   try {
+  //     if (!req.user.isAdmin) {
+  //       throw new UnauthorizedException(
+  //         'Access Denied, only an admin can change roles',
+  //       );
+  //     }
 
-  async getSingleUser(req: AuthenticatedRequest, userId: string) {
-    const user = await this.userModel.findOne({ _id: userId });
-    if (!user) throw new NotFoundException('User not found');
+  //     const user = await this.userModel.findOne({
+  //       _id: userId,
+  //       isVerified: true,
+  //     });
+  //     if (!user) {
+  //       throw new NotFoundException('User not verified or found');
+  //     }
 
-    const { name, _id, courses, role } = user;
-    return {
-      message: 'User details fetched successfully',
-      user: { name, _id, courses, role },
-    };
-  }
+  //     const updatedUser = await this.userModel.findByIdAndUpdate(
+  //       userId,
+  //       { role: newRole },
+  //       { new: true },
+  //     );
+  //     return { message: 'User role updated successfully', user: updatedUser };
+  //   } catch (error) {
+  //     throw new InternalServerErrorException('Assigning new role failed');
+  //   }
+  // }
 
-  async getSingleUserByAdmin(req: AuthenticatedRequest, userId: string) {
-    if (!req.user.isAdmin) {
-      throw new UnauthorizedException(
-        "Access Denied, you don't have the permission",
-      );
-    }
+  // async getSingleUser(req: AuthenticatedRequest, userId: string) {
+  //   const user = await this.userModel.findOne({ _id: userId });
+  //   if (!user) throw new NotFoundException('User not found');
 
-    const user = await this.userModel.findOne({
-      _id: userId,
-    });
-    if (!user) throw new NotFoundException('User not found');
+  //   const { name, _id, courses, role } = user;
+  //   return {
+  //     message: 'User details fetched successfully',
+  //     user: { name, _id, courses, role },
+  //   };
+  // }
 
-    const { password, ...userDetails } = user.toObject();
-    return { message: 'User details fetched successfully', userDetails };
-  }
+  // async getSingleUserByAdmin(req: AuthenticatedRequest, userId: string) {
+  //   if (!req.user.isAdmin) {
+  //     throw new UnauthorizedException(
+  //       "Access Denied, you don't have the permission",
+  //     );
+  //   }
 
-  async getAllUsers(req: AuthenticatedRequest) {
-    if (!req.user.isAdmin) {
-      throw new UnauthorizedException('Access Denied, you are not allowed');
-    }
+  //   const user = await this.userModel.findOne({
+  //     _id: userId,
+  //   });
+  //   if (!user) throw new NotFoundException('User not found');
 
-    const users = await this.userModel.aggregate([
-      {
-        $match: {
-          email: { $ne: this.configService.get<string>('admin.email') },
-        },
-      },
-    ]);
+  //   const { password, ...userDetails } = user.toObject();
+  //   return { message: 'User details fetched successfully', userDetails };
+  // }
 
-    return { message: 'All users fetched successfully', users };
-  }
+  // async getAllUsers(req: AuthenticatedRequest) {
+  //   if (!req.user.isAdmin) {
+  //     throw new UnauthorizedException('Access Denied, you are not allowed');
+  //   }
 
-  async updateUserProfile(
-    req: AuthenticatedRequest,
-    userId: string,
-    body: UpdateUserDto,
-  ) {
-    const user = await this.userModel.findOne({
-      _id: userId,
-    });
-    if (!user) throw new NotFoundException('User not found');
+  //   const users = await this.userModel.aggregate([
+  //     {
+  //       $match: {
+  //         email: { $ne: this.configService.get<string>('admin.email') },
+  //       },
+  //     },
+  //   ]);
 
-    if (userId !== req.user.id) {
-      throw new UnauthorizedException(
-        'Access Denied, you can only update your account',
-      );
-    }
+  //   return { message: 'All users fetched successfully', users };
+  // }
 
-    if (body.email) {
-      const emailExists = await this.userModel.findOne({
-        email: body.email,
-      });
-      if (emailExists)
-        throw new UnauthorizedException('Email has already been used');
-    }
+  // async updateUserProfile(
+  //   req: AuthenticatedRequest,
+  //   userId: string,
+  //   body: UpdateUserDto,
+  // ) {
+  //   const user = await this.userModel.findOne({
+  //     _id: userId,
+  //   });
+  //   if (!user) throw new NotFoundException('User not found');
 
-    const updatedUser = await this.userModel.findByIdAndUpdate(userId, body, {
-      new: true,
-    });
-    return { message: 'User details updated successfully', user: updatedUser };
-  }
+  //   if (userId !== req.user.id) {
+  //     throw new UnauthorizedException(
+  //       'Access Denied, you can only update your account',
+  //     );
+  //   }
 
-  async deleteUser(req: AuthenticatedRequest, userId: string) {
-    const user = await this.userModel.findOne({
-      _id: userId,
-    });
-    if (!user) throw new NotFoundException('User not found');
+  //   if (body.email) {
+  //     const emailExists = await this.userModel.findOne({
+  //       email: body.email,
+  //     });
+  //     if (emailExists)
+  //       throw new UnauthorizedException('Email has already been used');
+  //   }
 
-    if (userId !== user.id) {
-      throw new UnauthorizedException(
-        'Access Denied, you can only delete your account',
-      );
-    }
+  //   const updatedUser = await this.userModel.findByIdAndUpdate(userId, body, {
+  //     new: true,
+  //   });
+  //   return { message: 'User details updated successfully', user: updatedUser };
+  // }
 
-    await this.userModel.findByIdAndUpdate(
-      userId,
-      { deleted: true },
-      { new: true },
-    );
-    return { message: 'User account has been deleted successfully' };
-  }
+  // async deleteUser(req: AuthenticatedRequest, userId: string) {
+  //   const user = await this.userModel.findOne({
+  //     _id: userId,
+  //   });
+  //   if (!user) throw new NotFoundException('User not found');
+
+  //   if (userId !== user.id) {
+  //     throw new UnauthorizedException(
+  //       'Access Denied, you can only delete your account',
+  //     );
+  //   }
+
+  //   await this.userModel.findByIdAndUpdate(
+  //     userId,
+  //     { deleted: true },
+  //     { new: true },
+  //   );
+  //   return { message: 'User account has been deleted successfully' };
+  // }
 }
