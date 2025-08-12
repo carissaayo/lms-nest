@@ -18,12 +18,12 @@ export const envSchema = z.object({
   // PAYSTACK_SECRET: z.string().min(10, 'PAYSTACK_SECRET is required'),
   ADMIN_EMAIL: z.string().min(10, 'ADMIN_EMAIL is required for sending mails'),
   APP_NAME: z.string().min(1, 'APP_NAME is required for sending mails'),
-  // EMAIL_USERNAME: z
-  //   .string()
-  //   .min(10, 'EMAIL_USERNAME is required for sending mails'),
-  // EMAIL_PASSWORD: z
-  //   .string()
-  //   .min(10, 'EMAIL_PASSWORD is also required for sending mails'),
+  EMAIL_USERNAME: z
+    .string()
+    .min(10, 'EMAIL_USERNAME is required for sending mails'),
+  EMAIL_PASSWORD: z
+    .string()
+    .min(10, 'EMAIL_PASSWORD is also required for sending mails'),
   // APP_URL: z
   //   .string()
   //   .min(10, 'APP_URL is redirecting to verify email')
@@ -44,6 +44,15 @@ export const envSchema = z.object({
   DB_NAME: z.string().min(1, 'DB_NAME is required'),
   DB_USER: z.string().min(1, 'DB_USER is required'),
   DB_PASS: z.string().min(1, 'DB_PASS is required'),
+  JWT_ACCESS_TOKEN_SECRET: z
+    .string()
+    .min(10, 'JWT_ACCESS_TOKEN_SECRET is required'),
+  JWT_REFRESH_TOKEN_SECRET: z
+    .string()
+    .min(10, 'JWT_REFRESH_TOKEN_SECRET is required'),
+  JWT_EXPIRES_30_DAYS: z.string().min(1, 'JWT_EXPIRES_30_DAYS is required'),
+  JWT_EXPIRES_90_DAYS: z.string().min(1, 'JWT_EXPIRES_90_DAYS is required'),
+  JWT_EXPIRES_TEN_MINS: z.string().min(1, 'JWT_EXPIRES_TEN_MINS is required'),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;

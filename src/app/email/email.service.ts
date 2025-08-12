@@ -3,6 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import config from '../config/config';
 
+interface EmailOptions {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+}
+
 @Injectable()
 export class EmailService {
   private transporter;
@@ -14,16 +21,29 @@ export class EmailService {
         user: this.configService.get<string>('EMAIL_USERNAME'),
         pass: this.configService.get<string>('EMAIL_PASSWORD'),
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+    // Verify the connection configuration
+    this.transporter.verify(function (error, success) {
+      if (error) {
+        console.error('Email service connection error:', error);
+      } else {
+        console.log('Email service is ready to send messages');
+      }
     });
   }
 
-  async sendEmail(to: string, subject: string, html: string) {
+  async sendEmail(emailOptions: EmailOptions) {
     try {
+      const adminEmail = this.configService.get<string>('admin.email');
       const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to,
-        subject,
-        html,
+        from: adminEmail,
+        to: emailOptions.to,
+        subject: emailOptions.subject,
+        text: emailOptions.text,
+        html: emailOptions.html,
       };
 
       const info = await this.transporter.sendMail(mailOptions);
@@ -45,7 +65,7 @@ export class EmailService {
     <p>Please use this code to verify your email address.</p>
   `;
 
-    await this.sendEmail(email, subject, html);
+    await this.sendEmail({ to: email, subject, text, html });
   }
 
   //   async sendResetPasswordEmail(email: string, token: string) {

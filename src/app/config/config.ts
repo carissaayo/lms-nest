@@ -23,10 +23,10 @@ const config = () => {
     //   baseUrl: env.PAYSTACK_BASE_URL,
     //   secret: env.PAYSTACK_SECRET,
     // },
-    // email: {
-    //   username: env.EMAIL_USERNAME,
-    //   password: env.EMAIL_PASSWORD,
-    // },
+    email: {
+      username: env.EMAIL_USERNAME,
+      password: env.EMAIL_PASSWORD,
+    },
     // app_url: env.APP_URL,
     salt_rounds: env.SALTROUNDS,
     // cloudinary: {
@@ -47,6 +47,13 @@ const config = () => {
     },
     app: {
       name: env.APP_NAME,
+    },
+    jwt: {
+      access_token: env.JWT_ACCESS_TOKEN_SECRET,
+      refresh_token: env.JWT_REFRESH_TOKEN_SECRET,
+      duration30d: env.JWT_EXPIRES_30_DAYS,
+      duration90d: env.JWT_EXPIRES_90_DAYS,
+      duration10m: env.JWT_EXPIRES_TEN_MINS,
     },
   };
 };
