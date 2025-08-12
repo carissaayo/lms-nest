@@ -15,18 +15,25 @@ import {
   RegisterDto,
   ResetPasswordDto,
 } from './auth.dto';
+import { User } from '../user/user.entity';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { customError } from 'libs/custom-handlers';
+import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
+    @InjectRepository(User) private usersRepo: Repository<User>,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
-  async register(dto: RegisterDto) {
-    const user = await this.usersService.create(dto);
-    return { message: 'User registered successfully', user };
-  }
+  // async register(dto: RegisterDto) {
+  //   const user = await this.usersService.create(dto);
+  //   return { message: 'User registered successfully', user };
+  // }
 
   // async login(dto: LoginDto) {
   //   const user = await this.usersService.findByEmail(dto.email);
@@ -37,40 +44,52 @@ export class AuthService {
   //   return { access_token: this.jwtService.sign(payload) };
   // }
 
-  // async register(body: RegisterDto) {
-  //   const { email, password, confirmPassword, phone, name } = body;
-  //   const existingUser = await this.userModel.findOne({ email });
-  //   if (existingUser) {
-  //     throw new ConflictException('User already exists');
-  //   }
-  //   if (password !== confirmPassword) {
-  //     throw new UnauthorizedException('Passwords do not match');
-  //   }
+  async register(body: RegisterDto) {
+    const { email, password, confirmPassword, phone, name } = body;
 
-  //   const hashedPassword = await bcrypt.hash(password, 10);
+    // Check password match
+    if (password !== confirmPassword) {
+      throw customError.conflict('Passwords do not match ', 409);
+    }
+    const formattedPhone = formatPhoneNumber(phone, '234');
+    if (formattedPhone?.toString()?.length !== 13) {
+      throw customError.badRequest(
+        'The phone number you entered is not correct. Please follow this format: 09012345678',
+      );
+    }
+    // Check if user already exists
+    const existingUser = await this.usersRepo.findOne({ where: { email } });
+    if (existingUser) {
+      throw customError.conflict('Email has already been used ', 409);
+    }
+    try {
+      // Create new user entity
+      const user = this.usersRepo.create({
+        email,
+        password,
+        phone: formattedPhone,
+        name,
+      });
 
-  //   try {
-  //     const user = new this.userModel({
-  //       email,
-  //       password: hashedPassword,
-  //       phone,
-  //       name,
-  //     });
-  //     await user.save();
-  //     const { role, isVerified, _id } = user;
+      // Save to DB
+      const savedUser = await this.usersRepo.save(user);
 
-  //     const token = this.jwtService.sign({ email }, { expiresIn: '1d' });
-  //     await this.emailService.sendVerificationEmail(email, token);
+      const { role, isVerified, id } = savedUser;
 
-  //     return {
-  //       message:
-  //         'User registered successfully. Check your email for the verification link.',
-  //       user: { email, phone, name, isVerified, role, _id },
-  //     };
-  //   } catch (error) {
-  //     throw new InternalServerErrorException(error.message);
-  //   }
-  // }
+      const emailCode = generateOtp('numeric', 8);
+
+      // // Send verification email
+      await this.emailService.sendVerificationEmail(email, emailCode);
+
+      return {
+        message:
+          'User registered successfully. Check your email for the verification link.',
+        user: { email, phone, name, isVerified, role, id },
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
+  }
 
   // async login(loginDto: LoginDto) {
   //   const { email, password } = loginDto;

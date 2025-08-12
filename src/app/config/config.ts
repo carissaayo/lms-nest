@@ -1,7 +1,7 @@
 import { envSchema, EnvVars } from './config.validation';
 import { config as loadEnv } from 'dotenv';
 loadEnv();
-export default () => {
+const config = () => {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
@@ -45,5 +45,10 @@ export default () => {
       name: env.DB_NAME,
       user: env.DB_USER,
     },
+    app: {
+      name: env.APP_NAME,
+    },
   };
 };
+
+export default config;
