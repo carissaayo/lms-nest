@@ -42,19 +42,19 @@ export const generateRefreshToken = async (user: string, secret: string) => {
 
 // JWT Check if refresh token is authenticated
 export const verifyRefreshToken = async (
-  refreshtoken: string,
+  refreshToken: string,
   sessions: string[],
   accessTokenSecret: string,
   refreshTokenSecret: string,
 ): Promise<any> => {
-  console.log('VERIFY REFRESH TOKEN REACHED', refreshtoken, sessions);
-  if (refreshtoken === undefined || refreshtoken === null)
+  console.log('VERIFY REFRESH TOKEN REACHED', refreshToken, sessions);
+  if (refreshToken === undefined || refreshToken === null)
     return {
       status: 'failed',
       message: 'Access denied. Please submit refresh token',
     };
 
-  if (!sessions.includes(refreshtoken)) {
+  if (!sessions.includes(refreshToken)) {
     console.log('SESSION TOKENS NOT IN REFRESH');
     return {
       status: 'failed',
@@ -65,7 +65,7 @@ export const verifyRefreshToken = async (
   // Need to promisify jwt.verify since we're using it in an async function
   return new Promise((resolve) => {
     jwt.verify(
-      refreshtoken,
+      refreshToken,
       refreshTokenSecret,
       async (err: any, token: any) => {
         if (err) {

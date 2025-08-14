@@ -27,7 +27,6 @@ import { ProfileInterface } from './auth.interface';
 export class AuthService {
   constructor(
     @InjectRepository(User) private usersRepo: Repository<User>,
-    private jwtService: JwtService,
     private emailService: EmailService,
   ) {}
 
@@ -58,6 +57,7 @@ export class AuthService {
       throw customError.conflict('Email has already been used ', 409);
     }
     try {
+      const emailCode = generateOtp('numeric', 8);
       // Create new user entity
       const user = this.usersRepo.create({
         email,
@@ -66,14 +66,13 @@ export class AuthService {
         firstName,
         lastName,
         role,
+        emailCode,
       });
 
       // Save to DB
       const savedUser = await this.usersRepo.save(user);
 
       const { emailVerified, id } = savedUser;
-
-      const emailCode = generateOtp('numeric', 8);
 
       // // Send verification email
       await this.emailService.sendVerificationEmail(email, emailCode);
@@ -116,7 +115,7 @@ export class AuthService {
     await this.usersRepo.save(user);
 
     // Regenerate access token
-    const { token, refreshtoken, session } = await generateToken(
+    const { token, refreshToken, session } = await generateToken(
       user.id.toString(),
       req,
     );
@@ -125,12 +124,12 @@ export class AuthService {
     user.sessions = [session];
     user.failedSignInAttempts = 0;
     user.nextSignInAttempt = new Date();
-
+    await this.usersRepo.save(user);
     const profile: ProfileInterface = GET_PROFILE(user);
 
     return {
       accessToken: token,
-      refreshtoken: refreshtoken,
+      refreshToken: refreshToken,
       profile: profile,
       message: 'Signed In successfully',
     };
@@ -157,8 +156,6 @@ export class AuthService {
   // }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
-    console.log('req===', req);
-
     const { emailCode } = verifyEmailDto;
     const trimmedEmailCode = emailCode?.trim();
 
@@ -169,7 +166,6 @@ export class AuthService {
     const user = await this.usersRepo.findOne({
       where: { id: req.userId },
     });
-
     if (!user) {
       throw customError.badRequest('Access Denied');
     }
@@ -181,7 +177,6 @@ export class AuthService {
     if (user.emailCode !== trimmedEmailCode) {
       throw customError.badRequest('Invalid verification code');
     }
-
     user.emailVerified = true;
     user.emailCode = null;
 
