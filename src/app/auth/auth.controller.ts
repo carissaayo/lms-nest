@@ -16,12 +16,19 @@ import {
 import { AuthService } from './auth.service';
 
 import {
+  LoginDto,
   //   ChangePasswordDto,
   //   LoginDto,
   RegisterDto,
+  VerifyEmailDTO,
   //   ResetPasswordDto,
 } from './auth.dto';
 import { RolesGuard } from '../common/guards/role.guard';
+import { CustomRequest } from 'src/utils/auth-utils';
+import {
+  AuthenticateTokenUserGuard,
+  ReIssueTokenUserGuard,
+} from '../common/guards/user-auth.guard';
 
 @Controller('auth')
 @UsePipes(
@@ -39,17 +46,19 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
-  //   @Post('login')
-  //   login(@Body() dto: LoginDto) {
-  //     return this.authService.login(dto);
-  //   }
-  //   @Public()
-  //   @Post('login')
-  //   async login(@Body() loginDto: LoginDto) {
-  //     const token = await this.authService.login(loginDto);
-  //     if (!token) throw new UnauthorizedException('Invalid credentials');
-  //     return token;
-  //   }
+  @Post('login')
+  async login(@Body() loginDto: LoginDto, @Req() req: CustomRequest) {
+    return this.authService.login(loginDto, req);
+  }
+
+  @Post('verify-email')
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  async verifyEmail(
+    @Body() verifyEmailDto: VerifyEmailDTO,
+    @Req() req: CustomRequest,
+  ) {
+    return this.authService.verifyEmail(verifyEmailDto, req);
+  }
 
   //   @Public()
   //   @Get('verify-email')

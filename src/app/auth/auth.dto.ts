@@ -5,12 +5,15 @@ import {
   IsEmail,
   MinLength,
 } from 'class-validator';
+import { UserRole } from '../user/user.entity';
 
 export class RegisterDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
-
+  firstName: string;
+  @IsNotEmpty()
+  @IsString()
+  lastName: string;
   @IsEmail()
   @IsString()
   @IsNotEmpty()
@@ -18,7 +21,11 @@ export class RegisterDto {
 
   @IsNotEmpty()
   @IsString()
-  phone: string;
+  phoneNumber: string;
+
+  @IsNotEmpty()
+  @IsString()
+  role: UserRole;
 
   @MinLength(6)
   @IsString()
@@ -40,6 +47,11 @@ export class LoginDto {
   @IsNotEmpty()
   @IsString()
   password: string;
+}
+
+export class VerifyEmailDTO {
+  @IsNotEmpty({ message: 'Please enter the verification code' })
+  emailCode!: string;
 }
 
 export class ChangePasswordDto {
