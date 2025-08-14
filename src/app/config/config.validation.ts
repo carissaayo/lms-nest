@@ -53,6 +53,9 @@ export const envSchema = z.object({
   JWT_EXPIRES_30_DAYS: z.string().min(1, 'JWT_EXPIRES_30_DAYS is required'),
   JWT_EXPIRES_90_DAYS: z.string().min(1, 'JWT_EXPIRES_90_DAYS is required'),
   JWT_EXPIRES_TEN_MINS: z.string().min(1, 'JWT_EXPIRES_TEN_MINS is required'),
+  JWT_ACCESS_TOKEN_SECRET_USER: z
+    .string()
+    .min(1, 'JWT_EXPIRES_TEN_MINS is required'),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;

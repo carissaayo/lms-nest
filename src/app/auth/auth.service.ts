@@ -1,19 +1,13 @@
 import { UsersService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
-import {
-  Injectable,
-  ConflictException,
-  UnauthorizedException,
-  NotFoundException,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import {
   ChangePasswordDto,
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
+  VerifyEmailDTO,
 } from './auth.dto';
 import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
@@ -21,6 +15,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { customError } from 'libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
 import { EmailService } from '../email/email.service';
+import {
+  CustomRequest,
+  generateToken,
+  GET_PROFILE,
+  handleFailedAuthAttempt,
+} from 'src/utils/auth-utils';
+import { ProfileInterface } from './auth.interface';
 
 @Injectable()
 export class AuthService {
@@ -30,28 +31,22 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
-  // async register(dto: RegisterDto) {
-  //   const user = await this.usersService.create(dto);
-  //   return { message: 'User registered successfully', user };
-  // }
-
-  // async login(dto: LoginDto) {
-  //   const user = await this.usersService.findByEmail(dto.email);
-  //   if (!user || !(await user.validatePassword(dto.password))) {
-  //     throw new UnauthorizedException('Invalid credentials');
-  //   }
-  //   const payload = { sub: user.id, email: user.email, role: user.role };
-  //   return { access_token: this.jwtService.sign(payload) };
-  // }
-
   async register(body: RegisterDto) {
-    const { email, password, confirmPassword, phone, name } = body;
+    const {
+      email,
+      password,
+      confirmPassword,
+      phoneNumber,
+      firstName,
+      lastName,
+      role,
+    } = body;
 
     // Check password match
     if (password !== confirmPassword) {
       throw customError.conflict('Passwords do not match ', 409);
     }
-    const formattedPhone = formatPhoneNumber(phone, '234');
+    const formattedPhone = formatPhoneNumber(phoneNumber, '234');
     if (formattedPhone?.toString()?.length !== 13) {
       throw customError.badRequest(
         'The phone number you entered is not correct. Please follow this format: 09012345678',
@@ -67,14 +62,16 @@ export class AuthService {
       const user = this.usersRepo.create({
         email,
         password,
-        phone: formattedPhone,
-        name,
+        phoneNumber: formattedPhone,
+        firstName,
+        lastName,
+        role,
       });
 
       // Save to DB
       const savedUser = await this.usersRepo.save(user);
 
-      const { role, isVerified, id } = savedUser;
+      const { emailVerified, id } = savedUser;
 
       const emailCode = generateOtp('numeric', 8);
 
@@ -84,44 +81,60 @@ export class AuthService {
       return {
         message:
           'User registered successfully. Check your email for the verification link.',
-        user: { email, phone, name, isVerified, role, id },
+        user: {
+          email,
+          phoneNumber,
+          firstName,
+          lastName,
+          emailVerified,
+          role,
+          id,
+        },
       };
     } catch (error) {
-      throw new InternalServerErrorException(error.message);
+      throw customError.internalServerError('Internal Server Error ', 500);
     }
   }
 
-  // async login(loginDto: LoginDto) {
-  //   const { email, password } = loginDto;
-  //   const user = await this.userModel.findOne({ email });
-  //   if (!user) {
-  //     throw new UnauthorizedException('User not found');
-  //   }
+  async login(loginDto: LoginDto, req: CustomRequest) {
+    const { email, password } = loginDto;
 
-  //   const isPasswordValid = await bcrypt.compare(password, user.password);
-  //   if (!isPasswordValid) {
-  //     throw new UnauthorizedException('Invalid credentials');
-  //   }
+    // Find user by email in Postgres (TypeORM)
+    const user = await this.usersRepo.findOne({ where: { email } });
+    if (!user) {
+      throw customError.unauthorized('User not found');
+    }
 
-  //   const payload = {
-  //     sub: user._id,
-  //     email: user.email,
-  //     role: user.role,
-  //     phone: user.phone,
-  //     isVerified: user.isVerified,
-  //   };
-  //   const accessToken = this.jwtService.sign(payload);
-  //   const userDetails = {
-  //     email: user.email,
-  //     phone: user.phone,
-  //     role: user.role,
-  //     name: user.name,
-  //     isVerified: user.isVerified,
-  //     id: user._id,
-  //   };
+    // validate password using entity method
+    const isPasswordValid = await user.validatePassword(password);
 
-  //   return { message: 'Welcome back', accessToken, userDetails };
-  // }
+    if (!isPasswordValid) {
+      await handleFailedAuthAttempt(user, this.usersRepo);
+    }
+
+    user.failedAuthAttempts = 0;
+    await this.usersRepo.save(user);
+
+    // Regenerate access token
+    const { token, refreshtoken, session } = await generateToken(
+      user.id.toString(),
+      req,
+    );
+
+    // Store session in an array as required by the schema
+    user.sessions = [session];
+    user.failedSignInAttempts = 0;
+    user.nextSignInAttempt = new Date();
+
+    const profile: ProfileInterface = GET_PROFILE(user);
+
+    return {
+      accessToken: token,
+      refreshtoken: refreshtoken,
+      profile: profile,
+      message: 'Signed In successfully',
+    };
+  }
 
   // async resendVerificationEmail(email: string): Promise<string> {
   //   const user = await this.userModel.findOne({ email });
@@ -143,31 +156,45 @@ export class AuthService {
   //   return 'Verification email resent successfully!';
   // }
 
-  // async verifyEmail(token: string): Promise<string> {
-  //   try {
-  //     const payload = this.jwtService.verify(token, {
-  //       secret: this.configService.get<string>('JWT_SECRET'),
-  //     });
+  async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
+    console.log('req===', req);
 
-  //     const user = await this.userModel.findOne({ email: payload.email });
+    const { emailCode } = verifyEmailDto;
+    const trimmedEmailCode = emailCode?.trim();
 
-  //     if (!user) {
-  //       throw new NotFoundException('User not found');
-  //     }
+    if (!trimmedEmailCode) {
+      throw customError.unauthorized('Please enter the verification code');
+    }
 
-  //     if (user.isVerified) {
-  //       throw new BadRequestException('Email is already verified');
-  //     }
+    const user = await this.usersRepo.findOne({
+      where: { id: req.userId },
+    });
 
-  //     user.isVerified = true;
-  //     await user.save();
+    if (!user) {
+      throw customError.badRequest('Access Denied');
+    }
 
-  //     return 'Email successfully verified!';
-  //   } catch (error) {
-  //     throw new BadRequestException('Invalid or expired token');
-  //   }
-  // }
+    if (user.emailVerified) {
+      throw customError.badRequest('Email verified already');
+    }
 
+    if (user.emailCode !== trimmedEmailCode) {
+      throw customError.badRequest('Invalid verification code');
+    }
+
+    user.emailVerified = true;
+    user.emailCode = null;
+
+    await this.usersRepo.save(user);
+
+    const profile: ProfileInterface = GET_PROFILE(user);
+
+    return {
+      accessToken: req.token,
+      profile,
+      message: 'Email Verified Successfully',
+    };
+  }
   // async changePassword(
   //   req: AuthenticatedRequest,
   //   changePasswordDto: ChangePasswordDto,

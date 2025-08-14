@@ -14,19 +14,27 @@ import * as bcrypt from 'bcryptjs';
 import { Course } from '../course/course.entity';
 import { Enrollment } from '../database/main.entity';
 import { Transaction } from '../transaction/transaction.entity';
+import { AuthInfo } from '../auth/auth-info.entity';
 export enum UserRole {
   STUDENT = 'student',
   INSTRUCTOR = 'instructor',
   ADMIN = 'admin',
 }
+
+export enum UserStatus {
+  PENDING = 'pending',
+  APPPROVED = 'approved',
+  REJECTED = 'rejected',
+}
 @Entity({ name: 'users' })
 export class User extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
-  name!: string;
-
+  firstName!: string;
+  @Column()
+  lastName!: string;
   @Column({ unique: true })
   email!: string;
 
@@ -42,11 +50,14 @@ export class User extends BaseEntity {
     return bcrypt.compare(password, this.password);
   }
   @Column({ nullable: true })
-  phone?: string;
+  phoneNumber!: string;
 
   @Column({ default: false })
-  isVerified!: boolean;
-
+  emailVerified!: boolean;
+  @Column({ type: 'varchar', nullable: true })
+  emailCode: string | null;
+  @Column({ default: false })
+  isActive!: boolean;
   @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
   role!: UserRole;
 
@@ -59,9 +70,57 @@ export class User extends BaseEntity {
   @OneToMany(() => Transaction, (t) => t.user)
   transactions?: Transaction[];
 
+  @Column({
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.PENDING,
+  })
+  status!: string;
+
+  // @Column(() => AuthInfo)
+  // auth: AuthInfo;
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  sessions: any[];
+
+  @Column({ type: 'int', default: 0 })
+  failedSignInAttempts: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  nextSignInAttempt: Date | null;
+
+  @Column({ type: 'int', default: 0 })
+  walletBalance: number;
   @CreateDateColumn()
   createdAt!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  lastSeen?: Date;
 
   @UpdateDateColumn()
   updatedAt!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  nextAuthDate?: Date;
+
+  @Column({ type: 'int', default: 0 })
+  failedAuthAttempts: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  nextPasswordResetDate?: Date;
+
+  @Column({ type: 'int', default: 0 })
+  failedPasswordResetAttempts: number;
+
+  @Column({ type: 'varchar', nullable: true })
+  passwordResetCode?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  nextEmailVerifyDate?: Date;
+
+  @Column({ type: 'int', default: 0 })
+  failedEmailVerifyAttempts: number;
+
+  @Column({ type: 'varchar', nullable: true })
+  emailVerifyCode?: string;
+
+  @Column({ type: 'boolean', default: false })
+  isSignedUp: boolean;
 }
