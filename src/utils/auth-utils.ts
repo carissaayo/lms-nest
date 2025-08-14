@@ -6,8 +6,6 @@ import { customError } from 'libs/custom-handlers';
 import { User } from 'src/app/user/user.entity';
 import { ProfileInterface } from 'src/app/auth/auth.interface';
 export interface CustomRequest extends Request {
-  // verifyAccessToken?: string;
-
   verifyAccessToken?: 'nil' | 'failed' | 'success';
   verifyAccessTokenMessage?: string | undefined;
   userId?: string;
@@ -43,8 +41,8 @@ export async function handleFailedAuthAttempt(
 
 // Generate access and refresh tokens
 export const generateToken = async (userId: string, req: CustomRequest) => {
-  const JWT_REFRESH_TOKEN_SECRET_USER = appConfig.jwt.refresh_token;
-  const JWT_ACCESS_TOKEN_SECRET_USER = appConfig.jwt.secret_user;
+  const JWT_REFRESH_TOKEN_SECRET = appConfig.jwt.refresh_token;
+  const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
 
   const clientIpAddress = req.ip;
   const userAgent = req.headers['user-agent'];
@@ -52,24 +50,25 @@ export const generateToken = async (userId: string, req: CustomRequest) => {
   const token = await generateAccessToken(
     userId,
     'mins',
-    JWT_ACCESS_TOKEN_SECRET_USER,
+    JWT_ACCESS_TOKEN_SECRET,
   );
-  const refreshtoken = await generateRefreshToken(
+
+  const refreshToken = await generateRefreshToken(
     userId,
-    JWT_REFRESH_TOKEN_SECRET_USER,
+    JWT_REFRESH_TOKEN_SECRET,
   );
 
   const session = {
     ipAddress: clientIpAddress || '',
     userAgent: userAgent || '',
     date: new Date(Date.now()),
-    refreshtoken,
+    refreshtoken: refreshToken,
     active: true,
   };
 
   return {
     token,
-    refreshtoken,
+    refreshToken,
     session,
   };
 };

@@ -56,7 +56,7 @@ export class User extends BaseEntity {
   emailVerified!: boolean;
   @Column({ type: 'varchar', nullable: true })
   emailCode: string | null;
-  @Column({ default: false })
+  @Column({ default: true })
   isActive!: boolean;
   @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
   role!: UserRole;
@@ -117,9 +117,6 @@ export class User extends BaseEntity {
 
   @Column({ type: 'int', default: 0 })
   failedEmailVerifyAttempts: number;
-
-  @Column({ type: 'varchar', nullable: true })
-  emailVerifyCode?: string;
 
   @Column({ type: 'boolean', default: false })
   isSignedUp: boolean;
