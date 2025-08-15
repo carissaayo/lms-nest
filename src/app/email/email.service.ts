@@ -81,61 +81,25 @@ export class EmailService {
 
     await this.sendEmail({ to: email, subject, text, html });
   }
+
+  async sendPasswordChangeNotificationEmail(
+    email: string,
+    firstName: string,
+  ): Promise<void> {
+    const appName = this.configService.get<string>('app.name');
+    const subject = `${appName} Password Changed`;
+    const text = `Hi ${firstName}, your password has been changed successfully. If this wasn't you, please contact us immediately. If it was you, then please ignore this message.`;
+
+    const html = `
+    <h1>Password Changed</h1>
+    <p>Hi ${firstName},</p>
+    <p>Your password has been changed successfully.</p>
+    <p>If this wasn't you, please contact us immediately. If it was you, then please ignore this message.</p>
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
 }
-
-// export const sendWelcomeEmail = async (
-//   email: string,
-//   firstName: string | null
-// ): Promise<void> => {
-//   const subject = `Welcome to ${process.env.SITE_NAME || "Credlock"}`;
-//   const text = `Dear ${firstName || "User"},\n\nWelcome to ${
-//     process.env.SITE_NAME || "Credlock"
-//   }! We're excited to have you on board.\n\nBest regards,\nThe ${
-//     process.env.SITE_NAME || "Credlock"
-//   } Team`;
-
-//   const html = `
-//     <h1>Welcome to ${process.env.SITE_NAME || "Credlock"}!</h1>
-//     <p>Dear ${firstName || "User"},</p>
-//     <p>We're excited to have you on board.</p>
-//     <p>Best regards,<br>The ${process.env.SITE_NAME || "Credlock"} Team</p>
-//   `;
-
-//   await sendEmail({ to: email, subject, text, html });
-// };
-
-// export const sendVerificationEmail = async (
-//   email: string,
-//   code: string
-// ): Promise<void> => {
-//   const subject = `${process.env.SITE_NAME || "Credlock"} Email Verification`;
-//   const text = `Your verification code is: ${code}\n\nPlease use this code to verify your email address.`;
-
-//   const html = `
-//     <h1>Email Verification</h1>
-//     <p>Your verification code is: <strong>${code}</strong></p>
-//     <p>Please use this code to verify your email address.</p>
-//   `;
-
-//   await sendEmail({ to: email, subject, text, html });
-// };
-
-// export const sendPasswordResetEmail = async (
-//   email: string,
-//   code: string
-// ): Promise<void> => {
-//   const subject = `${process.env.SITE_NAME || "Credlock"} Password Reset`;
-//   const text = `Your password reset code is: ${code}\n\nThis code will expire in 30 minutes.\n\nIf you didn't request this, please ignore this email.`;
-
-//   const html = `
-//     <h1>Password Reset</h1>
-//     <p>Your password reset code is: <strong>${code}</strong></p>
-//     <p>This code will expire in 30 minutes.</p>
-//     <p>If you didn't request this, please ignore this email.</p>
-//   `;
-
-//   await sendEmail({ to: email, subject, text, html });
-// };
 
 // export const sendPasswordChangeNotificationEmail = async (
 //   email: string,

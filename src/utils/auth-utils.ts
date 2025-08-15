@@ -40,7 +40,7 @@ export async function handleFailedAuthAttempt(
 }
 
 // Generate access and refresh tokens
-export const generateToken = async (userId: string, req: CustomRequest) => {
+export const generateToken = async (user: User, req: CustomRequest) => {
   const JWT_REFRESH_TOKEN_SECRET = appConfig.jwt.refresh_token;
   const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
 
@@ -48,13 +48,14 @@ export const generateToken = async (userId: string, req: CustomRequest) => {
   const userAgent = req.headers['user-agent'];
 
   const token = await generateAccessToken(
-    userId,
-    'mins',
+    user.id,
+    user.role,
     JWT_ACCESS_TOKEN_SECRET,
   );
 
   const refreshToken = await generateRefreshToken(
-    userId,
+    user.id,
+    user.role,
     JWT_REFRESH_TOKEN_SECRET,
   );
 

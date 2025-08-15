@@ -20,8 +20,8 @@ export enum AssignmentStatus {
 
 @Entity({ name: 'categories' })
 export class Category extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ unique: true })
   name!: string;

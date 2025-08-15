@@ -1,11 +1,4 @@
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsEmail,
-  MinLength,
-  IsEnum,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsEmail } from 'class-validator';
 
 export class AccountNumberDto {
   @IsNotEmpty()
@@ -18,17 +11,8 @@ export class AccountNumberDto {
   bank_code: string;
 }
 
-export class UpdateUserDto {
-  @IsOptional()
+export class UpdateUserDTO {
   @IsEmail()
+  @IsOptional()
   email?: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(11)
-  phone?: string;
-
-  @IsOptional()
-  @IsString()
-  name?: string;
 }
