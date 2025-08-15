@@ -1,68 +1,62 @@
 import config from 'src/app/config/config';
+import { User, UserRole } from 'src/app/user/user.entity';
+import * as jwt from 'jsonwebtoken';
 
-const jwt = require('jsonwebtoken');
 const appConfig = config();
-// JWT Generate Token
+
+export interface JwtPayload {
+  id: string;
+  role: UserRole;
+}
+
+// JWT Generate Access Token
 export const generateAccessToken = async (
-  user: string,
-  type: string,
+  id: string,
+  role: UserRole,
   secret: string,
 ) => {
   try {
     console.log('CONFIRMED: ACCESS TOKEN GENERATED!');
-    const tenMinutes = appConfig.jwt.duration10m;
-    const thirtyDays = appConfig.jwt.duration30d;
-    const ninetyDays = appConfig.jwt.duration90d;
-    const tokenExpire = '1d';
-    //   type === 'mins' ? tenMinutes : type === 'month' ? thirtyDays : ninetyDays;
-
-    return jwt.sign(
-      {
-        id: user,
-      },
-      secret,
-      {
-        expiresIn: tokenExpire,
-      },
-    );
+    const tokenExpire = '1d'; // You can replace with appConfig.jwt.duration10m etc.
+    return jwt.sign({ id, role } as JwtPayload, secret, {
+      expiresIn: tokenExpire,
+    });
   } catch (err: any) {
-    console.log('FAILED TO GENERATE ACCESS TOKEN', err.message);
+    console.error('FAILED TO GENERATE ACCESS TOKEN', err.message);
+    throw err;
   }
 };
 
-// JWT Generate Token
-export const generateRefreshToken = async (user: string, secret: string) => {
-  return jwt.sign(
-    {
-      id: user,
-    },
-    secret,
-  );
+// JWT Generate Refresh Token
+export const generateRefreshToken = async (
+  id: string,
+  role: UserRole,
+  secret: string,
+) => {
+  return jwt.sign({ id, role } as JwtPayload, secret);
 };
 
-// JWT Check if refresh token is authenticated
+// JWT Verify Refresh Token and Re-Issue Access Token
 export const verifyRefreshToken = async (
   refreshToken: string,
   sessions: string[],
   accessTokenSecret: string,
   refreshTokenSecret: string,
-): Promise<any> => {
+): Promise<{ status: string; message?: string; newToken?: string }> => {
   console.log('VERIFY REFRESH TOKEN REACHED', refreshToken, sessions);
-  if (refreshToken === undefined || refreshToken === null)
+
+  if (!refreshToken) {
     return {
       status: 'failed',
       message: 'Access denied. Please submit refresh token',
     };
+  }
 
   if (!sessions.includes(refreshToken)) {
     console.log('SESSION TOKENS NOT IN REFRESH');
-    return {
-      status: 'failed',
-      message: 'Token expired. Please re-authorize',
-    };
+    return { status: 'failed', message: 'Token expired. Please re-authorize' };
   }
 
-  // Need to promisify jwt.verify since we're using it in an async function
   return new Promise((resolve) => {
     jwt.verify(
       refreshToken,
@@ -75,10 +69,10 @@ export const verifyRefreshToken = async (
             message: 'Access denied. Please re-authorize token',
           });
         } else {
-          console.log('ACCESS TOKEN ID', token.id);
+          console.log('ACCESS TOKEN PAYLOAD', token);
           const accessToken = await generateAccessToken(
             token.id,
-            'mins',
+            token.role,
             accessTokenSecret,
           );
           console.log('REFRESH ACCESS TOKEN GENERATED', accessToken);

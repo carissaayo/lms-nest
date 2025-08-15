@@ -1,205 +1,377 @@
-// import {
-//   Injectable,
-//   UnauthorizedException,
-//   NotFoundException,
-//   ForbiddenException,
-//   InternalServerErrorException,
-// } from '@nestjs/common';
-// import { InjectModel } from '@nestjs/mongoose';
-// import { Model, Types } from 'mongoose';
-// import { UploadApiResponse } from 'cloudinary';
-// import { Course, CourseDocument } from './course.schema';
-// import { User, UserDocument } from '../user/user.schema';
-// import { CreateCourseDto, UpdateCourseDto } from './course.dto';
-// import { AuthenticatedRequest } from '../domain/middleware/role.guard';
-// import { CloudinaryService } from '../domain/services/cloudinary.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Course } from './course.entity';
+import { User } from '../user/user.entity';
+import { Lesson } from '../lesson/lesson.entity';
+import { Category } from '../database/main.entity';
+import { CreateCourseDTO } from './course.dto';
+import { CustomRequest } from 'src/utils/auth-utils';
+import { customError } from 'libs/custom-handlers';
+import { singleImageValidation } from 'src/utils/file-validation';
+import { saveImageS3 } from '../fileUpload/image-upload.service';
 
-// @Injectable()
-// export class CourseService {
-//   constructor(
-//     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
-//     @InjectModel(User.name) private userModel: Model<UserDocument>,
-//     private cloudinaryService: CloudinaryService,
-//   ) {}
+@Injectable()
+export class CourseService {
+  constructor(
+    @InjectRepository(Course)
+    private readonly courseRepo: Repository<Course>,
 
-//   async createCourse(
-//     req: AuthenticatedRequest,
-//     body: CreateCourseDto,
-//     file: Express.Multer.File,
-//   ) {
-//     const userId = req.user.id;
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
 
-//     const user = await this.userModel.findById(userId);
-//     if (!user) {
-//       throw new UnauthorizedException(
-//         "You don't have the permissions to create a course",
-//       );
-//     }
+    @InjectRepository(Category)
+    private readonly categoryRepo: Repository<Category>,
 
-//     let uploadedImage: UploadApiResponse | null = null;
+    // @InjectRepository(Lesson)
+    // private readonly lessonRepo: Repository<Lesson>,
+  ) {}
 
-//     if (file) {
-//       // Upload image using Cloudinary service
-//       uploadedImage = await this.cloudinaryService.uploadImage(file, 'course');
-//     }
+  /**
+   * Create a new course
+   */
+  async createCourse(
+    createCourseDto: CreateCourseDTO,
+    coverImage: Express.Multer.File,
+    req: CustomRequest,
+  ) {
+    if (!createCourseDto) {
+      throw customError.badRequest('body is missing');
+    }
 
-//     const courseData: Partial<Course> = {
-//       ...body,
-//       image: uploadedImage
-//         ? {
-//             url: uploadedImage.secure_url,
-//             imageName: uploadedImage.public_id,
-//             caption: body.caption || '',
-//           }
-//         : undefined,
-//       instructor: new Types.ObjectId(userId),
-//       isSubmitted: true,
-//     };
+    console.log(coverImage);
 
-//     const newCourse = new this.courseModel(courseData);
+    const { title, description, category, price } = createCourseDto;
+    const files = req.files || {};
+    if (files.lenghth < 1) {
+      throw customError.badRequest('coverImage is required found');
+    }
+    const instructor = await this.userRepo.findOne({
+      where: { id: req.userId },
+    });
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
 
-//     // Add course ID to the user's courses array (if that array exists)
-//     if (!user.courses) user.courses = [];
-//     user.courses.push(newCourse._id as Types.ObjectId);
+    let categoryEntity: Category | undefined;
+    if (category) {
+      const categoryEntity = await this.categoryRepo.findOne({
+        where: { id: category },
+      });
+      if (!categoryEntity) {
+        throw new NotFoundException('Category not found');
+      }
+    }
 
-//     await newCourse.save();
-//     await user.save();
+    if (coverImage) {
+      singleImageValidation(coverImage, 'a cover image for the course');
+    }
 
-//     return {
-//       message: 'Course has been created successfully',
-//       course: newCourse,
-//     };
-//   }
+    const course = this.courseRepo.create({
+      title,
+      description,
+      category: categoryEntity,
+      price,
+      instructor,
+      //   coverImage,
+    });
 
-//   async submitCourseForApproval(req: AuthenticatedRequest, id: string) {
-//     const course = await this.courseModel.findOne({ _id: id, deleted: false });
-//     if (!course) throw new NotFoundException("Such course isn't available");
+    let uploadImg: string | undefined;
 
-//     if (req.user.id.toString() !== course.instructor.toString()) {
-//       throw new UnauthorizedException('You are not authorized');
-//     }
+    if (files && files.length > 0) {
+      const path = `images/courses`;
+      uploadImg = await saveImageS3(coverImage, path);
+    }
 
-//     if (course.isSubmitted) {
-//       throw new UnauthorizedException('Course has been submitted already');
-//     }
+    if (uploadImg && uploadImg?.length > 0) {
+      course.coverImage = uploadImg;
+    }
 
-//     course.isSubmitted = true;
-//     await course.save();
+    return await this.courseRepo.save(course);
+  }
 
-//     return { message: 'Course has been submitted for approval' };
-//   }
+  /**
+   * Edit an existing course
+   */
+  //   async editCourse(
+  //     courseId: string,
+  //     instructorId: string,
+  //     updateData: Partial<
+  //       Pick<Course, 'title' | 'description' | 'coverImage'>
+  //     > & { categoryId?: string },
+  //   ) {
+  //     const course = await this.courseRepo.findOne({
+  //       where: { id: courseId },
+  //       relations: ['instructor', 'category'],
+  //     });
 
-//   async getSingleCourse(id: string) {
-//     const course = await this.courseModel.findById(id);
-//     if (!course) throw new NotFoundException("Such course isn't available");
+  //     if (!course) {
+  //       throw new NotFoundException('Course not found');
+  //     }
 
-//     return { message: 'Course fetched successfully', course };
-//   }
+  //     if (course.instructor.id !== instructorId) {
+  //       throw new ForbiddenException('You are not allowed to edit this course');
+  //     }
 
-//   async approveCourse(req: AuthenticatedRequest, id: string) {
-//     const course = await this.courseModel.findOne({ _id: id });
-//     if (!course) throw new NotFoundException('Course not found');
+  //     if (updateData.categoryId) {
+  //       const category = await this.categoryRepo.findOne({
+  //         where: { id: updateData.categoryId },
+  //       });
+  //       if (!category) {
+  //         throw new NotFoundException('Category not found');
+  //       }
+  //       course.category = category;
+  //     }
 
-//     if (!course.isSubmitted) {
-//       throw new UnauthorizedException('Course has to be submitted first');
-//     }
-//     if (course.isApproved) {
-//       throw new UnauthorizedException('Course has been approved already');
-//     }
+  //     if (updateData.title !== undefined) course.title = updateData.title;
+  //     if (updateData.description !== undefined)
+  //       course.description = updateData.description;
+  //     if (updateData.coverImage !== undefined)
+  //       course.coverImage = updateData.coverImage;
 
-//     course.isApproved = true;
-//     course.approvedBy = new Types.ObjectId(req.user.id);
-//     course.approvalDate = new Date();
-//     await course.save();
+  //     return await this.courseRepo.save(course);
+  //   }
 
-//     return { message: 'Course has been approved successfully' };
-//   }
+  //   /**
+  //    * Add a lesson to a course
+  //    */
+  //   async addLessonToCourse(
+  //     courseId: string,
+  //     instructorId: string,
+  //     title: string,
+  //     content: string,
+  //     videoUrl?: string,
+  //   ) {
+  //     const course = await this.courseRepo.findOne({
+  //       where: { id: courseId },
+  //       relations: ['instructor', 'lessons'],
+  //     });
 
-//   async publishCourse(req: AuthenticatedRequest, id: string) {
-//     const course = await this.courseModel.findById(id);
-//     if (!course) throw new NotFoundException('Course not found');
-//     if (req.user.id.toString() !== course.instructor.toString()) {
-//       throw new UnauthorizedException('You are not authorized');
-//     }
+  //     if (!course) {
+  //       throw new NotFoundException('Course not found');
+  //     }
 
-//     course.isPublished = !course.isPublished;
-//     await course.save();
+  //     if (course.instructor.id !== instructorId) {
+  //       throw new ForbiddenException(
+  //         'You are not allowed to add lessons to this course',
+  //       );
+  //     }
 
-//     return { message: 'Course publish status updated' };
-//   }
+  //     const lesson = this.lessonRepo.create({
+  //       title,
+  //       content,
+  //       videoUrl,
+  //       course,
+  //     });
 
-//   async getAllCourses() {
-//     const courses = await this.courseModel.find();
-//     if (!courses) throw new NotFoundException('No course found');
-//     return { message: 'Courses fetched successfully', courses };
-//   }
+  //     await this.lessonRepo.save(lesson);
 
-//   async filterCourses(query: any) {
-//     const { category, instructor } = query;
-//     const filter: any = { isApproved: true };
+  //     return lesson;
+  //   }
+  // }
 
-//     if (category) filter.category = category;
-//     if (instructor) filter.instructor = instructor;
+  // import {
+  //   Injectable,
+  //   UnauthorizedException,
+  //   NotFoundException,
+  //   ForbiddenException,
+  //   InternalServerErrorException,
+  // } from '@nestjs/common';
+  // import { InjectModel } from '@nestjs/mongoose';
+  // import { Model, Types } from 'mongoose';
+  // import { UploadApiResponse } from 'cloudinary';
+  // import { Course, CourseDocument } from './course.schema';
+  // import { User, UserDocument } from '../user/user.schema';
+  // import { CreateCourseDto, UpdateCourseDto } from './course.dto';
+  // import { AuthenticatedRequest } from '../domain/middleware/role.guard';
+  // import { CloudinaryService } from '../domain/services/cloudinary.service';
 
-//     const courses = await this.courseModel.find(filter);
-//     const count = await this.courseModel.countDocuments(courses);
+  // @Injectable()
+  // export class CourseService {
+  //   constructor(
+  //     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+  //     @InjectModel(User.name) private userModel: Model<UserDocument>,
+  //     private cloudinaryService: CloudinaryService,
+  //   ) {}
 
-//     return { message: 'Courses fetched successfully', courses, count };
-//   }
+  //   async createCourse(
+  //     req: AuthenticatedRequest,
+  //     body: CreateCourseDto,
+  //     file: Express.Multer.File,
+  //   ) {
+  //     const userId = req.user.id;
 
-//   async getAllCoursesByAnInstructor(instructorId: string) {
-//     const instructor = await this.userModel.findOne({
-//       _id: instructorId,
-//       role: 'instructor',
-//     });
-//     if (!instructor) throw new ForbiddenException('Instructor not found');
+  //     const user = await this.userModel.findById(userId);
+  //     if (!user) {
+  //       throw new UnauthorizedException(
+  //         "You don't have the permissions to create a course",
+  //       );
+  //     }
 
-//     const courses = await this.courseModel.find({
-//       instructor: instructorId,
-//     });
+  //     let uploadedImage: UploadApiResponse | null = null;
 
-//     return { message: 'Courses fetched successfully', courses };
-//   }
+  //     if (file) {
+  //       // Upload image using Cloudinary service
+  //       uploadedImage = await this.cloudinaryService.uploadImage(file, 'course');
+  //     }
 
-//   async updateCourse(
-//     req: AuthenticatedRequest,
-//     updateDto: UpdateCourseDto,
-//     id: string,
-//   ) {
-//     const existingCourse = await this.courseModel.findOne({
-//       _id: id,
-//     });
-//     if (!existingCourse) throw new NotFoundException('Course not found');
+  //     const courseData: Partial<Course> = {
+  //       ...body,
+  //       image: uploadedImage
+  //         ? {
+  //             url: uploadedImage.secure_url,
+  //             imageName: uploadedImage.public_id,
+  //             caption: body.caption || '',
+  //           }
+  //         : undefined,
+  //       instructor: new Types.ObjectId(userId),
+  //       isSubmitted: true,
+  //     };
 
-//     if (existingCourse.instructor.toString() !== req.user.id.toString()) {
-//       throw new UnauthorizedException('You can only update your course');
-//     }
+  //     const newCourse = new this.courseModel(courseData);
 
-//     const updatedCourse = await this.courseModel.findByIdAndUpdate(
-//       id,
-//       updateDto,
-//       { new: true },
-//     );
+  //     // Add course ID to the user's courses array (if that array exists)
+  //     if (!user.courses) user.courses = [];
+  //     user.courses.push(newCourse._id as Types.ObjectId);
 
-//     return { message: 'Course updated successfully', course: updatedCourse };
-//   }
+  //     await newCourse.save();
+  //     await user.save();
 
-//   async deleteCourse(req: AuthenticatedRequest, id: string) {
-//     const existingCourse = await this.courseModel.findOne({
-//       _id: id,
-//     });
-//     if (!existingCourse) throw new NotFoundException('Course not found');
+  //     return {
+  //       message: 'Course has been created successfully',
+  //       course: newCourse,
+  //     };
+  //   }
 
-//     if (existingCourse.instructor.toString() !== req.user.id.toString()) {
-//       throw new UnauthorizedException('You can only delete your course');
-//     }
+  //   async submitCourseForApproval(req: AuthenticatedRequest, id: string) {
+  //     const course = await this.courseModel.findOne({ _id: id, deleted: false });
+  //     if (!course) throw new NotFoundException("Such course isn't available");
 
-//     await this.courseModel.findByIdAndUpdate(id, { deleted: true });
-//     await this.userModel.updateMany(
-//       { enrolledCourses: id },
-//       { $pull: { enrolledCourses: id } },
-//     );
+  //     if (req.user.id.toString() !== course.instructor.toString()) {
+  //       throw new UnauthorizedException('You are not authorized');
+  //     }
 
-//     return { message: 'Course deleted successfully' };
-//   }
-// }
+  //     if (course.isSubmitted) {
+  //       throw new UnauthorizedException('Course has been submitted already');
+  //     }
+
+  //     course.isSubmitted = true;
+  //     await course.save();
+
+  //     return { message: 'Course has been submitted for approval' };
+  //   }
+
+  //   async getSingleCourse(id: string) {
+  //     const course = await this.courseModel.findById(id);
+  //     if (!course) throw new NotFoundException("Such course isn't available");
+
+  //     return { message: 'Course fetched successfully', course };
+  //   }
+
+  //   async approveCourse(req: AuthenticatedRequest, id: string) {
+  //     const course = await this.courseModel.findOne({ _id: id });
+  //     if (!course) throw new NotFoundException('Course not found');
+
+  //     if (!course.isSubmitted) {
+  //       throw new UnauthorizedException('Course has to be submitted first');
+  //     }
+  //     if (course.isApproved) {
+  //       throw new UnauthorizedException('Course has been approved already');
+  //     }
+
+  //     course.isApproved = true;
+  //     course.approvedBy = new Types.ObjectId(req.user.id);
+  //     course.approvalDate = new Date();
+  //     await course.save();
+
+  //     return { message: 'Course has been approved successfully' };
+  //   }
+
+  //   async publishCourse(req: AuthenticatedRequest, id: string) {
+  //     const course = await this.courseModel.findById(id);
+  //     if (!course) throw new NotFoundException('Course not found');
+  //     if (req.user.id.toString() !== course.instructor.toString()) {
+  //       throw new UnauthorizedException('You are not authorized');
+  //     }
+
+  //     course.isPublished = !course.isPublished;
+  //     await course.save();
+
+  //     return { message: 'Course publish status updated' };
+  //   }
+
+  //   async getAllCourses() {
+  //     const courses = await this.courseModel.find();
+  //     if (!courses) throw new NotFoundException('No course found');
+  //     return { message: 'Courses fetched successfully', courses };
+  //   }
+
+  //   async filterCourses(query: any) {
+  //     const { category, instructor } = query;
+  //     const filter: any = { isApproved: true };
+
+  //     if (category) filter.category = category;
+  //     if (instructor) filter.instructor = instructor;
+
+  //     const courses = await this.courseModel.find(filter);
+  //     const count = await this.courseModel.countDocuments(courses);
+
+  //     return { message: 'Courses fetched successfully', courses, count };
+  //   }
+
+  //   async getAllCoursesByAnInstructor(instructorId: string) {
+  //     const instructor = await this.userModel.findOne({
+  //       _id: instructorId,
+  //       role: 'instructor',
+  //     });
+  //     if (!instructor) throw new ForbiddenException('Instructor not found');
+
+  //     const courses = await this.courseModel.find({
+  //       instructor: instructorId,
+  //     });
+
+  //     return { message: 'Courses fetched successfully', courses };
+  //   }
+
+  //   async updateCourse(
+  //     req: AuthenticatedRequest,
+  //     updateDto: UpdateCourseDto,
+  //     id: string,
+  //   ) {
+  //     const existingCourse = await this.courseModel.findOne({
+  //       _id: id,
+  //     });
+  //     if (!existingCourse) throw new NotFoundException('Course not found');
+
+  //     if (existingCourse.instructor.toString() !== req.user.id.toString()) {
+  //       throw new UnauthorizedException('You can only update your course');
+  //     }
+
+  //     const updatedCourse = await this.courseModel.findByIdAndUpdate(
+  //       id,
+  //       updateDto,
+  //       { new: true },
+  //     );
+
+  //     return { message: 'Course updated successfully', course: updatedCourse };
+  //   }
+
+  //   async deleteCourse(req: AuthenticatedRequest, id: string) {
+  //     const existingCourse = await this.courseModel.findOne({
+  //       _id: id,
+  //     });
+  //     if (!existingCourse) throw new NotFoundException('Course not found');
+
+  //     if (existingCourse.instructor.toString() !== req.user.id.toString()) {
+  //       throw new UnauthorizedException('You can only delete your course');
+  //     }
+
+  //     await this.courseModel.findByIdAndUpdate(id, { deleted: true });
+  //     await this.userModel.updateMany(
+  //       { enrolledCourses: id },
+  //       { $pull: { enrolledCourses: id } },
+  //     );
+
+  //     return { message: 'Course deleted successfully' };
+  //   }
+}

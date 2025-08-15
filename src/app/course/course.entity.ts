@@ -15,14 +15,14 @@ import { Lesson } from '../lesson/lesson.entity';
 
 @Entity({ name: 'courses' })
 export class Course extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   title!: string;
 
   @Column({ type: 'text', nullable: true })
-  description?: string;
+  description!: string;
 
   @ManyToOne(() => User, (user) => user.courses, { nullable: false })
   @JoinColumn({ name: 'instructor_id' })
@@ -38,8 +38,30 @@ export class Course extends BaseEntity {
   @OneToMany(() => Enrollment, (enr) => enr.course)
   enrollments?: Enrollment[];
 
-  @Column({ nullable: true })
-  coverImage?: string;
+  @Column()
+  coverImage!: string;
+
+  @Column({ default: false })
+  isApproved: boolean;
+
+  @Column({ default: false })
+  isPublished: boolean;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'approved_by' })
+  approvedBy?: User;
+
+  @Column({ type: 'timestamp', nullable: true })
+  approvalDate?: Date;
+
+  @Column({ default: false })
+  isSubmitted: boolean;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  price: number;
+
+  @Column({ default: false })
+  deleted: boolean;
 
   @CreateDateColumn()
   createdAt!: Date;

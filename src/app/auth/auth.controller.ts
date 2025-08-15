@@ -16,14 +16,12 @@ import {
 import { AuthService } from './auth.service';
 
 import {
+  ChangePasswordDTO,
   LoginDto,
-  //   ChangePasswordDto,
-  //   LoginDto,
   RegisterDto,
   RequestResetPasswordDTO,
   ResetPasswordDTO,
   VerifyEmailDTO,
-  //   ResetPasswordDto,
 } from './auth.dto';
 import { RolesGuard } from '../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -74,6 +72,15 @@ export class AuthController {
   @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDTO) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('change-password')
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDTO,
+    @Req() req: CustomRequest,
+  ) {
+    return this.authService.changePassword(changePasswordDto, req);
   }
   //   @Public()
   //   @Get('verify-email')

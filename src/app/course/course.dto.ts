@@ -1,93 +1,45 @@
 import {
-  IsNotEmpty,
   IsString,
-  IsMongoId,
-  IsBoolean,
   IsOptional,
+  IsUUID,
   IsNumber,
-  ValidateNested,
+  IsPositive,
+  MinLength,
+  IsNotEmpty,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { Types } from 'mongoose';
 
-class ImageDto {
-  @IsString()
-  url: string;
-
-  @IsString()
-  imageName: string;
-
-  @IsOptional()
-  @IsString()
-  caption?: string;
+export enum CourseCategory {
+  DEVELOPMENT = 'Development',
+  BUSINESS = 'Business',
+  FINANCE_ACCOUNTING = 'Finance & Accounting',
+  IT_SOFTWARE = 'IT & Software',
+  OFFICE_PRODUCTIVITY = 'Office Productivity',
+  PERSONAL_DEVELOPMENT = 'Personal Development',
+  DESIGN = 'Design',
+  MARKETING = 'Marketing',
+  LIFESTYLE = 'Lifestyle',
+  PHOTOGRAPHY_VIDEO = 'Photography & Video',
+  HEALTH_FITNESS = 'Health & Fitness',
+  MUSIC = 'Music',
+  TEACHING_ACADEMICS = 'Teaching & Academics',
 }
 
-export class UpdateCourseDto {
+export class CreateCourseDTO {
   @IsString()
-  title: string;
-
-  @IsString()
-  description: string;
-
-  @IsNumber()
-  duration: number;
+  @MinLength(10, { message: 'Title must be at least 10 characters long' })
+  @IsNotEmpty({ message: 'Title is required' })
+  title!: string;
 
   @IsString()
-  category: string;
+  @MinLength(30, { message: 'Title must be at least 30 characters long' })
+  @IsNotEmpty({ message: 'Description is required' })
+  description!: string;
 
-  @IsNumber()
+  @IsUUID()
+  @IsNotEmpty({ message: 'category is required' })
+  category!: string;
+
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive()
   price: number;
-
-  @ValidateNested()
-  @Type(() => ImageDto)
-  image: ImageDto;
-
-  @IsOptional()
-  @IsMongoId({ each: true })
-  lectures?: Types.ObjectId[];
-
-  @IsOptional()
-  @IsMongoId()
-  quizz?: Types.ObjectId;
-
-  @IsString()
-  caption: string;
-}
-
-export class CreateCourseDto {
-  @IsString()
-  @IsNotEmpty()
-  title: string;
-
-  @IsString()
-  @IsNotEmpty()
-  description: string;
-
-  @IsNumber()
-  @IsNotEmpty()
-  duration: number;
-
-  @IsMongoId()
-  instructor: Types.ObjectId;
-
-  @IsString()
-  category: string;
-
-  @IsNumber()
-  price: number;
-
-  @ValidateNested()
-  @Type(() => ImageDto)
-  image: ImageDto;
-
-  @IsOptional()
-  @IsMongoId({ each: true })
-  lectures?: Types.ObjectId[];
-
-  @IsOptional()
-  @IsMongoId()
-  quizz?: Types.ObjectId;
-
-  @IsString()
-  caption: string;
 }

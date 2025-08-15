@@ -33,8 +33,14 @@ export class AuthenticateTokenUserGuard implements CanActivate {
 
     try {
       const verifiedToken = jwt.verify(token, JWT_ACCESS_TOKEN_SECRET) as any;
+      console.log("verifiedToken",verifiedToken);
+
       req.userId = verifiedToken.id;
       req.token = token;
+      req.user = {
+        id: verifiedToken.id,
+        role: verifiedToken.role,
+      };
       return true;
     } catch (err) {
       if (err.message === 'jwt expired') {

@@ -56,6 +56,12 @@ const config = () => {
       duration10m: env.JWT_EXPIRES_TEN_MINS,
       secret_user: env.JWT_ACCESS_TOKEN_SECRET_USER,
     },
+    aws: {
+      access_key: env.AWS_ACCESS_KEY_ID,
+      secret_key: env.AWS_SECRET_ACCESS_KEY,
+      region: env.AWS_REGION,
+      bucket_name: env.AWS_BUCKET_NAME,
+    },
   };
 };
 

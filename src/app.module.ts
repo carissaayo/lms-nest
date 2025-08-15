@@ -7,7 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import AppDataSource from './app/config/database.config';
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
-import { SecurityModule } from './app/security/security.module';
+import { CourseModule } from './app/course/course.module';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { SecurityModule } from './app/security/security.module';
     }),
     AuthModule,
     UserModule,
-    // SecurityModule,
+    CourseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

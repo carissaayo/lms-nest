@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  ChangePasswordDTO,
   LoginDto,
   RegisterDto,
   RequestResetPasswordDTO,
@@ -112,10 +113,7 @@ export class AuthService {
     await this.usersRepo.save(user);
 
     // Regenerate access token
-    const { token, refreshToken, session } = await generateToken(
-      user.id.toString(),
-      req,
-    );
+    const { token, refreshToken, session } = await generateToken(user, req);
 
     // Store session in an array as required by the schema
     user.sessions = [session];
@@ -222,7 +220,6 @@ export class AuthService {
       );
     }
 
-    // Hash new password
     await user.hasNewPassword(newPassword);
 
     user.passwordResetCode = null;
@@ -234,127 +231,36 @@ export class AuthService {
       message: 'Password reset successfully',
     };
   }
-  // async changePassword(
-  //   req: AuthenticatedRequest,
-  //   changePasswordDto: ChangePasswordDto,
-  // ): Promise<string> {
-  //   const { currentPassword, newPassword, confirmNewPassword } =
-  //     changePasswordDto;
-  //   if (!currentPassword || !newPassword || !confirmNewPassword) {
-  //     throw new UnauthorizedException('Password(s) not provided');
-  //   }
+  async changePassword(
+    changePasswordDto: ChangePasswordDTO,
+    req: CustomRequest,
+  ) {
+    console.log('changePassword');
 
-  //   const user = await this.userModel.findById(req.user.id);
-  //   if (!user) {
-  //     throw new NotFoundException('User not found');
-  //   }
+    const { password, newPassword, confirmNewPassword } = changePasswordDto;
 
-  //   const isMatch = await bcrypt.compare(currentPassword, user.password);
-  //   if (!isMatch) {
-  //     throw new UnauthorizedException("Current password isn't correct");
-  //   }
+    const user = await this.usersRepo.findOne({ where: { id: req.userId } });
 
-  //   if (newPassword !== confirmNewPassword) {
-  //     throw new UnauthorizedException('New passwords do not match');
-  //   }
+    if (!user) {
+      throw customError.forbidden('Access Denied');
+    }
 
-  //   const hashedPassword = await bcrypt.hash(
-  //     newPassword,
-  //     Number(this.configService.get<string>('SALTROUNDS')),
-  //   );
-  //   await this.userModel.findByIdAndUpdate(req.user.id, {
-  //     password: hashedPassword,
-  //   });
+    const isPasswordValid = await user.validatePassword(password);
 
-  //   return 'Password changed successfully';
-  // }
+    if (!isPasswordValid) {
+      throw customError.badRequest('Current password is incorrect');
+    }
 
-  // async requestResetPasswordLink(
-  //   req: AuthenticatedRequest,
-  //   userEmail: string,
-  // ): Promise<string> {
-  //   const email = req.user.email;
+    if (newPassword !== confirmNewPassword) {
+      throw customError.badRequest('New passwords do not match');
+    }
 
-  //   if (email !== userEmail) {
-  //     throw new UnauthorizedException(
-  //       'Email is different from the registered one',
-  //     );
-  //   }
+    await user.hasNewPassword(newPassword);
 
-  //   const user = await this.userModel.findOne({ email });
-  //   if (!user) {
-  //     throw new NotFoundException('No user found with the email');
-  //   }
+    await this.usersRepo.save(user);
 
-  //   const token = this.jwtService.sign(
-  //     { email },
-  //     { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '1h' },
-  //   );
-
-  //   await this.emailService.sendResetPasswordEmail(email, token);
-
-  //   return 'Password reset email sent';
-  // }
-
-  // async createNewPassword(res: Response, token: string): Promise<any> {
-  //   try {
-  //     const decoded = this.jwtService.verify(token, {
-  //       secret: this.configService.get<string>('JWT_SECRET'),
-  //     });
-  //     const user = await this.userModel.findOne({ email: decoded.email });
-
-  //     if (!user) {
-  //       throw new NotFoundException('No user found with the email');
-  //     }
-
-  //     // Return raw HTML
-  //     return `
-  //     <h1>Reset Password</h1>
-  //     <form action="/api/reset-password" method="POST">
-  //       <input type="hidden" name="token" value="${token}" />
-  //       <label for="password">New Password:</label>
-  //       <input type="password" name="password" required />
-  //       <input type="password" name="confirmPassword" required />
-  //       <button type="submit">Reset Password</button>
-  //     </form>
-  //   `;
-  //   } catch (error) {
-  //     throw new BadRequestException('Invalid or expired token');
-  //   }
-  // }
-
-  // async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<string> {
-  //   try {
-  //     const { token, newPassword, confirmNewPassword } = resetPasswordDto;
-
-  //     if (!token || !newPassword || !confirmNewPassword) {
-  //       throw new BadRequestException('All fields are required.');
-  //     }
-
-  //     if (newPassword !== confirmNewPassword) {
-  //       throw new BadRequestException('Passwords do not match.');
-  //     }
-
-  //     const decoded = this.jwtService.verify(token, {
-  //       secret: this.configService.get<string>('JWT_SECRET'),
-  //     });
-  //     const user = await this.userModel.findOne({ email: decoded.email });
-
-  //     if (!user) {
-  //       throw new NotFoundException('User not found');
-  //     }
-
-  //     const hashedPassword = await bcrypt.hash(
-  //       newPassword,
-  //       Number(this.configService.get<string>('SALTROUNDS')),
-  //     );
-  //     await this.userModel.findByIdAndUpdate(user._id, {
-  //       password: hashedPassword,
-  //     });
-
-  //     return 'Password reset successfully!';
-  //   } catch (error) {
-  //     throw new BadRequestException('Invalid or expired token');
-  //   }
-  // }
+    return {
+      message: 'Password changed successfully',
+    };
+  }
 }

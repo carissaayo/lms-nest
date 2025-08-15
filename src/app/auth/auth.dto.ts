@@ -59,20 +59,6 @@ export class VerifyEmailDTO {
   emailCode!: string;
 }
 
-export class ChangePasswordDto {
-  @IsString()
-  @IsNotEmpty()
-  newPassword: string;
-
-  @IsNotEmpty()
-  @IsString()
-  confirmNewPassword: string;
-
-  @IsNotEmpty()
-  @IsString()
-  currentPassword: string;
-}
-
 export class RequestResetPasswordDTO {
   @IsEmail({}, { message: 'Please provide a valid email address' })
   @IsNotEmpty({ message: 'Email is required' })
@@ -93,5 +79,18 @@ export class ResetPasswordDTO {
 
   @MatchesProperty('newPassword', { message: 'Passwords do not match' })
   @IsNotEmpty({ message: 'Please confirm your password' })
+  confirmNewPassword!: string;
+}
+
+export class ChangePasswordDTO {
+  @IsNotEmpty({ message: 'Current password is required' })
+  password!: string;
+
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @IsNotEmpty({ message: 'New password is required' })
+  newPassword!: string;
+
+  @MatchesProperty('newPassword', { message: 'Passwords do not match' })
+  @IsNotEmpty({ message: 'Please confirm your new password' })
   confirmNewPassword!: string;
 }
