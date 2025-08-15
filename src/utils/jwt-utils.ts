@@ -17,7 +17,7 @@ export const generateAccessToken = async (
 ) => {
   try {
     console.log('CONFIRMED: ACCESS TOKEN GENERATED!');
-    const tokenExpire = '1d'; // You can replace with appConfig.jwt.duration10m etc.
+    const tokenExpire = '1d';
     return jwt.sign({ id, role } as JwtPayload, secret, {
       expiresIn: tokenExpire,
     });
