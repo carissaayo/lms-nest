@@ -4,47 +4,52 @@ import {
   IsString,
   IsEmail,
   MinLength,
+  IsEnum,
 } from 'class-validator';
 import { UserRole } from '../user/user.entity';
+import { MatchesProperty } from '../common/validators/matches-property.validator';
 
 export class RegisterDto {
-  @IsNotEmpty()
   @IsString()
-  firstName: string;
-  @IsNotEmpty()
-  @IsString()
-  lastName: string;
-  @IsEmail()
-  @IsString()
-  @IsNotEmpty()
-  email: string;
+  @IsNotEmpty({ message: 'First Name is required' })
+  firstName!: string;
 
-  @IsNotEmpty()
   @IsString()
-  phoneNumber: string;
+  @IsNotEmpty({ message: 'Last Name is required' })
+  lastName!: string;
 
-  @IsNotEmpty()
+  @IsString()
+  @IsOptional()
+  otherName?: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Phone Number is required' })
+  phoneNumber!: string;
+
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsNotEmpty({ message: 'Email is required' })
+  email!: string;
+
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @IsNotEmpty({ message: 'Password is required' })
+  password!: string;
+
+  @MatchesProperty('password', { message: 'Passwords do not match' })
+  @IsNotEmpty({ message: 'Please confirm your password' })
+  confirmPassword!: string;
+
+  @IsNotEmpty({ message: 'role is required' })
   @IsString()
   role: UserRole;
-
-  @MinLength(6)
-  @IsString()
-  @IsNotEmpty()
-  password: string;
-
-  @MinLength(6)
-  @IsString()
-  @IsNotEmpty()
-  confirmPassword: string;
 }
 
 export class LoginDto {
   @IsEmail()
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Email is required' })
   email: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Password is required' })
   @IsString()
   password: string;
 }
@@ -68,16 +73,25 @@ export class ChangePasswordDto {
   currentPassword: string;
 }
 
-export class ResetPasswordDto {
-  @IsString()
-  @IsNotEmpty()
-  newPassword: string;
+export class RequestResetPasswordDTO {
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsNotEmpty({ message: 'Email is required' })
+  email!: string;
+}
+export class ResetPasswordDTO {
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsNotEmpty({ message: 'Email is required' })
+  email!: string;
 
-  @IsNotEmpty()
   @IsString()
-  confirmNewPassword: string;
+  @IsNotEmpty({ message: 'Password Reset code is required' })
+  passwordResetCode!: string;
 
-  @IsNotEmpty()
-  @IsString()
-  token: string;
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @IsNotEmpty({ message: 'Password is required' })
+  newPassword!: string;
+
+  @MatchesProperty('newPassword', { message: 'Passwords do not match' })
+  @IsNotEmpty({ message: 'Please confirm your password' })
+  confirmNewPassword!: string;
 }

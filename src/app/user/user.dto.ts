@@ -4,6 +4,7 @@ import {
   IsString,
   IsEmail,
   MinLength,
+  IsEnum,
 } from 'class-validator';
 
 export class AccountNumberDto {

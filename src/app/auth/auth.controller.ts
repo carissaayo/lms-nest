@@ -20,6 +20,8 @@ import {
   //   ChangePasswordDto,
   //   LoginDto,
   RegisterDto,
+  RequestResetPasswordDTO,
+  ResetPasswordDTO,
   VerifyEmailDTO,
   //   ResetPasswordDto,
 } from './auth.dto';
@@ -60,6 +62,19 @@ export class AuthController {
     return this.authService.verifyEmail(verifyEmailDto, req);
   }
 
+  @Post('request-password-reset')
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  async passwordResetRequest(
+    @Body() resetPasswordDto: RequestResetPasswordDTO,
+  ) {
+    return this.authService.requestResetPassword(resetPasswordDto);
+  }
+
+  @Post('password-reset')
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDTO) {
+    return this.authService.resetPassword(resetPasswordDto);
+  }
   //   @Public()
   //   @Get('verify-email')
   //   async verifyEmail(@Query('token') token: string) {

@@ -4,9 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
   OneToMany,
-  JoinColumn,
   BaseEntity,
   BeforeInsert,
 } from 'typeorm';
@@ -14,7 +12,6 @@ import * as bcrypt from 'bcryptjs';
 import { Course } from '../course/course.entity';
 import { Enrollment } from '../database/main.entity';
 import { Transaction } from '../transaction/transaction.entity';
-import { AuthInfo } from '../auth/auth-info.entity';
 export enum UserRole {
   STUDENT = 'student',
   INSTRUCTOR = 'instructor',
@@ -45,6 +42,9 @@ export class User extends BaseEntity {
   async hashPassword() {
     this.password = await bcrypt.hash(this.password, 10);
   }
+  async hasNewPassword(newPassword: string) {
+    this.password = await bcrypt.hash(newPassword, 10);
+  }
 
   async validatePassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
@@ -56,6 +56,12 @@ export class User extends BaseEntity {
   emailVerified!: boolean;
   @Column({ type: 'varchar', nullable: true })
   emailCode: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  passwordResetCode?: string | null;
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date | null;
+
   @Column({ default: true })
   isActive!: boolean;
   @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
@@ -108,9 +114,6 @@ export class User extends BaseEntity {
 
   @Column({ type: 'int', default: 0 })
   failedPasswordResetAttempts: number;
-
-  @Column({ type: 'varchar', nullable: true })
-  passwordResetCode?: string;
 
   @Column({ type: 'timestamp', nullable: true })
   nextEmailVerifyDate?: Date;
