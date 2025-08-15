@@ -3,33 +3,37 @@ import { Reflector } from '@nestjs/core';
 import { UserRole } from 'src/app/user/user.entity';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { customError } from 'libs/custom-handlers';
+import { JwtPayload } from 'src/utils/jwt-utils';
+import * as jwt from 'jsonwebtoken';
+import config from 'src/app/config/config';
 
+const appConfig = config();
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
-
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-    if (!requiredRoles) {
-      return true;
-    }
-    const { user } = context.switchToHttp().getRequest();
-    console.log('requiredRoles:', requiredRoles);
-    console.log('user.role:', user?.role);
-    if (!user) {
-      throw customError.forbidden(
-        'Access Denied. You do not have the permission',
-      );
+    const request = context.switchToHttp().getRequest();
+    const authHeader = request.headers['authorization'];
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw customError.unauthorized('Access token is missing');
     }
 
-    if (!requiredRoles.includes(user.role)) {
-      throw customError.forbidden(
-        'Access Denied. You do not have the permission',
-      );
+    const token = authHeader.split(' ')[1];
+
+    try {
+      // Verify only against ACCESS TOKEN secret
+      const decoded = jwt.verify(
+        token,
+        appConfig.jwt.access_token,
+      ) as JwtPayload;
+
+      // Attach user payload to request
+      request.user = decoded;
+
+      return true;
+    } catch (err) {
+      throw customError.badRequest('Invalid or expired access token');
     }
-    return requiredRoles.includes(user.role);
   }
 }
