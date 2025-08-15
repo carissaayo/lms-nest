@@ -1,16 +1,13 @@
-import { UsersService } from '../user/user.service';
-import { JwtService } from '@nestjs/jwt';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-
+import { Injectable } from '@nestjs/common';
 import {
-  ChangePasswordDto,
   LoginDto,
   RegisterDto,
-  ResetPasswordDto,
+  RequestResetPasswordDTO,
+  ResetPasswordDTO,
   VerifyEmailDTO,
 } from './auth.dto';
 import { User } from '../user/user.entity';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { customError } from 'libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
@@ -135,26 +132,6 @@ export class AuthService {
     };
   }
 
-  // async resendVerificationEmail(email: string): Promise<string> {
-  //   const user = await this.userModel.findOne({ email });
-  //   if (!user) {
-  //     throw new NotFoundException('User not found');
-  //   }
-
-  //   if (user.isVerified) {
-  //     throw new BadRequestException('Email is already verified');
-  //   }
-
-  //   const verificationToken = this.jwtService.sign(
-  //     { email: user.email },
-  //     { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '1d' },
-  //   );
-
-  //   await this.emailService.sendVerificationEmail(email, verificationToken);
-
-  //   return 'Verification email resent successfully!';
-  // }
-
   async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
     const { emailCode } = verifyEmailDto;
     const trimmedEmailCode = emailCode?.trim();
@@ -188,6 +165,73 @@ export class AuthService {
       accessToken: req.token,
       profile,
       message: 'Email Verified Successfully',
+    };
+  }
+
+  async requestResetPassword(resetPasswordDto: RequestResetPasswordDTO) {
+    console.log('requestResetPassword');
+
+    const { email } = resetPasswordDto;
+
+    const user = await this.usersRepo.findOne({ where: { email } });
+
+    if (!user) {
+      throw customError.badRequest('User not found');
+    }
+
+    if (!user.isActive) {
+      throw customError.badRequest(
+        'Your account has been suspended. Please contact the administrator',
+      );
+    }
+
+    const resetCode = generateOtp('numeric', 8);
+    user.passwordResetCode = resetCode;
+    user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+
+    await this.usersRepo.save(user);
+
+    // Send password reset email
+    await this.emailService.sendPasswordResetEmail(email, resetCode);
+
+    return {
+      message: 'PASSWORD RESET CODE SENT TO YOUR EMAIL',
+    };
+  }
+  async resetPassword(resetPasswordDto: ResetPasswordDTO) {
+    console.log('resetPassword');
+
+    const { email, passwordResetCode, newPassword } = resetPasswordDto;
+
+    // Find user with matching code and unexpired reset time
+    const user = await this.usersRepo.findOne({
+      where: {
+        email,
+        passwordResetCode,
+        resetPasswordExpires: MoreThan(new Date()),
+      },
+    });
+
+    if (!user) {
+      throw customError.badRequest('Invalid or expired reset code');
+    }
+
+    if (!user.isActive) {
+      throw customError.badRequest(
+        'Your account has been suspended. Please contact the administrator',
+      );
+    }
+
+    // Hash new password
+    await user.hasNewPassword(newPassword);
+
+    user.passwordResetCode = null;
+    user.resetPasswordExpires = null;
+
+    await this.usersRepo.save(user);
+
+    return {
+      message: 'Password reset successfully',
     };
   }
   // async changePassword(

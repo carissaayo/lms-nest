@@ -1,82 +1,64 @@
-// import {
-//   Controller,
-//   Get,
-//   Param,
-//   Body,
-//   Patch,
-//   UseGuards,
-//   Req,
-// } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Body,
+  Patch,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import { User } from './user.entity';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CustomRequest } from 'src/utils/auth-utils';
+import { UsersService } from './user.service';
+import {
+  AuthenticateTokenUserGuard,
+  ReIssueTokenUserGuard,
+} from '../common/guards/user-auth.guard';
 
-// import {
-//   AuthenticatedRequest,
-//   RolesGuard,
-// } from '../domain/middleware/role.guard';
-// import { Roles } from '../domain/middleware/role.decorator';
-// import { Role } from '../domain/enums/roles.enum';
-// import { UsersService } from 'src/app/user/user.service';
-// import { UpdateUserDto } from './user.dto';
+@Controller('users')
+@UseGuards()
+export class UsersController {
+  constructor(private usersService: UsersService) {}
 
-// @Controller('users')
-// @UseGuards(RolesGuard)
-// export class UsersController {
-//   constructor(private readonly usersService: UsersService) {}
+  @Get('profile')
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  async getUserProfile(@Req() req: CustomRequest) {
+    return this.usersService.viewProfile(req);
+  }
 
-//   @Patch(':id/role')
-//   @Roles(Role.ADMIN)
-//   async changeUserRole(
-//     @Req() req: AuthenticatedRequest,
-//     @Param('id') userId: string,
-//     @Body('newRole') newRole: Role,
-//   ) {
-//     return await this.usersService.assignRole(req, userId, newRole);
-//   }
+  //   @Get(':id')
+  //   async getUserByAdmin(
+  //     @Req() req: AuthenticatedRequest,
+  //     @Param('id') userId: string,
+  //   ) {
+  //     return this.usersService.getSingleUserByAdmin(req, userId);
+  //   }
 
-//   @Get()
-//   @Roles(Role.ADMIN)
-//   async getAllUsers(@Req() req: AuthenticatedRequest) {
-//     return this.usersService.getAllUsers(req);
-//   }
+  //   @Patch('user/update')
+  //   async resetPassword(
+  //     @Req() req: AuthenticatedRequest,
+  //     @Body()
+  //     body: UpdateUserDto,
+  //     @Param('id') userId: string,
+  //   ) {
+  //     return await this.usersService.updateUserProfile(req, userId, body);
+  //   }
 
-//   @Get(':id')
-//   async getUserById(
-//     @Req() req: AuthenticatedRequest,
-//     @Param('id') userId: string,
-//   ) {
-//     return this.usersService.getSingleUser(req, userId);
-//   }
+  //   @Patch('user/delete')
+  //   async deleteUser(
+  //     @Req() req: AuthenticatedRequest,
+  //     @Param('id') userId: string,
+  //   ) {
+  //     return await this.usersService.deleteUser(req, userId);
+  //   }
 
-//   @Get(':id')
-//   async getUserByAdmin(
-//     @Req() req: AuthenticatedRequest,
-//     @Param('id') userId: string,
-//   ) {
-//     return this.usersService.getSingleUserByAdmin(req, userId);
-//   }
-
-//   @Patch('user/update')
-//   async resetPassword(
-//     @Req() req: AuthenticatedRequest,
-//     @Body()
-//     body: UpdateUserDto,
-//     @Param('id') userId: string,
-//   ) {
-//     return await this.usersService.updateUserProfile(req, userId, body);
-//   }
-
-//   @Patch('user/delete')
-//   async deleteUser(
-//     @Req() req: AuthenticatedRequest,
-//     @Param('id') userId: string,
-//   ) {
-//     return await this.usersService.deleteUser(req, userId);
-//   }
-
-//   @Patch('user/make-admin')
-//   async makeUserAdmin(
-//     @Req() req: AuthenticatedRequest,
-//     @Param('id') userId: string,
-//   ) {
-//     return await this.usersService.makeUserAdmin(req, userId);
-//   }
-// }
+  //   @Patch('user/make-admin')
+  //   async makeUserAdmin(
+  //     @Req() req: AuthenticatedRequest,
+  //     @Param('id') userId: string,
+  //   ) {
+  //     return await this.usersService.makeUserAdmin(req, userId);
+  //   }
+}

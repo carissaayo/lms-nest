@@ -13,8 +13,8 @@ export const generateAccessToken = async (
     const tenMinutes = appConfig.jwt.duration10m;
     const thirtyDays = appConfig.jwt.duration30d;
     const ninetyDays = appConfig.jwt.duration90d;
-    const tokenExpire =
-      type === 'mins' ? tenMinutes : type === 'month' ? thirtyDays : ninetyDays;
+    const tokenExpire = '1d';
+    //   type === 'mins' ? tenMinutes : type === 'month' ? thirtyDays : ninetyDays;
 
     return jwt.sign(
       {

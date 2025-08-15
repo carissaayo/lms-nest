@@ -13,6 +13,15 @@ import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RegisterDto } from '../auth/auth.dto';
+import { CustomRequest, GET_PROFILE } from 'src/utils/auth-utils';
+import { customError } from 'libs/custom-handlers';
+import { ProfileInterface } from '../auth/auth.interface';
+
+interface ViewProfileResponse {
+  accessToken: string;
+  profile: ProfileInterface;
+  message: string;
+}
 
 @Injectable()
 export class UsersService {
@@ -25,6 +34,30 @@ export class UsersService {
     const user = this.usersRepo.create(dto);
     return this.usersRepo.save(user);
   }
+  async viewProfile(req: CustomRequest) {
+    console.log('viewProfile');
+
+    const user = await this.usersRepo.findOne({
+      where: { id: req.userId },
+    });
+
+    if (!user) {
+      throw customError.forbidden('Access Denied');
+    }
+
+    // build profile
+    const profile: ProfileInterface = GET_PROFILE(user);
+
+    // save updated user
+    await this.usersRepo.save(user);
+
+    return {
+      accessToken: req.token || '',
+      profile,
+      message: 'Profile fetched successfully',
+    };
+  }
+
   // async makeUserAdmin(req: AuthenticatedRequest, userId: string) {
   //   const user = await this.userModel.findOne({
   //     _id: userId,

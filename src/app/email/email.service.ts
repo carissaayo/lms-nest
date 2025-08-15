@@ -67,52 +67,21 @@ export class EmailService {
     await this.sendEmail({ to: email, subject, text, html });
   }
 
-  //   async sendResetPasswordEmail(email: string, token: string) {
-  //     const resetPasswordLink = `${this.configService.get<string>('APP_URL')}/auth/verify-email?token=${token}`;
+  async sendPasswordResetEmail(email: string, code: string): Promise<void> {
+    const appName = this.configService.get<string>('app.name');
+    const subject = `${appName} Password Reset`;
+    const text = `Your password reset code is: ${code}\n\nThis code will expire in 30 minutes.\n\nIf you didn't request this, please ignore this email.`;
 
-  //     const mailOptions = {
-  //       from: this.configService.get<string>('EMAIL_USERNAME'),
-  //       to: email,
-  //       subject: 'Reset Password',
-  //       text: `Click the link below to reset your password:\n\n${resetPasswordLink}`,
-  //     };
+    const html = `
+    <h1>Password Reset</h1>
+    <p>Your password reset code is: <strong>${code}</strong></p>
+    <p>This code will expire in 30 minutes.</p>
+    <p>If you didn't request this, please ignore this email.</p>
+  `;
 
-  //     try {
-  //       await this.transporter.sendMail(mailOptions);
-  //     } catch (error) {
-  //       console.error('Error sending email:', error);
-  //       throw new InternalServerErrorException(
-  //         'Failed to send verification email',
-  //       );
-  //     }
-  //   }
+    await this.sendEmail({ to: email, subject, text, html });
+  }
 }
-
-// export const sendEmail = async (options: EmailOptions): Promise<void> => {
-//   try {
-//     const mailOptions = {
-//       from: `"${process.env.SITE_NAME || "Credlock"}" <${
-//         process.env.GMAIL_ADDRESS || "your-app-email@gmail.com"
-//       }>`,
-//       to: options.to,
-//       subject: options.subject,
-//       text: options.text,
-//       html: options.html,
-//     };
-
-//     console.log("Attempting to send email to:", options.to);
-
-//     const info = await transporter.sendMail(mailOptions);
-//     console.log("Email sent successfully:", info.messageId);
-
-//     return Promise.resolve();
-//   } catch (error) {
-//     console.error("Error sending email:", error);
-//     // Log the error but don't throw it to prevent breaking the application flow
-//     console.log("Email sending failed but process will continue");
-//     return Promise.resolve(); // Resolve anyway to prevent breaking the flow
-//   }
-// };
 
 // export const sendWelcomeEmail = async (
 //   email: string,
