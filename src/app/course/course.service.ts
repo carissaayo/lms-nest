@@ -9,7 +9,7 @@ import { CreateCourseDTO } from './course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'libs/custom-handlers';
 import { singleImageValidation } from 'src/utils/file-validation';
-import { saveImageS3 } from '../fileUpload/image-upload.service';
+import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
 
 @Injectable()
 export class CourseService {
@@ -39,32 +39,37 @@ export class CourseService {
       throw customError.badRequest('body is missing');
     }
 
-    console.log(coverImage);
-
     const { title, description, category, price } = createCourseDto;
-    const files = req.files || {};
-    if (files.lenghth < 1) {
+
+    if (!coverImage) {
       throw customError.badRequest('coverImage is required found');
     }
+
     const instructor = await this.userRepo.findOne({
       where: { id: req.userId },
     });
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-
     let categoryEntity: Category | undefined;
+
     if (category) {
-      const categoryEntity = await this.categoryRepo.findOne({
+      const found = await this.categoryRepo.findOne({
         where: { id: category },
       });
-      if (!categoryEntity) {
+
+      if (!found) {
         throw new NotFoundException('Category not found');
       }
+
+      categoryEntity = found; // ✅ safe now
     }
 
-    if (coverImage) {
-      singleImageValidation(coverImage, 'a cover image for the course');
+    singleImageValidation(coverImage, 'a cover image for the course');
+
+    const uploadImg = await saveImageS3(coverImage, `images/courses`);
+    if (!uploadImg || uploadImg.length <= 0) {
+      throw customError.badRequest('Invalid cover Image');
     }
 
     const course = this.courseRepo.create({
@@ -73,66 +78,89 @@ export class CourseService {
       category: categoryEntity,
       price,
       instructor,
-      //   coverImage,
+      coverImage: uploadImg,
     });
 
-    let uploadImg: string | undefined;
+    await this.courseRepo.save(course);
 
-    if (files && files.length > 0) {
-      const path = `images/courses`;
-      uploadImg = await saveImageS3(coverImage, path);
-    }
-
-    if (uploadImg && uploadImg?.length > 0) {
-      course.coverImage = uploadImg;
-    }
-
-    return await this.courseRepo.save(course);
+    return {
+      accessToken: req.token,
+      course,
+      message: 'Course created successfully',
+    };
   }
 
   /**
    * Edit an existing course
    */
-  //   async editCourse(
-  //     courseId: string,
-  //     instructorId: string,
-  //     updateData: Partial<
-  //       Pick<Course, 'title' | 'description' | 'coverImage'>
-  //     > & { categoryId?: string },
-  //   ) {
-  //     const course = await this.courseRepo.findOne({
-  //       where: { id: courseId },
-  //       relations: ['instructor', 'category'],
-  //     });
+  async updateCourse(
+    courseId: string,
+    updateCourseDto: Partial<CreateCourseDTO>,
+    coverImage: Express.Multer.File,
+    req: CustomRequest,
+  ) {
+    if (!updateCourseDto && !coverImage) {
+      throw customError.badRequest('No update data provided');
+    }
 
-  //     if (!course) {
-  //       throw new NotFoundException('Course not found');
-  //     }
+    const course = await this.courseRepo.findOne({
+      where: { id: courseId },
+      relations: ['instructor', 'category'],
+    });
 
-  //     if (course.instructor.id !== instructorId) {
-  //       throw new ForbiddenException('You are not allowed to edit this course');
-  //     }
+    if (!course) {
+      throw customError.notFound('Course not found');
+    }
 
-  //     if (updateData.categoryId) {
-  //       const category = await this.categoryRepo.findOne({
-  //         where: { id: updateData.categoryId },
-  //       });
-  //       if (!category) {
-  //         throw new NotFoundException('Category not found');
-  //       }
-  //       course.category = category;
-  //     }
+    if (course.instructor.id !== req.userId) {
+      throw customError.forbidden('You can only update your  course');
+    }
 
-  //     if (updateData.title !== undefined) course.title = updateData.title;
-  //     if (updateData.description !== undefined)
-  //       course.description = updateData.description;
-  //     if (updateData.coverImage !== undefined)
-  //       course.coverImage = updateData.coverImage;
+    const { title, description, category, price } = updateCourseDto || {};
 
-  //     return await this.courseRepo.save(course);
-  //   }
+    if (category) {
+      const foundCategory = await this.categoryRepo.findOne({
+        where: { id: category },
+      });
+      if (!foundCategory) {
+        throw customError.notFound('Category not found');
+      }
+      course.category = foundCategory;
+    }
 
-  //   /**
+    if (coverImage) {
+      singleImageValidation(coverImage, 'a cover image for the course');
+
+      // Delete old image from S3 if exists
+      if (course.coverImage) {
+        try {
+          await deleteImageS3(course.coverImage);
+        } catch (err) {
+          console.warn(' Failed to delete old cover image:', err.message);
+        }
+      }
+
+      // Upload new one
+      const uploadImg = await saveImageS3(coverImage, `images/courses`);
+      if (!uploadImg || uploadImg.length <= 0) {
+        throw customError.badRequest('Invalid cover image');
+      }
+      course.coverImage = uploadImg;
+    }
+
+    if (title) course.title = title;
+    if (description) course.description = description;
+    if (price !== undefined) course.price = price;
+
+    await this.courseRepo.save(course);
+
+    return {
+      accessToken: req.token,
+      course,
+      message: 'Course updated successfully',
+    };
+  }
+
   //    * Add a lesson to a course
   //    */
   //   async addLessonToCourse(

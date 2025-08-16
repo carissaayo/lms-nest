@@ -9,17 +9,16 @@ import {
   UploadedFile,
   UseInterceptors,
   Query,
-  Request,
   Req,
-  UsePipes,
-  ValidationPipe,
+  Patch,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CourseService } from './course.service';
 import { UserRole } from '../user/user.entity';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CustomRequest } from 'src/utils/auth-utils';
-import { CreateCourseDTO } from './course.dto';
+import { CreateCourseDTO, UpdateCourseDTO } from './course.dto';
 import { RolesGuard } from '../common/guards/role.guard';
 import {
   AuthenticateTokenUserGuard,
@@ -27,12 +26,6 @@ import {
 } from '../common/guards/user-auth.guard';
 
 @Controller('courses')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
 @Roles(UserRole.INSTRUCTOR)
 export class CourseController {
@@ -48,6 +41,21 @@ export class CourseController {
     return this.courseService.createCourse(createCourseDto, coverImage, req);
   }
 
+  @Patch(':courseId')
+  @UseInterceptors(FileInterceptor('coverImage'))
+  async updateCourse(
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Body() updateCourseDto: UpdateCourseDTO,
+    @UploadedFile() coverImage: Express.Multer.File,
+    @Req() req: CustomRequest,
+  ) {
+    return this.courseService.updateCourse(
+      courseId,
+      updateCourseDto,
+      coverImage,
+      req,
+    );
+  }
   //   // Public routes
   //   @Public()
   //   @Get('filter')
