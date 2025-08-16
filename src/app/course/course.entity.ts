@@ -57,6 +57,9 @@ export class Course extends BaseEntity {
   @Column({ default: false })
   isSubmitted: boolean;
 
+  @CreateDateColumn({ nullable: true })
+  submittedAt?: Date;
+
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 

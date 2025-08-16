@@ -215,6 +215,9 @@ export class CourseService {
     };
   }
 
+  /**
+   * Delete a course  by an instructor
+   */
   async deleteCourse(courseId: string, req: CustomRequest) {
     const course = await this.courseRepo.findOne({
       where: { id: courseId, deleted: false },
@@ -233,6 +236,36 @@ export class CourseService {
 
     return {
       message: 'Course deleted successfully',
+    };
+  }
+
+  /**
+   * Submit a course for approval  by an instructor
+   */
+  async submitCourse(courseId: string, req: CustomRequest) {
+    // Find the course that hasn’t been deleted
+    const course = await this.courseRepo.findOne({
+      where: { id: courseId, deleted: false },
+      relations: ['instructor'],
+    });
+
+    if (!course) {
+      throw customError.notFound('Course not found');
+    }
+
+    if (course.instructor.id !== req.userId) {
+      throw customError.forbidden('You can only delete your courses');
+    }
+
+    course.isSubmitted = true;
+    course.submittedAt = new Date();
+
+    await this.courseRepo.save(course);
+
+    return {
+      message: 'Course submitted successfully',
+      accessToken: req.token,
+      course,
     };
   }
 }
