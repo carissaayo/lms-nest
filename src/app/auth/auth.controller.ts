@@ -29,6 +29,7 @@ import {
   AuthenticateTokenUserGuard,
   ReIssueTokenUserGuard,
 } from '../common/guards/user-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 
 @Controller('auth')
 @UsePipes(
@@ -47,6 +48,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Public()
   async login(@Body() loginDto: LoginDto, @Req() req: CustomRequest) {
     return this.authService.login(loginDto, req);
   }

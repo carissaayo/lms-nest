@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsOptional,
@@ -39,7 +40,31 @@ export class CreateCourseDTO {
   @IsNotEmpty({ message: 'category is required' })
   category!: string;
 
-  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsNumber()
   @IsPositive()
-  price: number;
+  @IsNotEmpty({ message: 'price is required' })
+  @Type(() => Number)
+  price!: number;
+}
+
+export class UpdateCourseDTO {
+  @IsString()
+  @IsOptional()
+  @MinLength(10, { message: 'Title must be at least 10 characters long' })
+  title?: string;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(30, { message: 'Description must be at least 30 characters long' })
+  description?: string;
+
+  @IsUUID()
+  @IsOptional()
+  category?: string;
+
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  @IsOptional()
+  price?: number;
 }

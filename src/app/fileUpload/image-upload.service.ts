@@ -189,3 +189,39 @@ export const saveImageS3 = async (
 
   return saveToS3.Location;
 };
+
+// Delete image from S3 using its full URL
+export const deleteImageS3 = async (imageUrl: string): Promise<void> => {
+  if (!imageUrl) return;
+
+  AWS.config.update({
+    accessKeyId: appConfig.aws.access_key,
+    secretAccessKey: appConfig.aws.secret_key,
+    region: appConfig.aws.region,
+  });
+
+  const s3 = new AWS.S3();
+
+  // Extract the Key from the imageUrl
+  // Example: https://bucket-name.s3.region.amazonaws.com/images/courses-abc123.png
+  const bucket = appConfig.aws.bucket_name;
+
+  // Get the key by removing domain part
+  const url = new URL(imageUrl);
+  const key = url.pathname.startsWith('/')
+    ? url.pathname.slice(1)
+    : url.pathname;
+
+  const params = {
+    Bucket: bucket,
+    Key: key,
+  };
+
+  try {
+    await s3.deleteObject(params).promise();
+    console.log(`🗑️ Deleted old image from S3: ${key}`);
+  } catch (err) {
+    console.error('❌ Failed to delete image from S3:', err);
+    throw customError.custom('Failed to delete image from S3', 500);
+  }
+};
