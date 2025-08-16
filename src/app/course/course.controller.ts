@@ -67,4 +67,9 @@ export class CourseController {
   async deleteCourse(@Param('id') courseId: string, @Req() req: CustomRequest) {
     return this.courseService.deleteCourse(courseId, req);
   }
+
+  @Patch(':id/submit')
+  async submitCourse(@Param('id') courseId: string, @Req() req: CustomRequest) {
+    return this.courseService.submitCourse(courseId, req);
+  }
 }
