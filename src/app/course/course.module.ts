@@ -7,10 +7,11 @@ import { CourseController } from './course.controller';
 
 import { Category } from '../database/main.entity';
 import { User } from '../user/user.entity';
+import { EmailService } from '../email/email.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Course, Category, User])],
-  providers: [CourseService],
+  providers: [CourseService, EmailService],
   controllers: [CourseController],
   exports: [CourseService, TypeOrmModule],
 })

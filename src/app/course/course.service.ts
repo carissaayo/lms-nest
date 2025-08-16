@@ -11,6 +11,7 @@ import { customError } from 'libs/custom-handlers';
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
 import { DBQuery, DBQueryCount, QueryString } from '../database/dbquery';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class CourseService {
@@ -23,6 +24,8 @@ export class CourseService {
 
     @InjectRepository(Category)
     private readonly categoryRepo: Repository<Category>,
+
+    private readonly emailService: EmailService,
 
     // @InjectRepository(Lesson)
     // private readonly lessonRepo: Repository<Lesson>,
@@ -84,6 +87,12 @@ export class CourseService {
 
     await this.courseRepo.save(course);
 
+    // // Send submission email
+    await this.emailService.courseCreation(
+      instructor.email,
+      instructor.firstName,
+      course.title,
+    );
     return {
       accessToken: req.token,
       course,
@@ -152,9 +161,16 @@ export class CourseService {
     if (title) course.title = title;
     if (description) course.description = description;
     if (price !== undefined) course.price = price;
-
+    if (course.isSubmitted) course.isSubmitted = false;
+    if (course.submittedAt) course.submittedAt = undefined;
     await this.courseRepo.save(course);
-
+    const instructor = course.instructor;
+    // // Send updating email
+    await this.emailService.courseUpdating(
+      instructor.email,
+      instructor.firstName,
+      course.title,
+    );
     return {
       accessToken: req.token,
       course,
@@ -234,6 +250,14 @@ export class CourseService {
     course.deleted = true;
     await this.courseRepo.save(course);
 
+    await this.courseRepo.save(course);
+    const instructor = course.instructor;
+    // // Send submission email
+    await this.emailService.courseDeletion(
+      instructor.email,
+      instructor.firstName,
+      course.title,
+    );
     return {
       message: 'Course deleted successfully',
     };
@@ -243,7 +267,6 @@ export class CourseService {
    * Submit a course for approval  by an instructor
    */
   async submitCourse(courseId: string, req: CustomRequest) {
-    // Find the course that hasn’t been deleted
     const course = await this.courseRepo.findOne({
       where: { id: courseId, deleted: false },
       relations: ['instructor'],
@@ -261,6 +284,13 @@ export class CourseService {
     course.submittedAt = new Date();
 
     await this.courseRepo.save(course);
+    const instructor = course.instructor;
+    // // Send submission email
+    await this.emailService.courseSubmission(
+      instructor.email,
+      instructor.firstName,
+      course.title,
+    );
 
     return {
       message: 'Course submitted successfully',

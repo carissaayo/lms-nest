@@ -99,6 +99,81 @@ export class EmailService {
 
     await this.sendEmail({ to: email, subject, text, html });
   }
+
+  async courseCreation(
+    email: string,
+    firstName: string,
+    title: string,
+  ): Promise<void> {
+    const appName = this.configService.get<string>('app.name');
+    const subject = `${appName} Course Creation`;
+    const text = `Hi ${firstName}, your course ${title} has been created and pending submission.`;
+
+    const html = `
+    <h1>New Course Creation</h1>
+    <p>Hi ${firstName},</p>
+    <p>Your course, ${title}, has been created successfully.</p>
+    <p>You can now decide to submit it for approval.</p>
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
+  async courseUpdating(
+    email: string,
+    firstName: string,
+    title: string,
+  ): Promise<void> {
+    const appName = this.configService.get<string>('app.name');
+    const subject = `${appName} Course Update`;
+    const text = `Hi ${firstName}, your course ${title} has been updated successfully.`;
+
+    const html = `
+    <h1>Course Update</h1>
+    <p>Hi ${firstName},</p>
+    <p>Your course, ${title}, has been updated successfully.</p>
+    <p>You have to re-submit it for approval</p>
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
+
+  async courseSubmission(
+    email: string,
+    firstName: string,
+    title: string,
+  ): Promise<void> {
+    const appName = this.configService.get<string>('app.name');
+    const subject = `${appName} Course Submission`;
+    const text = `Hi ${firstName}, your course ${title} has been submitted for approval.`;
+
+    const html = `
+    <h1>New course Submission</h1>
+    <p>Hi ${firstName},</p>
+    <p>Your course, ${title}, has been submitted for approval.</p>
+    <p>We will notify you as soon as there is an update on it.</p>
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
+
+  async courseDeletion(
+    email: string,
+    firstName: string,
+    title: string,
+  ): Promise<void> {
+    const appName = this.configService.get<string>('app.name');
+    const subject = `${appName} Course Deletion`;
+    const text = `Hi ${firstName}, your course ${title} has been deleted`;
+
+    const html = `
+    <h1>Course Deletion</h1>
+    <p>Hi ${firstName},</p>
+    <p>Your course, ${title}, has been deleted.</p>
+    <p>If this wasn't your doing, please reach out to us.</p>
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
 }
 
 // export const sendPasswordChangeNotificationEmail = async (
