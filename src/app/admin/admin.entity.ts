@@ -8,30 +8,30 @@ import {
 } from 'typeorm';
 
 import * as bcrypt from 'bcryptjs';
+import { UserRole } from '../user/user.entity';
+
+export enum AdminStatus {
+  PENDING = 'pending',
+  APPPROVED = 'approved',
+  REJECTED = 'rejected',
+}
 
 @Entity('user_admins')
 export class UserAdmin {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true })
-  firstName: string;
-
-  @Column({ nullable: true })
-  lastName: string;
-
-  @Column({ nullable: true })
-  otherName: string;
-
-  @Column({ nullable: true })
-  alias: string;
-
-  @Column({ nullable: true })
-  orgName: string;
+  @Column()
+  firstName!: string;
+  @Column()
+  lastName!: string;
+  @Column({ unique: true })
+  email!: string;
 
   @Column({ nullable: true })
   state: string;
-
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
+  role!: UserRole;
   @Column({ nullable: true })
   city: string;
 
@@ -42,13 +42,22 @@ export class UserAdmin {
   picture: string;
 
   @Column({ nullable: true })
-  phoneNumber: string;
-
-  @Column({ nullable: true, unique: true })
-  email: string;
+  phoneNumber!: string;
 
   @Column({ nullable: true })
-  password: string;
+  password!: string;
+  @Column({ default: false })
+  emailVerified!: boolean;
+  @Column({ type: 'varchar', nullable: true })
+  emailCode: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  passwordResetCode?: string | null;
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date | null;
+
+  @Column({ default: true })
+  isActive!: boolean;
 
   @Column({ nullable: true })
   ipAddress: string;
@@ -73,24 +82,41 @@ export class UserAdmin {
 
   @Column({ default: 0 })
   failedSignInAttempts: number;
+  @Column({
+    type: 'enum',
+    enum: AdminStatus,
+    default: AdminStatus.PENDING,
+  })
+  status!: string;
 
-  @Column({ default: true })
-  isActive: boolean;
+  @UpdateDateColumn()
+  updatedAt!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  nextAuthDate?: Date;
 
-  @Column({ default: false })
-  emailVerified: boolean;
+  @Column({ type: 'int', default: 0 })
+  failedAuthAttempts: number;
 
-  @Column({ nullable: true })
-  emailCode: string;
+  @Column({ type: 'timestamp', nullable: true })
+  nextPasswordResetDate?: Date;
 
-  @Column({ nullable: true })
-  passwordResetCode: string;
+  @Column({ type: 'int', default: 0 })
+  failedPasswordResetAttempts: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  nextEmailVerifyDate?: Date;
+
+  @Column({ type: 'int', default: 0 })
+  failedEmailVerifyAttempts: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  nextSignInAttempt: Date | null;
+
+  @Column({ type: 'boolean', default: false })
+  isSignedUp: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
   passwordResetExpires: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  nextSignInAttempt: Date;
 
   @Column({ type: 'jsonb', default: [] })
   actions: any[];
@@ -98,16 +124,17 @@ export class UserAdmin {
   @Column({ default: false })
   deleted: boolean;
 
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-
   @BeforeInsert()
   async hashPassword() {
     if (this.password) {
       this.password = await bcrypt.hash(this.password, 10);
     }
+  }
+  async hasNewPassword(newPassword: string) {
+    this.password = await bcrypt.hash(newPassword, 10);
+  }
+
+  async validatePassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.password);
   }
 }

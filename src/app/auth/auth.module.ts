@@ -8,6 +8,11 @@ import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '../user/user.module';
 import { UsersService } from '../user/user.service';
 import { EmailModule } from '../email/email.module';
+import { AdminAuthController } from './admin-auth.controller';
+import { AdminAuthService } from './admin-auth.service';
+import { UserAdmin } from '../admin/admin.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../user/user.entity';
 
 @Module({
   imports: [
@@ -19,13 +24,14 @@ import { EmailModule } from '../email/email.module';
         signOptions: { expiresIn: '1d' },
       }),
     }),
-    UserModule,
+
     PassportModule,
     EmailModule,
+    TypeOrmModule.forFeature([UserAdmin, User]),
   ],
 
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  controllers: [AuthController, AdminAuthController],
+  providers: [AuthService, JwtStrategy, AdminAuthService],
+  exports: [AuthService, AdminAuthService],
 })
 export class AuthModule {}

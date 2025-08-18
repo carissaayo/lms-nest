@@ -7,24 +7,25 @@ import {
   ResetPasswordDTO,
   VerifyEmailDTO,
 } from './auth.dto';
-import { User } from '../user/user.entity';
+
 import { MoreThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { customError } from 'libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
 import { EmailService } from '../email/email.service';
+import { CustomRequest, generateToken } from 'src/utils/auth-utils';
+
+import { UserAdmin } from '../admin/admin.entity';
 import {
-  CustomRequest,
-  generateToken,
-  GET_PROFILE,
+  GET_ADMIN_PROFILE,
   handleFailedAuthAttempt,
-} from 'src/utils/auth-utils';
-import { ProfileInterface } from './auth.interface';
+} from 'src/utils/admin-auth-utils';
+import { AdminProfileInterface } from '../admin/admin.interface';
 
 @Injectable()
-export class AuthService {
+export class AdminAuthService {
   constructor(
-    @InjectRepository(User) private usersRepo: Repository<User>,
+    @InjectRepository(UserAdmin) private usersRepo: Repository<UserAdmin>,
     private emailService: EmailService,
   ) {}
 
@@ -120,7 +121,7 @@ export class AuthService {
       user.failedSignInAttempts = 0;
       user.nextSignInAttempt = new Date();
       await this.usersRepo.save(user);
-      const profile: ProfileInterface = GET_PROFILE(user);
+      const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
 
       return {
         accessToken: token,
@@ -161,7 +162,7 @@ export class AuthService {
 
     await this.usersRepo.save(user);
 
-    const profile: ProfileInterface = GET_PROFILE(user);
+    const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
 
     return {
       accessToken: req.token,

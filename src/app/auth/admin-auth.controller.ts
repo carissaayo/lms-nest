@@ -2,18 +2,11 @@ import {
   Controller,
   Post,
   Body,
-  BadRequestException,
-  UnauthorizedException,
   UsePipes,
   ValidationPipe,
-  Get,
-  Query,
   UseGuards,
-  Put,
   Req,
-  Res,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
 
 import {
   ChangePasswordDTO,
@@ -30,8 +23,11 @@ import {
   ReIssueTokenUserGuard,
 } from '../common/guards/user-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../user/user.entity';
+import { AdminAuthService } from './admin-auth.service';
 
-@Controller('auth')
+@Controller('admin-auth')
 @UsePipes(
   new ValidationPipe({
     whitelist: true,
@@ -39,8 +35,9 @@ import { Public } from '../common/decorators/public.decorator';
   }),
 )
 @UseGuards(RolesGuard)
-export class AuthController {
-  constructor(private authService: AuthService) {}
+@Roles(UserRole.INSTRUCTOR)
+export class AdminAuthController {
+  constructor(private authService: AdminAuthService) {}
 
   @Post('register')
   register(@Body() dto: RegisterDto) {

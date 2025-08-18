@@ -5,6 +5,7 @@ import config from 'src/app/config/config';
 import { customError } from 'libs/custom-handlers';
 import { User } from 'src/app/user/user.entity';
 import { ProfileInterface } from 'src/app/auth/auth.interface';
+import { UserAdmin } from 'src/app/admin/admin.entity';
 export interface CustomRequest extends Request {
   verifyAccessToken?: 'nil' | 'failed' | 'success';
   verifyAccessTokenMessage?: string | undefined;
@@ -23,7 +24,7 @@ const appConfig = config();
  * @param usersRepo - TypeORM repository for saving updates
  */
 export async function handleFailedAuthAttempt(
-  user: User,
+  user: User | UserAdmin,
   usersRepo: Repository<User>,
 ): Promise<never> {
   if (user.failedAuthAttempts >= 5) {
@@ -40,7 +41,10 @@ export async function handleFailedAuthAttempt(
 }
 
 // Generate access and refresh tokens
-export const generateToken = async (user: User, req: CustomRequest) => {
+export const generateToken = async (
+  user: User | UserAdmin,
+  req: CustomRequest,
+) => {
   const JWT_REFRESH_TOKEN_SECRET = appConfig.jwt.refresh_token;
   const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
 
