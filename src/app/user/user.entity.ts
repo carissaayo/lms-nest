@@ -49,7 +49,7 @@ export class User extends BaseEntity {
   async validatePassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
   }
-  @Column({ nullable: true })
+  @Column()
   phoneNumber!: string;
 
   @Column({ default: false })
@@ -83,8 +83,6 @@ export class User extends BaseEntity {
   })
   status!: string;
 
-  // @Column(() => AuthInfo)
-  // auth: AuthInfo;
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   sessions: any[];
 
