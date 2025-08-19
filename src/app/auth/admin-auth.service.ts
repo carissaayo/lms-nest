@@ -52,9 +52,12 @@ export class AdminAuthService {
     }
     // Check if user already exists
     const existingUser = await this.usersRepo.findOne({ where: { email } });
-    if (existingUser) {
-      throw customError.conflict('Email has already been used ', 409);
+    if (!existingUser) {
+      throw customError.forbidden('You have to be added up first');
     }
+
+    if (existingUser.isActive)
+      throw customError.conflict('You have already signed up');
     try {
       const emailCode = generateOtp('numeric', 8);
       // Create new user entity

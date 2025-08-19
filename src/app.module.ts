@@ -8,6 +8,7 @@ import AppDataSource from './app/config/database.config';
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
 import { CourseModule } from './app/course/course.module';
+import { AdminModule } from './app/admin/admin.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CourseModule } from './app/course/course.module';
     AuthModule,
     UserModule,
     CourseModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

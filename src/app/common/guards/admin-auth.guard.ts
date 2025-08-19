@@ -1,122 +1,123 @@
-// // src/auth/guards/admin-auth.guard.ts
-// import {
-//   CanActivate,
-//   ExecutionContext,
-//   Injectable,
-//   UnauthorizedException,
-//   ForbiddenException,
-// } from '@nestjs/common';
-// import { InjectRepository } from '@nestjs/typeorm';
-// import * as jwt from 'jsonwebtoken';
-// import { customError } from 'libs/custom-handlers';
-// import { User } from 'src/app/user/user.entity';
-// import { verifyRefreshToken } from 'src/utils/jwt-utils';
-// import { Repository } from 'typeorm';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { Request } from 'express';
+import * as jwt from 'jsonwebtoken';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from 'src/app/user/user.entity';
+import { verifyRefreshToken } from 'src/utils/jwt-utils';
+import config from 'src/app/config/config';
+import { UserAdmin } from 'src/app/admin/admin.entity';
+const appConfig = config();
+@Injectable()
+export class AuthenticateTokenAdminGuard implements CanActivate {
+  constructor() {}
 
-// @Injectable()
-// export class AuthenticateAdminTokenGuard implements CanActivate {
-//   private readonly JWT_ACCESS_TOKEN_SECRET_ADMIN = process.env
-//     .JWT_ACCESS_TOKEN_SECRET_ADMIN as string;
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest<Request>() as any;
 
-//   async canActivate(context: ExecutionContext): Promise<boolean> {
-//     const req = context.switchToHttp().getRequest();
+    const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
+    const authHeader = req.headers['authorization'];
 
-//     const authHeader = req.headers['authorization'];
-//     const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader && authHeader.split(' ')[1];
 
-//     if (!token || token === 'null') {
-//       throw customError.forbidden(
-//         'Access denied. Please include an access token',
-//       );
-//     }
+    if (!token || token === 'null') {
+      throw new UnauthorizedException(
+        'Access denied. Please include an access token',
+      );
+    }
 
-//     try {
-//       const decoded: any = jwt.verify(
-//         token,
-//         this.JWT_ACCESS_TOKEN_SECRET_ADMIN,
-//       );
-//       req.userId = decoded?.id;
-//       req.token = token;
-//       return true;
-//     } catch (err: any) {
-//       if (err.message === 'jwt expired') {
-//         // Mark as expired so ReIssueAdminTokenGuard knows to act
-//         req.tokenExpired = true;
-//         req.decodedToken = jwt.decode(token) as { id: string };
-//         req.userId = req.decodedToken?.id;
-//         req.token = token;
-//         return true;
-//       }
-//       throw customError.unauthorized(
-//         'Access denied. Please re-authorize token',
-//       );
-//     }
-//   }
-// }
+    try {
+      const verifiedToken = jwt.verify(token, JWT_ACCESS_TOKEN_SECRET) as any;
+      console.log('verifiedToken', verifiedToken);
 
-// @Injectable()
-// export class ReIssueAdminTokenGuard implements CanActivate {
-//   private readonly JWT_ACCESS_TOKEN_SECRET_ADMIN = process.env
-//     .JWT_ACCESS_TOKEN_SECRET_ADMIN as string;
-//   private readonly JWT_REFRESH_TOKEN_SECRET_ADMIN = process.env
-//     .JWT_REFRESH_TOKEN_SECRET_ADMIN as string;
+      req.userId = verifiedToken.id;
+      req.token = token;
+      req.user = {
+        id: verifiedToken.id,
+        role: verifiedToken.role,
+      };
+      return true;
+    } catch (err) {
+      if (err.message === 'jwt expired') {
+        const decoded = jwt.decode(token) as { id: string } | null;
+        req.userId = decoded?.id;
+        req.token = token;
+        throw new UnauthorizedException('Token expired');
+      }
+      console.log('err===', err);
 
-//   constructor(
-//     @InjectRepository(User)
-//     private readonly adminRepo: Repository<User>,
-//   ) {}
+      throw new UnauthorizedException(
+        'Access denied. Please re-authorize token',
+      );
+    }
+  }
+}
 
-//   async canActivate(context: ExecutionContext): Promise<boolean> {
-//     const req = context.switchToHttp().getRequest();
+@Injectable()
+export class ReIssueTokenAdminGuard implements CanActivate {
+  constructor(
+    @InjectRepository(UserAdmin)
+    private readonly userRepo: Repository<UserAdmin>,
+  ) {}
 
-//     // If token wasn't expired, no need to re-issue
-//     if (!req.tokenExpired) return true;
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest<Request>() as any;
 
-//     const refreshToken = req.headers['refreshtoken'];
-//     if (!refreshToken) {
-//       throw customError.unauthorized(
-//         'Access denied. Please include a refresh token',
-//       );
-//     }
+    const JWT_REFRESH_TOKEN_SECRET = appConfig.jwt.refresh_token;
+    const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
 
-//     const user = await this.adminRepo.findById(req.userId).exec();
-//     if (!user) {
-//       throw customError.unauthorized('Authorization failed');
-//     }
+    if (!req.headers.refreshtoken) {
+      throw new UnauthorizedException(
+        'Access denied. Please include a refresh token',
+      );
+    }
 
-//     if (user.isActive !== true) {
-//       throw customError.forbidden(
-//         'Your account has been suspended. Please contact the administrator',
-//       );
-//     }
+    const user = await this.userRepo.findOne({
+      where: { id: req.userId },
+    });
 
-//     // Update last seen
-//     user.lastSeen = new Date();
-//     await user.save();
+    if (!user) {
+      throw new UnauthorizedException('Authorization failed');
+    }
 
-//     const userAgent = req.headers['user-agent'];
-//     const activeSessions = user.sessions
-//       .filter(
-//         (s: { active: boolean; userAgent: string }) =>
-//           s.active && s.userAgent === userAgent,
-//       )
-//       .map((s: { refreshtoken: string }) => s.refreshtoken);
+    if (!user.isActive) {
+      throw new ForbiddenException(
+        'Your account has been suspended. Please contact the administrator',
+      );
+    }
 
-//     const validSession = await verifyRefreshToken(
-//       refreshToken as string,
-//       activeSessions,
-//       this.JWT_ACCESS_TOKEN_SECRET_ADMIN,
-//       this.JWT_REFRESH_TOKEN_SECRET_ADMIN,
-//     );
+    user.lastSeen = new Date();
+    await this.userRepo.save(user);
 
-//     if (validSession.status === 'failed') {
-//       throw customError.unauthorized(validSession.message);
-//     }
+    const userAgent = req.headers['user-agent'];
+    const activeSessions =
+      user.sessions
+        ?.filter(
+          (obj: any) => obj.active === true && obj.userAgent === userAgent,
+        )
+        .map((obj: any) => obj.refreshtoken) || [];
 
-//     if (validSession.status === 'success') {
-//       req.token = validSession.newToken; // New Access Token
-//     }
+    const validSession = await verifyRefreshToken(
+      req.headers.refreshtoken as string,
+      activeSessions,
+      JWT_ACCESS_TOKEN_SECRET,
+      JWT_REFRESH_TOKEN_SECRET,
+    );
 
-//     return true;
-//   }
-// }
+    if (validSession.status === 'failed') {
+      throw new UnauthorizedException(validSession.message);
+    }
+
+    if (validSession.status === 'success') {
+      req.token = validSession.newToken;
+    }
+
+    return true;
+  }
+}

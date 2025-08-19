@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { SuspendStatus } from '../admin/admin.dto';
 
 interface EmailOptions {
   to: string;
@@ -174,57 +175,47 @@ export class EmailService {
 
     await this.sendEmail({ to: email, subject, text, html });
   }
+
+  async adminInvitationEmail(email: string) {
+    const appName = this.configService.get<string>('app.name');
+    const subject = `${appName || 'DevLearn'} Admin Invitation Email`;
+    const text = `You have been invited to join us at ${appName || 'DevLearn'}\n\n.`;
+
+    const html = `
+    <h1>Hi,</h1>
+    <p>You have been invited to join our platform as an admin</p>
+    <p>Please click the link below to complete your registration</p>
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
+  async suspensionEmail(
+    email: string,
+    firstName: string,
+    action: string,
+    suspensionReason: string,
+  ) {
+    const appName = this.configService.get<string>('app.name');
+    const main = action === 'activate' ? 'Activation' : 'Suspension';
+    const subject = `${appName || 'DevLearn'} Account ${main} Email`;
+    const text = `Your account has been ${action}ed`;
+    const html = `
+    <h1>Hi, ${firstName}</h1>
+    ${
+      main === 'Activation' &&
+      `<p>Your account has been activated </p>
+      <p>It's good to have you back</p>`
+    }
+
+      ${
+        main === 'Suspension' &&
+        `<p>Your account has been suspended due to ${suspensionReason} </p>
+      <p>You can reach out to support to learn more or complain</p>`
+      }
+    
+   
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
 }
-
-// export const sendPasswordChangeNotificationEmail = async (
-//   email: string,
-//   firstName: string
-// ): Promise<void> => {
-//   const subject = `${process.env.SITE_NAME || "Credlock"} Password Changed`;
-//   const text = `Hi ${firstName}, your password has been changed successfully. If this wasn't you, please contact us immediately. If it was you, then please ignore this message.`;
-
-//   const html = `
-//     <h1>Password Changed</h1>
-//     <p>Hi ${firstName},</p>
-//     <p>Your password has been changed successfully.</p>
-//     <p>If this wasn't you, please contact us immediately. If it was you, then please ignore this message.</p>
-//   `;
-
-//   await sendEmail({ to: email, subject, text, html });
-// };
-
-// export const sendMerchantReferralEmail = async (
-//   email: string,
-//   merchantName: string,
-//   contactName: string,
-//   appLinks: { android: string; ios: string }
-// ): Promise<void> => {
-//   const subject = `Welcome to Credlock - You've Been Referred!`;
-//   const text = `Dear ${contactName},
-
-// We're excited to inform you that ${merchantName} has been added to Credlock! You can now start offering Buy Now Pay Later (BNPL) services to your customers.
-
-// To get started, download the Credlock Business app:
-// - Android: ${appLinks.android}
-// - iOS: ${appLinks.ios}
-
-// If you have any questions, feel free to contact our support team.
-
-// Best regards,
-// The Credlock Team`;
-
-//   const html = `
-//     <h1>Welcome to Credlock!</h1>
-//     <p>Dear ${contactName},</p>
-//     <p>We're excited to inform you that <strong>${merchantName}</strong> has been added to Credlock! You can now start offering Buy Now Pay Later (BNPL) services to your customers.</p>
-//     <p>To get started, download the Credlock Business app:</p>
-//     <ul>
-//       <li><a href="${appLinks.android}">Android</a></li>
-//       <li><a href="${appLinks.ios}">iOS</a></li>
-//     </ul>
-//     <p>If you have any questions, feel free to contact our support team.</p>
-//     <p>Best regards,<br>The Credlock Team</p>
-//   `;
-
-//   await sendEmail({ to: email, subject, text, html });
-// };
