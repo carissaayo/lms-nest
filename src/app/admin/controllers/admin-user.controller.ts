@@ -10,16 +10,17 @@ import {
   Param,
 } from '@nestjs/common';
 
-import { RolesGuard } from '../common/guards/role.guard';
+import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../user/user.entity';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../user/user.entity';
 
-import { PermissionsGuard } from '../common/guards/permissions.gurad';
-import { Permissions } from '../common/decorators/permissions.decorator';
-import { AdminUserService } from './admin-users.service';
-import { SuspendUserDTO } from './admin.dto';
+import { PermissionsGuard } from '../../common/guards/permissions.gurad';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { AdminUserService } from '../services/admin-users.service';
+import { SuspendUserDTO } from '../admin.dto';
+import { PermissionsEnum } from '../admin.interface';
 
 @Controller('admin-users')
 @UsePipes(
@@ -31,7 +32,7 @@ import { SuspendUserDTO } from './admin.dto';
 @UseGuards(RolesGuard)
 @UseGuards(PermissionsGuard)
 @Roles(UserRole.ADMIN)
-@Permissions('admin_user')
+@Permissions(PermissionsEnum.ADMIN_USERS)
 export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 

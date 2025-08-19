@@ -1,17 +1,16 @@
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
-import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
-import { UserModule } from '../user/user.module';
-import { UsersService } from '../user/user.service';
+
 import { EmailModule } from '../email/email.module';
-import { AdminAuthController } from './admin-auth.controller';
-import { AdminAuthService } from './admin-auth.service';
-import { UserAdmin } from '../admin/admin.entity';
-import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { JwtStrategy } from './jwt.strategy';
+
+import { AuthController } from './controllers/auth.controller';
+import { AuthService } from './services/auth.service';
+
 import { User } from '../user/user.entity';
 
 @Module({
@@ -27,11 +26,11 @@ import { User } from '../user/user.entity';
 
     PassportModule,
     EmailModule,
-    TypeOrmModule.forFeature([UserAdmin, User]),
+    TypeOrmModule.forFeature([User]),
   ],
 
-  controllers: [AuthController, AdminAuthController],
-  providers: [AuthService, JwtStrategy, AdminAuthService],
-  exports: [AuthService, AdminAuthService],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}

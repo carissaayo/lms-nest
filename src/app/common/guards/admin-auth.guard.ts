@@ -9,7 +9,7 @@ import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from 'src/app/user/user.entity';
+
 import { verifyRefreshToken } from 'src/utils/jwt-utils';
 import config from 'src/app/config/config';
 import { UserAdmin } from 'src/app/admin/admin.entity';

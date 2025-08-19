@@ -2,18 +2,11 @@ import {
   Controller,
   Post,
   Body,
-  BadRequestException,
-  UnauthorizedException,
   UsePipes,
   ValidationPipe,
-  Get,
-  Query,
   UseGuards,
-  Put,
   Req,
-  Res,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
 
 import {
   ChangePasswordDTO,
@@ -22,16 +15,20 @@ import {
   RequestResetPasswordDTO,
   ResetPasswordDTO,
   VerifyEmailDTO,
-} from './auth.dto';
-import { RolesGuard } from '../common/guards/role.guard';
+} from '../../auth/auth.dto';
+import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
-import {
-  AuthenticateTokenUserGuard,
-  ReIssueTokenUserGuard,
-} from '../common/guards/user-auth.guard';
-import { Public } from '../common/decorators/public.decorator';
 
-@Controller('auth')
+import { Public } from '../../common/decorators/public.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../user/user.entity';
+import { AdminAuthService } from '../services/admin-auth.service';
+import {
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+} from '../../common/guards/admin-auth.guard';
+
+@Controller('admin-auth')
 @UsePipes(
   new ValidationPipe({
     whitelist: true,
@@ -39,10 +36,12 @@ import { Public } from '../common/decorators/public.decorator';
   }),
 )
 @UseGuards(RolesGuard)
-export class AuthController {
-  constructor(private authService: AuthService) {}
+@Roles(UserRole.ADMIN)
+export class AdminAuthController {
+  constructor(private authService: AdminAuthService) {}
 
   @Post('register')
+  @Public()
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
@@ -54,7 +53,7 @@ export class AuthController {
   }
 
   @Post('verify-email')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async verifyEmail(
     @Body() verifyEmailDto: VerifyEmailDTO,
     @Req() req: CustomRequest,
@@ -63,7 +62,7 @@ export class AuthController {
   }
 
   @Post('request-password-reset')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async passwordResetRequest(
     @Body() resetPasswordDto: RequestResetPasswordDTO,
   ) {
@@ -71,13 +70,13 @@ export class AuthController {
   }
 
   @Post('password-reset')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDTO) {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Post('change-password')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDTO,
     @Req() req: CustomRequest,

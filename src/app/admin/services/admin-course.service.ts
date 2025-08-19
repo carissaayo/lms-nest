@@ -1,53 +1,89 @@
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LoginDto, VerifyEmailDTO } from '../auth/auth.dto';
-import { CustomRequest, generateToken } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
-import { AdminStatus, UserAdmin } from './admin.entity';
-import { EmailService } from '../email/email.service';
-import {
-  GET_ADMIN_PROFILE,
-  handleFailedAuthAttempt,
-} from 'src/utils/admin-auth-utils';
-import { AdminProfileInterface, PermissionsEnum } from './admin.interface';
+
+import { EmailService } from '../../email/email.service';
+
+import { AdminStatus, UserAdmin } from '../admin.entity';
+import { Course } from 'src/app/course/course.entity';
+
+import { LoginDto, VerifyEmailDTO } from '../../auth/auth.dto';
+import { AdminProfileInterface, PermissionsEnum } from '../admin.interface';
 import {
   AddAnAdminDTO,
   AssignPermissionsDTO,
   PermissionsActions,
-  SuspendStatus,
   SuspendUserDTO,
-} from './admin.dto';
+} from '../admin.dto';
+
+import { CustomRequest, generateToken } from 'src/utils/auth-utils';
+import { customError } from 'libs/custom-handlers';
+import {
+  GET_ADMIN_PROFILE,
+  handleFailedAuthAttempt,
+} from 'src/utils/admin-auth-utils';
+import { DBQuery, DBQueryCount, QueryString } from 'src/app/database/dbquery';
 
 @Injectable()
-export class AdminAdminsService {
+export class AdminCoursesService {
   constructor(
     @InjectRepository(UserAdmin) private adminRepo: Repository<UserAdmin>,
     private emailService: EmailService,
+    @InjectRepository(Course)
+    private readonly courseRepo: Repository<Course>,
   ) {}
 
-  async viewProfile(req: CustomRequest) {
-    console.log('viewProfile');
+  async viewCourses(query: QueryString) {
+    const fetchCourses = new DBQuery(this.courseRepo, 'course', query)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
 
-    const user = await this.adminRepo.findOne({
-      where: { id: req.userId },
-    });
+    fetchCourses.query
+      .leftJoinAndSelect('course.instructor', 'instructor')
+      .leftJoinAndSelect('course.category', 'category');
 
-    if (!user) {
-      throw customError.forbidden('Access Denied');
-    }
-    const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
+    const courseQuery = fetchCourses.query;
+    const courses = await courseQuery.getMany();
+    const page = fetchCourses.page;
+
+    const fetchCourseCount = new DBQueryCount(
+      this.courseRepo,
+      'course',
+      query,
+    ).filter();
+    const totalCount = await fetchCourseCount.count();
+
+    const formattedCourses = courses.map((course) => ({
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      price: course.price,
+      instructor: course.instructor
+        ? {
+            id: course.instructor.id,
+            firstName: course.instructor.firstName,
+            lastName: course.instructor.lastName,
+          }
+        : null,
+      category: course.category
+        ? { name: course.category.name, id: course.category.id }
+        : null,
+    }));
 
     return {
-      accessToken: req.token || '',
-      profile,
-      message: 'Profile fetched successfully',
+      page,
+      results: totalCount,
+      courses: formattedCourses,
+      message: 'Courses fetched successfully',
     };
   }
+
   /**
-   * Add admin by email
+   * Approve or reject a course
    */
-  async addAdminByEmail(dto: AddAnAdminDTO, req: CustomRequest) {
+  async ApproveCourse(dto: AddAnAdminDTO, req: CustomRequest) {
     const { email } = dto;
 
     const existing = await this.adminRepo.findOne({ where: { email } });
@@ -164,7 +200,7 @@ export class AdminAdminsService {
     });
 
     if (!user) throw customError.notFound('User not found');
-    // if (admin.id === user.id)
+    // if (admin.id === user.id )
     //   throw customError.forbidden('You can not give yourself permissions');
     try {
       if (!user.permissions) {

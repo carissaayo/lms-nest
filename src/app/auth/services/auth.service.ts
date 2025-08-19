@@ -1,4 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { MoreThan, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+
+import { EmailService } from 'src/app/email/email.service';
+
 import {
   ChangePasswordDTO,
   LoginDto,
@@ -6,26 +11,23 @@ import {
   RequestResetPasswordDTO,
   ResetPasswordDTO,
   VerifyEmailDTO,
-} from './auth.dto';
+} from '../auth.dto';
+import { User } from 'src/app/user/user.entity';
+import { ProfileInterface } from '../auth.interface';
 
-import { MoreThan, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
 import { customError } from 'libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
-import { EmailService } from '../email/email.service';
-import { CustomRequest, generateToken } from 'src/utils/auth-utils';
-
-import { UserAdmin } from '../admin/admin.entity';
 import {
-  GET_ADMIN_PROFILE,
+  CustomRequest,
+  generateToken,
+  GET_PROFILE,
   handleFailedAuthAttempt,
-} from 'src/utils/admin-auth-utils';
-import { AdminProfileInterface } from '../admin/admin.interface';
+} from 'src/utils/auth-utils';
 
 @Injectable()
-export class AdminAuthService {
+export class AuthService {
   constructor(
-    @InjectRepository(UserAdmin) private usersRepo: Repository<UserAdmin>,
+    @InjectRepository(User) private usersRepo: Repository<User>,
     private emailService: EmailService,
   ) {}
 
@@ -37,6 +39,7 @@ export class AdminAuthService {
       phoneNumber,
       firstName,
       lastName,
+      role,
     } = body;
 
     // Check password match
@@ -51,24 +54,26 @@ export class AdminAuthService {
     }
     // Check if user already exists
     const existingUser = await this.usersRepo.findOne({ where: { email } });
-    if (!existingUser) {
-      throw customError.forbidden('You have to be added up first');
+    if (existingUser) {
+      throw customError.conflict('Email has already been used ', 409);
     }
-
-    if (existingUser.isActive)
-      throw customError.conflict('You have already signed up');
     try {
       const emailCode = generateOtp('numeric', 8);
-
-      existingUser.password = password;
-      existingUser.phoneNumber = phoneNumber;
-      existingUser.firstName = firstName;
-      existingUser.firstName = firstName;
+      // Create new user entity
+      const user = this.usersRepo.create({
+        email,
+        password,
+        phoneNumber: formattedPhone,
+        firstName,
+        lastName,
+        role,
+        emailCode,
+      });
 
       // Save to DB
-      const savedUser = await this.usersRepo.save(existingUser);
+      const savedUser = await this.usersRepo.save(user);
 
-      const { emailVerified, id, role } = savedUser;
+      const { emailVerified, id } = savedUser;
 
       // // Send verification email
       await this.emailService.sendVerificationEmail(email, emailCode);
@@ -87,7 +92,7 @@ export class AdminAuthService {
         },
       };
     } catch (error) {
-      throw customError.internalServerError(error.message, 500);
+      throw customError.internalServerError('Internal Server Error ', 500);
     }
   }
 
@@ -102,11 +107,10 @@ export class AdminAuthService {
     try {
       // validate password using entity method
       const isPasswordValid = await user.validatePassword(password);
-      console.log('isPass', isPasswordValid);
 
-      // if (!isPasswordValid) {
-      //   await handleFailedAuthAttempt(user, this.usersRepo);
-      // }
+      if (!isPasswordValid) {
+        await handleFailedAuthAttempt(user, this.usersRepo);
+      }
 
       user.failedAuthAttempts = 0;
       await this.usersRepo.save(user);
@@ -119,7 +123,7 @@ export class AdminAuthService {
       user.failedSignInAttempts = 0;
       user.nextSignInAttempt = new Date();
       await this.usersRepo.save(user);
-      const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
+      const profile: ProfileInterface = GET_PROFILE(user);
 
       return {
         accessToken: token,
@@ -129,7 +133,7 @@ export class AdminAuthService {
       };
     } catch (error) {
       console.log(error);
-      throw customError.internalServerError(error.message, error.statusCode);
+      throw customError.internalServerError('Internal Server Error', 500);
     }
   }
 
@@ -160,7 +164,7 @@ export class AdminAuthService {
 
     await this.usersRepo.save(user);
 
-    const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
+    const profile: ProfileInterface = GET_PROFILE(user);
 
     return {
       accessToken: req.token,

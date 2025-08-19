@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
+import { EmailService } from '../email/email.service';
+
 import { Course } from './course.entity';
 import { User } from '../user/user.entity';
-import { Lesson } from '../lesson/lesson.entity';
 import { Category } from '../database/main.entity';
 import { CreateCourseDTO } from './course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -11,7 +13,6 @@ import { customError } from 'libs/custom-handlers';
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
 import { DBQuery, DBQueryCount, QueryString } from '../database/dbquery';
-import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class CourseService {
