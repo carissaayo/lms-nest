@@ -10,21 +10,46 @@ import {
   GET_ADMIN_PROFILE,
   handleFailedAuthAttempt,
 } from 'src/utils/admin-auth-utils';
-import { AdminProfileInterface } from './admin.interface';
-import { SuspendStatus, SuspendUserDTO } from './admin.dto';
-import { User } from '../user/user.entity';
+import { AdminProfileInterface, PermissionsEnum } from './admin.interface';
+import {
+  AddAnAdminDTO,
+  AssignPermissionsDTO,
+  PermissionsActions,
+  SuspendStatus,
+  SuspendUserDTO,
+} from './admin.dto';
 
 @Injectable()
-export class AdminUserService {
+export class AdminAdminsService {
   constructor(
     @InjectRepository(UserAdmin) private adminRepo: Repository<UserAdmin>,
     private emailService: EmailService,
   ) {}
 
+  async viewProfile(req: CustomRequest) {
+    console.log('viewProfile');
+
+    const user = await this.adminRepo.findOne({
+      where: { id: req.userId },
+    });
+
+    if (!user) {
+      throw customError.forbidden('Access Denied');
+    }
+    const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
+
+    return {
+      accessToken: req.token || '',
+      profile,
+      message: 'Profile fetched successfully',
+    };
+  }
   /**
    * Add admin by email
    */
-  async addAdminByEmail(email: string, req: CustomRequest) {
+  async addAdminByEmail(dto: AddAnAdminDTO, req: CustomRequest) {
+    const { email } = dto;
+
     const existing = await this.adminRepo.findOne({ where: { email } });
     if (existing) {
       throw customError.conflict('Admin with this email already exists');
@@ -117,14 +142,15 @@ export class AdminUserService {
 
   async assignPermission(
     userId: string,
-    suspendDto: SuspendUserDTO,
+    dto: AssignPermissionsDTO,
     req: CustomRequest,
   ) {
-    const { action, suspensionReason } = suspendDto;
     if (!userId) throw customError.badRequest('UserId is required');
 
-    if (!action) {
-      throw customError.badRequest('Action is required');
+    const { permissions: newPermissions, action } = dto;
+
+    if (!newPermissions) {
+      throw customError.badRequest('Permission array is required');
     }
 
     const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
@@ -138,36 +164,33 @@ export class AdminUserService {
     });
 
     if (!user) throw customError.notFound('User not found');
+    // if (admin.id === user.id)
+    //   throw customError.forbidden('You can not give yourself permissions');
     try {
-      const newAction = {
-        action: `User is ${action}ed by ${admin.id}`,
-        ...(suspensionReason ? { suspensionReason } : {}),
-        date: new Date(),
-      };
+      if (!user.permissions) {
+        user.permissions = [];
+      }
 
-      const newAdminAction = {
-        action: `${action}ed a User  ${user.id}`,
-        ...(suspensionReason ? { suspensionReason } : {}),
-        date: new Date(),
-      };
+      let updatedPermissions: PermissionsEnum[] = [];
 
-      user.isActive = false;
-      user.actions.push(newAction);
-      admin.actions.push(newAdminAction);
-      this.adminRepo.save(user);
-      this.adminRepo.save(admin);
+      if (action === PermissionsActions.ADD) {
+        updatedPermissions = [
+          ...new Set([...user.permissions, ...newPermissions]),
+        ];
+      } else if (action === PermissionsActions.REMOVE) {
+        updatedPermissions = user.permissions.filter(
+          (perm) => !newPermissions.includes(perm),
+        );
+      }
 
-      await this.emailService.suspensionEmail(
-        user.email,
-        user.firstName,
-        action,
-        suspensionReason || '',
-      );
+      user.permissions = updatedPermissions;
+      await this.adminRepo.save(user);
+
       const { token, refreshToken } = await generateToken(admin, req);
       return {
         accessToken: token,
         refreshToken: refreshToken,
-        message: 'User account has been suspended.',
+        message: 'Admin permissions have been updated',
       };
     } catch (error) {
       console.log(error);
@@ -255,5 +278,13 @@ export class AdminUserService {
       console.log(error);
       throw customError.internalServerError('Internal Server Error', 500);
     }
+  }
+
+  async findAdminById(id: string) {
+    const admin = await this.adminRepo.findOne({ where: { id } });
+
+    return {
+      admin,
+    };
   }
 }

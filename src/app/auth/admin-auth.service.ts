@@ -37,7 +37,6 @@ export class AdminAuthService {
       phoneNumber,
       firstName,
       lastName,
-      role,
     } = body;
 
     // Check password match
@@ -60,21 +59,16 @@ export class AdminAuthService {
       throw customError.conflict('You have already signed up');
     try {
       const emailCode = generateOtp('numeric', 8);
-      // Create new user entity
-      const user = this.usersRepo.create({
-        email,
-        password,
-        phoneNumber: formattedPhone,
-        firstName,
-        lastName,
-        role,
-        emailCode,
-      });
+
+      existingUser.password = password;
+      existingUser.phoneNumber = phoneNumber;
+      existingUser.firstName = firstName;
+      existingUser.firstName = firstName;
 
       // Save to DB
-      const savedUser = await this.usersRepo.save(user);
+      const savedUser = await this.usersRepo.save(existingUser);
 
-      const { emailVerified, id } = savedUser;
+      const { emailVerified, id, role } = savedUser;
 
       // // Send verification email
       await this.emailService.sendVerificationEmail(email, emailCode);
@@ -93,7 +87,7 @@ export class AdminAuthService {
         },
       };
     } catch (error) {
-      throw customError.internalServerError('Internal Server Error ', 500);
+      throw customError.internalServerError(error.message, 500);
     }
   }
 
@@ -108,10 +102,11 @@ export class AdminAuthService {
     try {
       // validate password using entity method
       const isPasswordValid = await user.validatePassword(password);
+      console.log('isPass', isPasswordValid);
 
-      if (!isPasswordValid) {
-        await handleFailedAuthAttempt(user, this.usersRepo);
-      }
+      // if (!isPasswordValid) {
+      //   await handleFailedAuthAttempt(user, this.usersRepo);
+      // }
 
       user.failedAuthAttempts = 0;
       await this.usersRepo.save(user);
@@ -134,7 +129,7 @@ export class AdminAuthService {
       };
     } catch (error) {
       console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
+      throw customError.internalServerError(error.message, error.statusCode);
     }
   }
 

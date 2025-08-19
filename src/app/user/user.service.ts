@@ -47,7 +47,6 @@ export class UsersService {
     }
     const profile: ProfileInterface = GET_PROFILE(user);
 
-    await this.usersRepo.save(user);
     return {
       accessToken: req.token || '',
       profile,
