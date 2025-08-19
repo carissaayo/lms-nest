@@ -121,4 +121,6 @@ export class User extends BaseEntity {
 
   @Column({ type: 'boolean', default: false })
   isSignedUp: boolean;
+  @Column({ type: 'jsonb', default: [] })
+  actions: any[];
 }
