@@ -18,14 +18,15 @@ import {
 } from './auth.dto';
 import { RolesGuard } from '../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
-import {
-  AuthenticateTokenUserGuard,
-  ReIssueTokenUserGuard,
-} from '../common/guards/user-auth.guard';
+
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../user/user.entity';
 import { AdminAuthService } from './admin-auth.service';
+import {
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+} from '../common/guards/admin-auth.guard';
 
 @Controller('admin-auth')
 @UsePipes(
@@ -35,11 +36,12 @@ import { AdminAuthService } from './admin-auth.service';
   }),
 )
 @UseGuards(RolesGuard)
-@Roles(UserRole.INSTRUCTOR)
+@Roles(UserRole.ADMIN)
 export class AdminAuthController {
   constructor(private authService: AdminAuthService) {}
 
   @Post('register')
+  @Public()
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
@@ -51,7 +53,7 @@ export class AdminAuthController {
   }
 
   @Post('verify-email')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async verifyEmail(
     @Body() verifyEmailDto: VerifyEmailDTO,
     @Req() req: CustomRequest,
@@ -60,7 +62,7 @@ export class AdminAuthController {
   }
 
   @Post('request-password-reset')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async passwordResetRequest(
     @Body() resetPasswordDto: RequestResetPasswordDTO,
   ) {
@@ -68,13 +70,13 @@ export class AdminAuthController {
   }
 
   @Post('password-reset')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDTO) {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Post('change-password')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDTO,
     @Req() req: CustomRequest,
