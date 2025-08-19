@@ -14,4 +14,6 @@ export enum PermissionsEnum {
   ADMIN_PAYMENTS = 'admin_payments',
   ADMIN_COURSES = 'admin_courses',
   ADMIN_PERMISSIONS = 'admin_permissions',
+  ADMIN_ADMINS = 'admin_admins',
+  SUPER_ADMIN = 'super_admin',
 }

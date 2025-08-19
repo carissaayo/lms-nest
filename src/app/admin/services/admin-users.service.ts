@@ -1,18 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LoginDto, VerifyEmailDTO } from '../auth/auth.dto';
+import { EmailService } from '../../email/email.service';
+import { UserAdmin } from '../admin.entity';
+import { User } from '../../user/user.entity';
+
+import { VerifyEmailDTO } from '../../auth/auth.dto';
+import { SuspendUserDTO } from '../admin.dto';
+import { AdminProfileInterface } from '../admin.interface';
+
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
 import { customError } from 'libs/custom-handlers';
-import { AdminStatus, UserAdmin } from './admin.entity';
-import { EmailService } from '../email/email.service';
-import {
-  GET_ADMIN_PROFILE,
-  handleFailedAuthAttempt,
-} from 'src/utils/admin-auth-utils';
-import { AdminProfileInterface } from './admin.interface';
-import { SuspendStatus, SuspendUserDTO } from './admin.dto';
-import { User } from '../user/user.entity';
+import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
 
 @Injectable()
 export class AdminUserService {

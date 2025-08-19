@@ -7,6 +7,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
+import { AuthService } from '../services/auth.service';
 
 import {
   ChangePasswordDTO,
@@ -15,20 +16,16 @@ import {
   RequestResetPasswordDTO,
   ResetPasswordDTO,
   VerifyEmailDTO,
-} from './auth.dto';
-import { RolesGuard } from '../common/guards/role.guard';
+} from '../auth.dto';
+import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
-
-import { Public } from '../common/decorators/public.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../user/user.entity';
-import { AdminAuthService } from './admin-auth.service';
 import {
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-} from '../common/guards/admin-auth.guard';
+  AuthenticateTokenUserGuard,
+  ReIssueTokenUserGuard,
+} from '../../common/guards/user-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 
-@Controller('admin-auth')
+@Controller('auth')
 @UsePipes(
   new ValidationPipe({
     whitelist: true,
@@ -36,12 +33,10 @@ import {
   }),
 )
 @UseGuards(RolesGuard)
-@Roles(UserRole.ADMIN)
-export class AdminAuthController {
-  constructor(private authService: AdminAuthService) {}
+export class AuthController {
+  constructor(private authService: AuthService) {}
 
   @Post('register')
-  @Public()
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
@@ -53,7 +48,7 @@ export class AdminAuthController {
   }
 
   @Post('verify-email')
-  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async verifyEmail(
     @Body() verifyEmailDto: VerifyEmailDTO,
     @Req() req: CustomRequest,
@@ -62,7 +57,7 @@ export class AdminAuthController {
   }
 
   @Post('request-password-reset')
-  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async passwordResetRequest(
     @Body() resetPasswordDto: RequestResetPasswordDTO,
   ) {
@@ -70,13 +65,13 @@ export class AdminAuthController {
   }
 
   @Post('password-reset')
-  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDTO) {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Post('change-password')
-  @UseGuards(AuthenticateTokenAdminGuard, ReIssueTokenAdminGuard)
+  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDTO,
     @Req() req: CustomRequest,

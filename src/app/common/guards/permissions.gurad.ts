@@ -6,7 +6,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { PermissionsEnum } from 'src/app/admin/admin.interface';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
-import { AdminAdminsService } from 'src/app/admin/admin-admins.service';
+import { AdminAdminsService } from 'src/app/admin/services/admin-admins.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -38,6 +38,9 @@ export class PermissionsGuard implements CanActivate {
       throw customError.forbidden('No permissions assigned yet');
     }
 
+    if (admin.permissions.includes(PermissionsEnum.SUPER_ADMIN)) {
+      return true;
+    }
     const hasPermission = requiredPermissions.every((permission) =>
       admin.permissions.includes(permission),
     );

@@ -7,6 +7,7 @@ import {
   IsPositive,
   MinLength,
   IsNotEmpty,
+  IsEnum,
 } from 'class-validator';
 
 export enum CourseCategory {
@@ -67,4 +68,13 @@ export class UpdateCourseDTO {
   @Type(() => Number)
   @IsOptional()
   price?: number;
+}
+
+export class ApproveCourseDTO {
+  @IsString()
+  @IsNotEmpty()
+  @IsEnum(['approve', 'reject'], {
+    message: 'Action must be either approve or reject',
+  })
+  action: ['approve', 'reject'];
 }

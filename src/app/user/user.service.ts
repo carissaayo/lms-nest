@@ -1,57 +1,23 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  NotFoundException,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
-import * as jwt from 'jsonwebtoken';
-
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { User } from './user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+
+import { User } from './user.entity';
+
 import { RegisterDto } from '../auth/auth.dto';
+import { UpdateUserDTO } from './user.dto';
+import { ProfileInterface } from '../auth/auth.interface';
+
 import { CustomRequest, GET_PROFILE } from 'src/utils/auth-utils';
 import { customError } from 'libs/custom-handlers';
-import { ProfileInterface } from '../auth/auth.interface';
-import { UpdateUserDTO } from './user.dto';
-
-interface ViewProfileResponse {
-  accessToken: string;
-  profile: ProfileInterface;
-  message: string;
-}
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User) private usersRepo: Repository<User>,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(@InjectRepository(User) private usersRepo: Repository<User>) {}
 
   async create(dto: RegisterDto) {
     const user = this.usersRepo.create(dto);
     return this.usersRepo.save(user);
-  }
-  async viewProfile(req: CustomRequest) {
-    console.log('viewProfile');
-
-    const user = await this.usersRepo.findOne({
-      where: { id: req.userId },
-    });
-
-    if (!user) {
-      throw customError.forbidden('Access Denied');
-    }
-    const profile: ProfileInterface = GET_PROFILE(user);
-
-    return {
-      accessToken: req.token || '',
-      profile,
-      message: 'Profile fetched successfully',
-    };
   }
 
   async updateUser(updateProfile: UpdateUserDTO, req: CustomRequest) {
@@ -69,6 +35,25 @@ export class UsersService {
     const profile: ProfileInterface = GET_PROFILE(user);
 
     await this.usersRepo.save(user);
+
+    return {
+      accessToken: req.token || '',
+      profile,
+      message: 'Profile fetched successfully',
+    };
+  }
+
+  async viewProfile(req: CustomRequest) {
+    console.log('viewProfile');
+
+    const user = await this.usersRepo.findOne({
+      where: { id: req.userId },
+    });
+
+    if (!user) {
+      throw customError.forbidden('Access Denied');
+    }
+    const profile: ProfileInterface = GET_PROFILE(user);
 
     return {
       accessToken: req.token || '',

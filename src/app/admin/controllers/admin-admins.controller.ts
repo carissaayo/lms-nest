@@ -11,22 +11,22 @@ import {
   Get,
 } from '@nestjs/common';
 
-import { RolesGuard } from '../common/guards/role.guard';
+import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../user/user.entity';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../user/user.entity';
 
-import { PermissionsGuard } from '../common/guards/permissions.gurad';
-import { Permissions } from '../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.gurad';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 import {
   AddAnAdminDTO,
   AssignPermissionsDTO,
   SuspendUserDTO,
-} from './admin.dto';
-import { AdminAdminsService } from './admin-admins.service';
-import { PermissionsEnum } from './admin.interface';
+} from '../admin.dto';
+import { AdminAdminsService } from '../services/admin-admins.service';
+import { PermissionsEnum } from '../admin.interface';
 
 @Controller('admin-admins')
 @UsePipes(
@@ -45,12 +45,12 @@ export class AdminAdminsController {
     return this.adminAdminService.viewProfile(req);
   }
 
-  @Permissions(PermissionsEnum.ADMIN_USERS)
+  @Permissions(PermissionsEnum.ADMIN_ADMINS)
   @Post('add-admin')
   async addAdminByEmail(@Body() dto: AddAnAdminDTO, @Req() req: CustomRequest) {
     return this.adminAdminService.addAdminByEmail(dto, req);
   }
-  @Permissions(PermissionsEnum.ADMIN_USERS)
+  @Permissions(PermissionsEnum.ADMIN_ADMINS)
   @Patch(':userId/action')
   async suspendUser(
     @Param('id') userId: string,
@@ -60,7 +60,7 @@ export class AdminAdminsController {
     return this.adminAdminService.suspendAdmin(userId, suspendDto, req);
   }
 
-  @Permissions(PermissionsEnum.ADMIN_USERS)
+  @Permissions(PermissionsEnum.ADMIN_PERMISSIONS)
   @Patch(':userId/permissions')
   async assignPermission(
     @Param('userId') userId: string,

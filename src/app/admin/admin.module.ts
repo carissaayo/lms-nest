@@ -2,20 +2,31 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { EmailModule } from '../email/email.module';
+import { CourseModule } from '../course/course.module';
 
-import { AdminUserService } from './admin-users.service';
-import { AdminAdminsService } from './admin-admins.service';
+import { AdminUserService } from './services/admin-users.service';
+import { AdminAdminsService } from './services/admin-admins.service';
+import { AdminCoursesService } from './services/admin-course.service';
 
-import { AdminAdminsController } from './admin-admins.controller';
-import { AdminUserController } from './admin-user.controller';
+import { AdminAdminsController } from './controllers/admin-admins.controller';
+import { AdminUserController } from './controllers/admin-user.controller';
+import { AdminCoursesController } from './controllers/admin-courses.controller';
 
 import { UserAdmin } from './admin.entity';
 import { User } from '../user/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserAdmin, User]), EmailModule],
-  providers: [AdminUserService, AdminAdminsService],
-  controllers: [AdminUserController, AdminAdminsController],
-  exports: [AdminUserService, AdminAdminsService],
+  imports: [
+    TypeOrmModule.forFeature([UserAdmin, User]),
+    EmailModule,
+    CourseModule,
+  ],
+  providers: [AdminUserService, AdminAdminsService, AdminCoursesService],
+  controllers: [
+    AdminUserController,
+    AdminAdminsController,
+    AdminCoursesController,
+  ],
+  exports: [],
 })
 export class AdminModule {}
