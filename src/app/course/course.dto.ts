@@ -8,6 +8,7 @@ import {
   MinLength,
   IsNotEmpty,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
 
 export enum CourseCategory {
@@ -70,11 +71,22 @@ export class UpdateCourseDTO {
   price?: number;
 }
 
+export enum ApprovalStatus {
+  APPROVE = 'approve',
+  REJECT = 'reject',
+}
 export class ApproveCourseDTO {
   @IsString()
   @IsNotEmpty()
-  @IsEnum(['approve', 'reject'], {
+  @IsEnum(ApprovalStatus, {
     message: 'Action must be either approve or reject',
   })
-  action: ['approve', 'reject'];
+  action: ApprovalStatus;
+
+  @ValidateIf((o) => o.action === ApprovalStatus.REJECT)
+  @IsString()
+  @IsNotEmpty({
+    message: 'Rejection reason is required when rejecting a course',
+  })
+  rejectReason?: string;
 }
