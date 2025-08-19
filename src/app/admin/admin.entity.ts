@@ -9,6 +9,7 @@ import {
 
 import * as bcrypt from 'bcryptjs';
 import { UserRole } from '../user/user.entity';
+import { PermissionsEnum } from './admin.interface';
 
 export enum AdminStatus {
   PENDING = 'pending',
@@ -21,16 +22,16 @@ export class UserAdmin {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  firstName!: string;
-  @Column()
-  lastName!: string;
+  @Column({ nullable: true })
+  firstName: string;
+  @Column({ nullable: true })
+  lastName: string;
   @Column({ unique: true })
   email!: string;
 
   @Column({ nullable: true })
   state: string;
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.ADMIN })
   role!: UserRole;
   @Column({ nullable: true })
   city: string;
@@ -42,10 +43,10 @@ export class UserAdmin {
   picture: string;
 
   @Column({ nullable: true })
-  phoneNumber!: string;
+  phoneNumber: string;
 
   @Column({ nullable: true })
-  password!: string;
+  password: string;
   @Column({ default: false })
   emailVerified!: boolean;
   @Column({ type: 'varchar', nullable: true })
@@ -65,8 +66,13 @@ export class UserAdmin {
   @Column({ nullable: true })
   userAgent: string;
 
-  @Column('text', { array: true, default: [] })
-  permissions: string[];
+  @Column({
+    type: 'enum',
+    enum: PermissionsEnum,
+    array: true,
+    default: [],
+  })
+  permissions: PermissionsEnum[];
 
   @Column({ type: 'timestamp', nullable: true })
   signUpDate: Date;

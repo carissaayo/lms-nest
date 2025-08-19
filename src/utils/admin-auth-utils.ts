@@ -38,7 +38,7 @@ export async function handleFailedAuthAttempt(
 
   await adminRepo.save(admin);
 
-  throw customError.unauthorized('Invalid credentials');
+  throw customError.unauthorized('Invalid credentials', 401);
 }
 
 // Generate access and refresh tokens

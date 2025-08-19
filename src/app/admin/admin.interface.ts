@@ -8,3 +8,10 @@ export interface AdminProfileInterface {
   role: string;
   permissions: string[] | null | undefined;
 }
+
+export enum PermissionsEnum {
+  ADMIN_USERS = 'admin_users',
+  ADMIN_PAYMENTS = 'admin_payments',
+  ADMIN_COURSES = 'admin_courses',
+  ADMIN_PERMISSIONS = 'admin_permissions',
+}

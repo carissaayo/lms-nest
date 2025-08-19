@@ -1,60 +1,40 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
-import { UserAdmin } from 'src/app/admin/admin.entity';
-import { JwtPayload } from 'src/utils/jwt-utils';
-import { customError } from 'libs/custom-handlers';
-import * as jwt from 'jsonwebtoken';
-import config from 'src/app/config/config';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
-const appConfig = config();
+import { customError } from 'libs/custom-handlers';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { PermissionsEnum } from 'src/app/admin/admin.interface';
+import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
+
+import { AdminAdminsService } from 'src/app/admin/admin-admins.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    private readonly adminService: AdminAdminsService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) return true;
 
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
-      PERMISSIONS_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-
-    const request = context.switchToHttp().getRequest();
-    const authHeader = request.headers['authorization'];
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw customError.unauthorized('Access token is missing');
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    let decoded: JwtPayload;
-    try {
-      decoded = jwt.verify(token, appConfig.jwt.access_token) as JwtPayload;
-    } catch (err) {
-      if (err instanceof jwt.TokenExpiredError) {
-        throw customError.unauthorized('Access token has expired');
-      }
-      if (err instanceof jwt.JsonWebTokenError) {
-        throw customError.badRequest('Invalid access token');
-      }
-      throw err;
-    }
-
-    request.user = decoded;
+    const requiredPermissions = this.reflector.getAllAndOverride<
+      PermissionsEnum[]
+    >(PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
 
     if (!requiredPermissions) return true;
 
-    const admin = decoded as UserAdmin;
+    const request = context.switchToHttp().getRequest();
+    console.log('request', request);
 
-    if (!admin.permissions || admin.permissions.length === 0) {
+    const user = request.user;
+    const { admin } = await this.adminService.findAdminById(user.id);
+
+    if (!admin || !admin.permissions || admin.permissions.length === 0) {
       throw customError.forbidden('No permissions assigned yet');
     }
 
