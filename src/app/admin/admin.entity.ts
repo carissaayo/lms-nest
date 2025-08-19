@@ -2,14 +2,14 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
   UpdateDateColumn,
   BeforeInsert,
 } from 'typeorm';
 
 import * as bcrypt from 'bcryptjs';
-import { UserRole } from '../user/user.entity';
+
 import { PermissionsEnum } from './admin.interface';
+import { UserRole } from '../user/user.entity';
 
 export enum AdminStatus {
   PENDING = 'pending',

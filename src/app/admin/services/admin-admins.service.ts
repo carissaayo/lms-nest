@@ -53,9 +53,15 @@ export class AdminAdminsService {
     if (existing) {
       throw customError.conflict('Admin with this email already exists');
     }
+    const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
+    if (!admin) throw customError.notFound('Admin not found');
+
+    if (!admin.isActive) {
+      throw customError.forbidden('Your account has been suspended');
+    }
 
     try {
-      const admin = this.adminRepo.create({
+      const newAdmin = this.adminRepo.create({
         email,
         signedUp: false,
         isActive: false,
@@ -63,7 +69,7 @@ export class AdminAdminsService {
         status: AdminStatus.PENDING,
       });
 
-      this.adminRepo.save(admin);
+      this.adminRepo.save(newAdmin);
 
       await this.emailService.adminInvitationEmail(email);
       return {

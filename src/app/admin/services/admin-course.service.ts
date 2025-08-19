@@ -23,6 +23,8 @@ import {
   handleFailedAuthAttempt,
 } from 'src/utils/admin-auth-utils';
 import { DBQuery, DBQueryCount, QueryString } from 'src/app/database/dbquery';
+import { ApprovalStatus, ApproveCourseDTO } from 'src/app/course/course.dto';
+import { UserRole } from 'src/app/user/user.entity';
 
 @Injectable()
 export class AdminCoursesService {
@@ -83,26 +85,45 @@ export class AdminCoursesService {
   /**
    * Approve or reject a course
    */
-  async ApproveCourse(dto: AddAnAdminDTO, req: CustomRequest) {
-    const { email } = dto;
+  async approveCourse(
+    courseId: string,
+    dto: ApproveCourseDTO,
+    req: CustomRequest,
+  ) {
+    if (!courseId) throw customError.notFound('courseId is required');
+    const { action } = dto;
 
-    const existing = await this.adminRepo.findOne({ where: { email } });
-    if (existing) {
-      throw customError.conflict('Admin with this email already exists');
+    const course = await this.courseRepo.findOne({
+      where: { id: courseId },
+      relations: ['instructor'],
+    });
+
+    if (!course) {
+      throw customError.conflict('Course not found');
+    }
+    if (course.deleted) throw customError.gone('Course has been deleted');
+
+    const instructor = course.instructor;
+    if (!instructor.isActive)
+      throw customError.forbidden('Instructor has been suspended');
+
+    if (instructor.role !== UserRole.INSTRUCTOR)
+      throw customError.forbidden('Invalid instructor');
+
+    const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
+    if (!admin) throw customError.notFound('Admin not found');
+
+    if (!admin.isActive) {
+      throw customError.forbidden('Your account has been suspended');
     }
 
     try {
-      const admin = this.adminRepo.create({
-        email,
-        signedUp: false,
-        isActive: false,
-        emailVerified: false,
-        status: AdminStatus.PENDING,
-      });
-
-      this.adminRepo.save(admin);
-
-      await this.emailService.adminInvitationEmail(email);
+      if (action === ApprovalStatus.APPROVE) {
+        course.isApproved = true;
+        course.approvalDate = new Date();
+        course.approvedBy = admin;
+        course.approvedByName = `${admin.firstName} ${admin.lastName}`;
+      }
       return {
         accessToken: req.token,
         message: 'Admin has ben added successfully',

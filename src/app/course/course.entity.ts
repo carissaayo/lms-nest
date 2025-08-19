@@ -12,6 +12,7 @@ import {
 import { User } from '../user/user.entity';
 import { Category, Enrollment } from '../database/main.entity';
 import { Lesson } from '../lesson/lesson.entity';
+import { UserAdmin } from '../admin/admin.entity';
 
 @Entity({ name: 'courses' })
 export class Course extends BaseEntity {
@@ -49,7 +50,10 @@ export class Course extends BaseEntity {
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'approved_by' })
-  approvedBy?: User;
+  approvedBy?: UserAdmin;
+
+  @Column({ nullable: true })
+  approvedByName?: string;
 
   @Column({ type: 'timestamp', nullable: true })
   approvalDate?: Date;
