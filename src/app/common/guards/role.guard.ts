@@ -1,7 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from 'src/app/user/user.entity';
-import { ROLES_KEY } from '../decorators/roles.decorator';
+
 import { customError } from 'libs/custom-handlers';
 import { JwtPayload } from 'src/utils/jwt-utils';
 import * as jwt from 'jsonwebtoken';

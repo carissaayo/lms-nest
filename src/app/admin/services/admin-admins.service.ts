@@ -31,6 +31,9 @@ export class AdminAdminsService {
     const user = await this.adminRepo.findOne({
       where: { id: req.userId },
     });
+    console.log('req===', req.userId);
+    console.log('token', req.token);
+    console.log('user====', user);
 
     if (!user) {
       throw customError.forbidden('Access Denied');
@@ -38,7 +41,7 @@ export class AdminAdminsService {
     const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
 
     return {
-      accessToken: req.token || '',
+      accessToken: req.token,
       profile,
       message: 'Profile fetched successfully',
     };

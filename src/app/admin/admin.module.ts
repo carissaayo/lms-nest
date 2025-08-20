@@ -14,6 +14,8 @@ import { AdminCoursesController } from './controllers/admin-courses.controller';
 
 import { UserAdmin } from './admin.entity';
 import { User } from '../user/user.entity';
+import { AdminAuthController } from './controllers/admin-auth.controller';
+import { AdminAuthService } from './services/admin-auth.service';
 
 @Module({
   imports: [
@@ -21,11 +23,17 @@ import { User } from '../user/user.entity';
     EmailModule,
     CourseModule,
   ],
-  providers: [AdminUserService, AdminAdminsService, AdminCoursesService],
+  providers: [
+    AdminUserService,
+    AdminAdminsService,
+    AdminCoursesService,
+    AdminAuthService,
+  ],
   controllers: [
     AdminUserController,
     AdminAdminsController,
     AdminCoursesController,
+    AdminAuthController,
   ],
   exports: [],
 })

@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CourseService } from './course.service';
-import { UserRole } from '../user/user.entity';
+import { UserRole } from '../user/user.interface';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { CreateCourseDTO, UpdateCourseDTO } from './course.dto';

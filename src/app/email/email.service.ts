@@ -218,4 +218,37 @@ export class EmailService {
 
     await this.sendEmail({ to: email, subject, text, html });
   }
+
+  async courseApprovalEmail(
+    email: string,
+    firstName: string,
+    title: string,
+    action: string,
+    rejectReason: string,
+  ) {
+    const appName = this.configService.get<string>('app.name');
+    const main = action === 'approve' ? 'Approval' : 'Rejection';
+    const subject = `${appName || 'DevLearn'} Course ${main} Email`;
+    const text = `Your account has been ${action}ed`;
+    const html = `
+    <h1>Hi, ${firstName}</h1>
+    ${
+      main === 'Approval' &&
+      `<p>Your course - ${title} has been approve </p>
+      <p>You can now proceed to put out your course by publishing it</p>
+         <p>Thank you for creating contents to help humanity</p>`
+    }
+
+      ${
+        main === 'Rejection' &&
+        `<p>Your - ${title} has been rejected due to ${rejectReason} </p>
+      <p>You can reach out to support to learn more or complain</p>
+         <p>You can still update the course and submit it for approval again or create a new one</p>`
+      }
+    
+   
+  `;
+
+    await this.sendEmail({ to: email, subject, text, html });
+  }
 }
