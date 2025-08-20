@@ -1,10 +1,8 @@
 import { Repository } from 'typeorm';
 import { Request } from 'express';
-import { generateAccessToken, generateRefreshToken } from './jwt-utils';
-import config from 'src/app/config/config';
+
 import { customError } from 'libs/custom-handlers';
-import { User } from 'src/app/user/user.entity';
-import { ProfileInterface } from 'src/app/auth/auth.interface';
+
 import { UserAdmin } from 'src/app/admin/admin.entity';
 import { AdminProfileInterface } from 'src/app/admin/admin.interface';
 export interface CustomRequest extends Request {
@@ -14,8 +12,6 @@ export interface CustomRequest extends Request {
   token?: string;
   files?: any;
 }
-
-const appConfig = config();
 
 /**
  * Handles failed authentication attempts for an admin.
@@ -40,41 +36,6 @@ export async function handleFailedAuthAttempt(
 
   throw customError.unauthorized('Invalid credentials', 401);
 }
-
-// Generate access and refresh tokens
-// export const generateToken = async (user: User, req: CustomRequest) => {
-//   const JWT_REFRESH_TOKEN_SECRET = appConfig.jwt.refresh_token;
-//   const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
-
-//   const clientIpAddress = req.ip;
-//   const userAgent = req.headers['user-agent'];
-
-//   const token = await generateAccessToken(
-//     user.id,
-//     user.role,
-//     JWT_ACCESS_TOKEN_SECRET,
-//   );
-
-//   const refreshToken = await generateRefreshToken(
-//     user.id,
-//     user.role,
-//     JWT_REFRESH_TOKEN_SECRET,
-//   );
-
-//   const session = {
-//     ipAddress: clientIpAddress || '',
-//     userAgent: userAgent || '',
-//     date: new Date(Date.now()),
-//     refreshtoken: refreshToken,
-//     active: true,
-//   };
-
-//   return {
-//     token,
-//     refreshToken,
-//     session,
-//   };
-// };
 
 export const GET_ADMIN_PROFILE = (admin: UserAdmin): AdminProfileInterface => {
   return {

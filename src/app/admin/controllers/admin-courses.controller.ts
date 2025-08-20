@@ -8,21 +8,25 @@ import {
   Param,
   Get,
   Query,
+  Req,
 } from '@nestjs/common';
 
-import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../user/user.entity';
+import { UserRole } from '../../user/user.interface';
 
 import { PermissionsGuard } from '../../common/guards/permissions.gurad';
 import { Permissions } from '../../common/decorators/permissions.decorator';
-import { AdminUserService } from '../services/admin-users.service';
-import { SuspendUserDTO } from '../admin.dto';
+
 import { PermissionsEnum } from '../admin.interface';
 import { AdminCoursesService } from '../services/admin-course.service';
 import { ApproveCourseDTO } from 'src/app/course/course.dto';
+import { IdParam } from 'src/app/common/decorators/idParam.decorator';
+import {
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+} from 'src/app/common/guards/admin-auth.guard';
 
 @Controller('admin-courses')
 @UsePipes(
@@ -31,8 +35,11 @@ import { ApproveCourseDTO } from 'src/app/course/course.dto';
     transform: true,
   }),
 )
-@UseGuards(RolesGuard)
-@UseGuards(PermissionsGuard)
+@UseGuards(
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+  PermissionsGuard,
+)
 @Roles(UserRole.ADMIN)
 @Permissions(PermissionsEnum.ADMIN_COURSES)
 export class AdminCoursesController {
@@ -40,9 +47,9 @@ export class AdminCoursesController {
 
   @Patch(':courseId/action')
   async approveCourse(
-    @Param('courseId') courseId: string,
+    @IdParam('courseId') courseId: string,
     @Body() dto: ApproveCourseDTO,
-    req: CustomRequest,
+    @Req() req: CustomRequest,
   ) {
     return this.adminCoursesService.approveCourse(courseId, dto, req);
   }

@@ -48,16 +48,24 @@ export class Course extends BaseEntity {
   @Column({ default: false })
   isPublished: boolean;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => UserAdmin, { nullable: true })
   @JoinColumn({ name: 'approved_by' })
   approvedBy?: UserAdmin;
 
   @Column({ nullable: true })
   approvedByName?: string;
 
+  @ManyToOne(() => UserAdmin, { nullable: true })
+  @JoinColumn({ name: 'rejected_by' })
+  rejectedBy?: UserAdmin;
+
+  @Column({ nullable: true })
+  rejectedByName?: string;
+
   @Column({ type: 'timestamp', nullable: true })
   approvalDate?: Date;
-
+  @Column({ type: 'timestamp', nullable: true })
+  rejectionDate?: Date;
   @Column({ default: false })
   isSubmitted: boolean;
 

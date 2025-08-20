@@ -12,11 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { Course } from '../course/course.entity';
 import { Enrollment } from '../database/main.entity';
 import { Transaction } from '../transaction/transaction.entity';
-export enum UserRole {
-  STUDENT = 'student',
-  INSTRUCTOR = 'instructor',
-  ADMIN = 'admin',
-}
+import { UserRole } from './user.interface';
 
 export enum UserStatus {
   PENDING = 'pending',

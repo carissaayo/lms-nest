@@ -15,7 +15,7 @@ import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../user/user.entity';
+import { UserRole } from '../../user/user.interface';
 
 import { PermissionsGuard } from '../../common/guards/permissions.gurad';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -27,6 +27,10 @@ import {
 } from '../admin.dto';
 import { AdminAdminsService } from '../services/admin-admins.service';
 import { PermissionsEnum } from '../admin.interface';
+import {
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+} from 'src/app/common/guards/admin-auth.guard';
 
 @Controller('admin-admins')
 @UsePipes(
@@ -35,7 +39,11 @@ import { PermissionsEnum } from '../admin.interface';
     transform: true,
   }),
 )
-@UseGuards(RolesGuard, PermissionsGuard)
+@UseGuards(
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+  PermissionsGuard,
+)
 @Roles(UserRole.ADMIN)
 export class AdminAdminsController {
   constructor(private adminAdminService: AdminAdminsService) {}

@@ -9,7 +9,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 
 import { PermissionsEnum } from './admin.interface';
-import { UserRole } from '../user/user.entity';
+import { UserRole } from '../user/user.interface';
 
 export enum AdminStatus {
   PENDING = 'pending',

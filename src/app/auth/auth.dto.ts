@@ -6,7 +6,7 @@ import {
   MinLength,
   IsEnum,
 } from 'class-validator';
-import { UserRole } from '../user/user.entity';
+import { UserRole } from '../user/user.interface';
 import { MatchesProperty } from '../common/validators/matches-property.validator';
 
 export class RegisterDto {

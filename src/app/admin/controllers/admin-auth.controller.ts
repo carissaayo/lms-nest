@@ -21,12 +21,13 @@ import { CustomRequest } from 'src/utils/auth-utils';
 
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../user/user.entity';
+
 import { AdminAuthService } from '../services/admin-auth.service';
 import {
   AuthenticateTokenAdminGuard,
   ReIssueTokenAdminGuard,
 } from '../../common/guards/admin-auth.guard';
+import { UserRole } from 'src/app/user/user.interface';
 
 @Controller('admin-auth')
 @UsePipes(

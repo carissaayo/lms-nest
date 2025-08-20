@@ -16,6 +16,8 @@ import {
   SuspendUserDTO,
 } from '../admin.dto';
 
+import { UserRole } from 'src/app/user/user.interface';
+
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
 import { customError } from 'libs/custom-handlers';
 import {
@@ -24,7 +26,6 @@ import {
 } from 'src/utils/admin-auth-utils';
 import { DBQuery, DBQueryCount, QueryString } from 'src/app/database/dbquery';
 import { ApprovalStatus, ApproveCourseDTO } from 'src/app/course/course.dto';
-import { UserRole } from 'src/app/user/user.entity';
 
 @Injectable()
 export class AdminCoursesService {
@@ -91,7 +92,7 @@ export class AdminCoursesService {
     req: CustomRequest,
   ) {
     if (!courseId) throw customError.notFound('courseId is required');
-    const { action } = dto;
+    const { action, rejectReason } = dto;
 
     const course = await this.courseRepo.findOne({
       where: { id: courseId },
@@ -112,6 +113,7 @@ export class AdminCoursesService {
 
     const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
     if (!admin) throw customError.notFound('Admin not found');
+    admin.isActive = true;
 
     if (!admin.isActive) {
       throw customError.forbidden('Your account has been suspended');
@@ -123,14 +125,39 @@ export class AdminCoursesService {
         course.approvalDate = new Date();
         course.approvedBy = admin;
         course.approvedByName = `${admin.firstName} ${admin.lastName}`;
+      } else {
+        course.isApproved = false;
+        course.rejectionDate = new Date();
+        course.rejectedBy = admin;
+        course.rejectedByName = `${admin.firstName} ${admin.lastName}`;
       }
+      const newAdminAction = {
+        action: `${action}ed a Course  ${course.id}`,
+        ...(rejectReason ? { rejectReason } : {}),
+        date: new Date(),
+      };
+      admin.actions.push(newAdminAction);
+      await this.courseRepo.save(course);
+      await this.adminRepo.save(admin);
+
+      await this.emailService.courseApprovalEmail(
+        instructor.email,
+        instructor.firstName,
+        course.title,
+        action,
+        rejectReason || '',
+      );
       return {
         accessToken: req.token,
-        message: 'Admin has ben added successfully',
+        message: 'Course has been updated successfully',
+        course,
       };
     } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
+      console.log('Error', error);
+      throw customError.internalServerError(
+        error.message || 'Internal Server Error',
+        error.statusCode || 500,
+      );
     }
   }
 

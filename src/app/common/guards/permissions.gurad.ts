@@ -29,10 +29,10 @@ export class PermissionsGuard implements CanActivate {
     if (!requiredPermissions) return true;
 
     const request = context.switchToHttp().getRequest();
-    console.log('request', request);
 
     const user = request.user;
     const { admin } = await this.adminService.findAdminById(user.id);
+    console.log(admin);
 
     if (!admin || !admin.permissions || admin.permissions.length === 0) {
       throw customError.forbidden('No permissions assigned yet');

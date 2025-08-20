@@ -269,34 +269,42 @@ export class CourseService {
    */
   async submitCourse(courseId: string, req: CustomRequest) {
     const course = await this.courseRepo.findOne({
-      where: { id: courseId, deleted: false },
+      where: { id: courseId },
       relations: ['instructor'],
     });
 
     if (!course) {
       throw customError.notFound('Course not found');
     }
+    if (course.deleted) throw customError.notFound('Course has been deleted');
 
     if (course.instructor.id !== req.userId) {
       throw customError.forbidden('You can only delete your courses');
     }
+    try {
+      course.isSubmitted = true;
+      course.submittedAt = new Date();
 
-    course.isSubmitted = true;
-    course.submittedAt = new Date();
+      await this.courseRepo.save(course);
+      const instructor = course.instructor;
+      // // Send submission email
+      await this.emailService.courseSubmission(
+        instructor.email,
+        instructor.firstName,
+        course.title,
+      );
 
-    await this.courseRepo.save(course);
-    const instructor = course.instructor;
-    // // Send submission email
-    await this.emailService.courseSubmission(
-      instructor.email,
-      instructor.firstName,
-      course.title,
-    );
-
-    return {
-      message: 'Course submitted successfully',
-      accessToken: req.token,
-      course,
-    };
+      return {
+        message: 'Course submitted successfully',
+        accessToken: req.token,
+        course,
+      };
+    } catch (error) {
+      console.log(error);
+      throw new Error(
+        error.message || 'Internal Server Error',
+        error.status || 500,
+      );
+    }
   }
 }

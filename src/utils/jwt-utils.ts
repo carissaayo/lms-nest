@@ -1,5 +1,5 @@
 import config from 'src/app/config/config';
-import { User, UserRole } from 'src/app/user/user.entity';
+import { UserRole } from 'src/app/user/user.interface';
 import * as jwt from 'jsonwebtoken';
 
 const appConfig = config();

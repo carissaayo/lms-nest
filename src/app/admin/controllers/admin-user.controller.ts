@@ -14,7 +14,7 @@ import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../user/user.entity';
+import { UserRole } from '../../user/user.interface';
 
 import { PermissionsGuard } from '../../common/guards/permissions.gurad';
 import { Permissions } from '../../common/decorators/permissions.decorator';
