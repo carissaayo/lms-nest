@@ -10,13 +10,27 @@ export interface QueryString {
   [key: string]: any;
 }
 
+function isQueryBuilder<T extends ObjectLiteral>(
+  source: Repository<T> | SelectQueryBuilder<T>,
+): source is SelectQueryBuilder<T> {
+  return (source as SelectQueryBuilder<T>).getQuery !== undefined;
+}
+
 export class BaseDBQuery<T extends ObjectLiteral> {
   public query: SelectQueryBuilder<T>;
   public queryString: QueryString;
   public page?: number;
 
-  constructor(repo: Repository<T>, alias: string, queryString: QueryString) {
-    this.query = repo.createQueryBuilder(alias);
+  constructor(
+    source: Repository<T> | SelectQueryBuilder<T>,
+    alias: string,
+    queryString: QueryString,
+  ) {
+    if (isQueryBuilder(source)) {
+      this.query = source;
+    } else {
+      this.query = source.createQueryBuilder(alias);
+    }
     this.queryString = queryString;
   }
 
@@ -25,11 +39,44 @@ export class BaseDBQuery<T extends ObjectLiteral> {
     excludedFields.forEach((el) => delete filteredQueryObj[el]);
 
     Object.entries(filteredQueryObj).forEach(([key, value]) => {
-      if (typeof value === 'string' && value.includes(',')) {
+      if (typeof value === 'object' && value !== null) {
+        // Handle operators like gte, lte, gt, lt
+        Object.entries(value).forEach(([op, val]) => {
+          switch (op) {
+            case 'gte':
+              this.query.andWhere(`${this.query.alias}.${key} >= :${key}_gte`, {
+                [`${key}_gte`]: val,
+              });
+              break;
+            case 'gt':
+              this.query.andWhere(`${this.query.alias}.${key} > :${key}_gt`, {
+                [`${key}_gt`]: val,
+              });
+              break;
+            case 'lte':
+              this.query.andWhere(`${this.query.alias}.${key} <= :${key}_lte`, {
+                [`${key}_lte`]: val,
+              });
+              break;
+            case 'lt':
+              this.query.andWhere(`${this.query.alias}.${key} < :${key}_lt`, {
+                [`${key}_lt`]: val,
+              });
+              break;
+          }
+        });
+      } else if (typeof value === 'string' && value.includes(',')) {
+        // Handle IN queries e.g. category=math,science
         this.query.andWhere(`${this.query.alias}.${key} IN (:...${key})`, {
           [key]: value.split(','),
         });
+      } else if (typeof value === 'string') {
+        // Default partial search for strings
+        this.query.andWhere(`${this.query.alias}.${key} ILIKE :${key}`, {
+          [key]: `%${value}%`,
+        });
       } else {
+        // Equality check for numbers / booleans
         this.query.andWhere(`${this.query.alias}.${key} = :${key}`, {
           [key]: value,
         });
@@ -74,24 +121,22 @@ export class BaseDBQuery<T extends ObjectLiteral> {
     this.page = page;
     return this;
   }
-}
 
-export class DBQuery<T extends ObjectLiteral> extends BaseDBQuery<T> {
-  constructor(repo: Repository<T>, alias: string, queryString: QueryString) {
-    super(repo, alias, queryString);
-  }
-
-  async getMany() {
+  async getMany(): Promise<T[]> {
     return await this.query.getMany();
-  }
-}
-
-export class DBQueryCount<T extends ObjectLiteral> extends BaseDBQuery<T> {
-  constructor(repo: Repository<T>, alias: string, queryString: QueryString) {
-    super(repo, alias, queryString);
   }
 
   async count(): Promise<number> {
     return await this.query.getCount();
+  }
+}
+
+export class DBQuery<T extends ObjectLiteral> extends BaseDBQuery<T> {
+  constructor(
+    source: Repository<T> | SelectQueryBuilder<T>,
+    alias: string,
+    queryString: QueryString,
+  ) {
+    super(source, alias, queryString);
   }
 }

@@ -25,6 +25,8 @@ import {
   AuthenticateTokenUserGuard,
   ReIssueTokenUserGuard,
 } from '../common/guards/user-auth.guard';
+import { QueryString } from '../database/dbquery';
+import { IdParam } from '../common/decorators/idParam.decorator';
 
 @Controller('courses')
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
@@ -59,7 +61,7 @@ export class CourseController {
   }
 
   @Get()
-  async getCourses(@Query() query: any) {
+  async getCourses(@Query() query: QueryString) {
     return this.courseService.viewCourses(query);
   }
 
@@ -69,7 +71,17 @@ export class CourseController {
   }
 
   @Patch(':id/submit')
-  async submitCourse(@Param('id') courseId: string, @Req() req: CustomRequest) {
+  async submitCourse(
+    @IdParam('id') courseId: string,
+    @Req() req: CustomRequest,
+  ) {
     return this.courseService.submitCourse(courseId, req);
+  }
+  @Patch(':id/publish')
+  async publishCourse(
+    @IdParam('id') courseId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.courseService.publishCourse(courseId, req);
   }
 }

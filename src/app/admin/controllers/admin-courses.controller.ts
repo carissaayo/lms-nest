@@ -5,7 +5,6 @@ import {
   ValidationPipe,
   UseGuards,
   Patch,
-  Param,
   Get,
   Query,
   Req,
@@ -21,12 +20,13 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 
 import { PermissionsEnum } from '../admin.interface';
 import { AdminCoursesService } from '../services/admin-course.service';
-import { ApproveCourseDTO } from 'src/app/course/course.dto';
+import { AdminCourseActionDTO } from 'src/app/course/course.dto';
 import { IdParam } from 'src/app/common/decorators/idParam.decorator';
 import {
   AuthenticateTokenAdminGuard,
   ReIssueTokenAdminGuard,
 } from 'src/app/common/guards/admin-auth.guard';
+import { QueryString } from 'src/app/database/dbquery';
 
 @Controller('admin-courses')
 @UsePipes(
@@ -48,14 +48,14 @@ export class AdminCoursesController {
   @Patch(':courseId/action')
   async approveCourse(
     @IdParam('courseId') courseId: string,
-    @Body() dto: ApproveCourseDTO,
+    @Body() dto: AdminCourseActionDTO,
     @Req() req: CustomRequest,
   ) {
     return this.adminCoursesService.approveCourse(courseId, dto, req);
   }
 
   @Get()
-  async getCourses(@Query() query: any) {
+  async getCourses(@Query() query: QueryString) {
     return this.adminCoursesService.viewCourses(query);
   }
 }
