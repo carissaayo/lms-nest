@@ -21,8 +21,9 @@ export class Lesson extends BaseEntity {
   title!: string;
 
   @Column({ type: 'text', nullable: true })
-  content?: string; // could be markdown, html, or an external url
-
+  content?: string;
+  @Column({ type: 'int', default: 1 })
+  position!: number;
   @ManyToOne(() => Course, (course) => course.lessons, { nullable: false })
   @JoinColumn({ name: 'course_id' })
   course!: Course;
