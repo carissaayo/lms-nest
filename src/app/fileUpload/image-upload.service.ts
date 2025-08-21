@@ -190,6 +190,44 @@ export const saveImageS3 = async (
   return saveToS3.Location;
 };
 
+export const saveFileS3 = async (file: any, path: string): Promise<string> => {
+  AWS.config.update({
+    accessKeyId: appConfig.aws.access_key,
+    secretAccessKey: appConfig.aws.secret_key,
+    region: appConfig.aws.region,
+  });
+
+  const s3 = new AWS.S3();
+
+  let inputBuffer = file.buffer;
+
+  const hash = crypto.createHash('md5');
+  const fileHash = hash.update(inputBuffer).digest('hex');
+
+  const ext = file.originalname.split('.').pop();
+  const fileUrl = `-${fileHash}.${ext}`;
+
+  const params = {
+    Bucket: appConfig.aws.bucket_name,
+    Key: path + fileUrl,
+    Body: inputBuffer,
+    ContentType: file.mimetype,
+  };
+
+  const uploaded = await s3
+    .upload(params)
+    .promise()
+    .catch((err) => {
+      console.error('Error uploading to S3:', err);
+      throw customError.custom('Failed to upload file to S3', 500);
+    });
+
+  // Clear buffer
+  inputBuffer = null;
+
+  return uploaded.Location;
+};
+
 // Delete image from S3 using its full URL
 export const deleteImageS3 = async (imageUrl: string): Promise<void> => {
   if (!imageUrl) return;
@@ -223,5 +261,34 @@ export const deleteImageS3 = async (imageUrl: string): Promise<void> => {
   } catch (err) {
     console.error('❌ Failed to delete image from S3:', err);
     throw customError.custom('Failed to delete image from S3', 500);
+  }
+};
+
+export const deleteFileS3 = async (fileUrl: string): Promise<void> => {
+  if (!fileUrl) return;
+
+  AWS.config.update({
+    accessKeyId: appConfig.aws.access_key,
+    secretAccessKey: appConfig.aws.secret_key,
+    region: appConfig.aws.region,
+  });
+
+  const s3 = new AWS.S3();
+  const bucket = appConfig.aws.bucket_name;
+
+  // Extract key from URL
+  const url = new URL(fileUrl);
+  const key = url.pathname.startsWith('/')
+    ? url.pathname.slice(1)
+    : url.pathname;
+
+  const params = { Bucket: bucket, Key: key };
+
+  try {
+    await s3.deleteObject(params).promise();
+    console.log(`🗑️ Deleted file from S3: ${key}`);
+  } catch (err) {
+    console.error('❌ Failed to delete file from S3:', err);
+    throw customError.custom('Failed to delete file from S3', 500);
   }
 };

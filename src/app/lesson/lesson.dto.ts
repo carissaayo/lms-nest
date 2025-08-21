@@ -1,21 +1,25 @@
-import { IsNotEmpty, IsOptional, IsString, IsInt, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class CreateLessonDTO {
-  @IsNotEmpty()
+  @MinLength(10, { message: 'Title must be at least 10 characters long' })
+  @IsNotEmpty({ message: 'Title is required' })
   @IsString()
   title: string;
 
-  @IsOptional()
-  @IsString()
-  content?: string;
-
-  @IsNotEmpty()
+  @IsUUID()
+  @IsNotEmpty({ message: 'courseId is required' })
   courseId: string;
 
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  position?: number;
+  @MinLength(10, { message: 'Description must be at least 10 characters long' })
+  @IsNotEmpty({ message: 'Description is required' })
+  @IsString()
+  description: string;
 }
 
 export class UpdateLessonDTO {
@@ -25,10 +29,5 @@ export class UpdateLessonDTO {
 
   @IsOptional()
   @IsString()
-  content?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  position?: number;
+  description?: string;
 }
