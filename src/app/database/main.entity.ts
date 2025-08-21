@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Course } from '../course/course.entity';
 import { User } from '../user/user.entity';
-import { Assignment } from '../assignment/assignment.entity';
+import { Submission } from '../submission/submission.entity';
 
 export enum AssignmentStatus {
   PENDING = 'pending',
@@ -35,46 +35,26 @@ export class Enrollment extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => User, (user) => user.enrollments, { nullable: false })
+  @ManyToOne(() => User, (user) => user.enrollments, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @ManyToOne(() => Course, (course) => course.enrollments, { nullable: false })
+  @ManyToOne(() => Course, (course) => course.enrollments, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'course_id' })
   course!: Course;
 
   @Column({ default: 'active' })
   status!: string;
 
-  @OneToMany(() => Submission, (s) => s.enrollment)
+  @OneToMany(() => Submission, (s) => s.enrollment, { cascade: true })
   submissions?: Submission[];
 
   @CreateDateColumn()
   createdAt!: Date;
-}
-
-@Entity({ name: 'submissions' })
-export class Submission extends BaseEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
-  @ManyToOne(() => Assignment, (a) => a.submissions, { nullable: false })
-  @JoinColumn({ name: 'assignment_id' })
-  assignment!: Assignment;
-
-  @ManyToOne(() => Enrollment, (e) => e.submissions, { nullable: false })
-  @JoinColumn({ name: 'enrollment_id' })
-  enrollment!: Enrollment;
-
-  @Column({ nullable: true })
-  fileUrl?: string;
-
-  @Column({ type: 'text', nullable: true })
-  feedback?: string;
-
-  @Column({ type: 'int', nullable: true })
-  grade?: number;
-
-  @Column({ type: 'timestamptz' })
-  submittedAt!: Date;
 }

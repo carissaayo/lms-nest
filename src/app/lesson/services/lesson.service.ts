@@ -14,6 +14,7 @@ import {
 } from 'src/app/fileUpload/image-upload.service';
 import { User } from 'src/app/user/user.entity';
 import { EmailService } from 'src/app/email/email.service';
+import { DBQuery, QueryString } from 'src/app/database/dbquery';
 
 @Injectable()
 export class LessonService {
@@ -240,88 +241,135 @@ export class LessonService {
   }
 
   /**
-  //    * Delete a lesson
-  //    */
-  //   async deleteLesson(lessonId: number, req: CustomRequest) {
-  //     const lesson = await this.lessonRepo.findOne({
-  //       where: { id: lessonId },
-  //       relations: ['course', 'course.instructor'],
-  //     });
+   Delete a lesson
+      */
+  async deleteLesson(lessonId: string, req: CustomRequest) {
+    const lesson = await this.lessonRepo.findOne({
+      where: { id: lessonId },
+      relations: ['course', 'course.instructor'],
+    });
 
-  //     if (!lesson) throw customError.notFound('Lesson not found');
-  //     if (lesson.course.instructor.id !== req.userId) {
-  //       throw customError.forbidden(
-  //         'You can only delete lessons from your own course',
-  //       );
-  //     }
+    if (!lesson) throw customError.notFound('Lesson not found');
+    if (lesson.course.instructor.id !== req.userId) {
+      throw customError.forbidden(
+        'You can only delete lessons from your own course',
+      );
+    }
 
-  //     await this.lessonRepo.remove(lesson);
+    try {
+      if (lesson.videoUrl) {
+        try {
+          await deleteFileS3(lesson.videoUrl);
+        } catch (err) {
+          console.warn(' Failed to delete old video:', err.message);
+        }
+      }
+      if (lesson.noteUrl) {
+        try {
+          await deleteFileS3(lesson.noteUrl);
+        } catch (err) {
+          console.warn(' Failed to delete old note:', err.message);
+        }
+      }
 
-  //     return {
-  //       message: 'Lesson deleted successfully',
-  //     };
+      await this.lessonRepo.remove(lesson);
+      const instructor = lesson.course.instructor;
+      await this.emailService.LessonDeletion(
+        instructor.email,
+        instructor.firstName,
+        lesson.title,
+        lesson.course.title,
+      );
+
+      return {
+        accessToken: req.token,
+        message: 'Lesson deleted successfully',
+      };
+    } catch (error) {
+      console.log(error);
+      throw customError.internalServerError(
+        error.message || '',
+        error.statusCOde || 500,
+      );
+    }
+  }
+
+  /**
+   * Get all lessons in a course
+   */
+  async getLessons(courseId: string, query: QueryString, req: CustomRequest) {
+    const course = await this.courseRepo.findOne({
+      where: { id: courseId, deleted: false },
+      relations: ['instructor'],
+    });
+
+    if (!course) throw customError.notFound('Course not found');
+    if (course.instructor.id !== req.userId) {
+      throw customError.forbidden(
+        'You can only view lessons from your own course',
+      );
+    }
+
+    const baseQuery = this.lessonRepo
+      .createQueryBuilder('lesson')
+      .leftJoinAndSelect('lesson.course', 'course')
+      .leftJoinAndSelect('lesson.assignments', 'assignments')
+      .where('course.id = :courseId', { courseId });
+
+    const dbQuery = new DBQuery(baseQuery, 'lesson', query);
+
+    dbQuery.filter().sort().limitFields().paginate();
+
+    if (!query.sort) {
+      dbQuery.query.addOrderBy('lesson.position', 'ASC');
+    }
+
+    const [lessons, total] = await Promise.all([
+      dbQuery.getMany(),
+      dbQuery.count(),
+    ]);
+
+    return {
+      accessToken: req.token,
+      page: dbQuery.page,
+      results: total,
+      lessons,
+      message: 'Lessons fetched successfully',
+    };
+  }
+
+  // async reorderLessons(
+  //   courseId: string,
+  //   newOrder: { lessonId: number; position: number }[],
+  //   req: CustomRequest,
+  // ) {
+  //   const course = await this.courseRepo.findOne({
+  //     where: { id: courseId },
+  //     relations: ['instructor'],
+  //   });
+
+  //   if (!course) throw customError.notFound('Course not found');
+  //   if (course.instructor.id !== req.userId) {
+  //     throw customError.forbidden(
+  //       'You can only reorder lessons in your own course',
+  //     );
   //   }
 
-  //   /**
-  //    * Get all lessons in a course
-  //    */
-  //   async getLessons(courseId: string, req: CustomRequest) {
-  //     const course = await this.courseRepo.findOne({
-  //       where: { id: courseId, deleted: false },
-  //       relations: ['instructor'],
-  //     });
-
-  //     if (!course) throw customError.notFound('Course not found');
-  //     if (course.instructor.id !== req.userId) {
-  //       throw customError.forbidden(
-  //         'You can only view lessons from your own course',
-  //       );
-  //     }
-
-  //     const lessons = await this.lessonRepo.find({
-  //       where: { course: { id: courseId } },
-  //       order: { position: 'ASC' }, // always ordered
-  //     });
-
-  //     return {
-  //       courseId,
-  //       lessons,
-  //       message: 'Lessons fetched successfully',
-  //     };
+  //   for (const { lessonId, position } of newOrder) {
+  //     await this.lessonRepo.update(
+  //       { id: lessonId, course: { id: courseId } },
+  //       { position },
+  //     );
   //   }
 
-  //   async reorderLessons(
-  //     courseId: string,
-  //     newOrder: { lessonId: number; position: number }[],
-  //     req: CustomRequest,
-  //   ) {
-  //     const course = await this.courseRepo.findOne({
-  //       where: { id: courseId },
-  //       relations: ['instructor'],
-  //     });
+  //   const updatedLessons = await this.lessonRepo.find({
+  //     where: { course: { id: courseId } },
+  //     order: { position: 'ASC' },
+  //   });
 
-  //     if (!course) throw customError.notFound('Course not found');
-  //     if (course.instructor.id !== req.userId) {
-  //       throw customError.forbidden(
-  //         'You can only reorder lessons in your own course',
-  //       );
-  //     }
-
-  //     for (const { lessonId, position } of newOrder) {
-  //       await this.lessonRepo.update(
-  //         { id: lessonId, course: { id: courseId } },
-  //         { position },
-  //       );
-  //     }
-
-  //     const updatedLessons = await this.lessonRepo.find({
-  //       where: { course: { id: courseId } },
-  //       order: { position: 'ASC' },
-  //     });
-
-  //     return {
-  //       lessons: updatedLessons,
-  //       message: 'Lessons reordered successfully',
-  //     };
-  //   }
+  //   return {
+  //     lessons: updatedLessons,
+  //     message: 'Lessons reordered successfully',
+  //   };
+  // }
 }
