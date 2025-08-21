@@ -293,6 +293,56 @@ export class EmailService {
     });
   }
 
+  async LessonCreation(
+    email: string,
+    firstName: string,
+    title: string,
+    lessonTitle: string,
+  ) {
+    const subject = 'New Lesson Created';
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${firstName},`,
+      body: `<p>Your course <strong>${title}</strong> now has a new lesson  </p>
+             <p>Lesson title: ${lessonTitle}</p>
+              <p>You have to resubmit the course
+             </p>`,
+    });
+
+    await this.sendEmail({
+      to: email,
+      subject,
+      text: `Your course ${title} has been created.`,
+      html,
+    });
+  }
+
+  async LessonUpdating(
+    email: string,
+    firstName: string,
+    title: string,
+    lessonTitle: string,
+  ) {
+    const subject = 'Course Lesson Updated';
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${firstName},`,
+      body: `
+      <p>One of your lessons in the course <strong>${title}</strong> has been updated successfully </p>
+      <p>Lesson title: <strong>${lessonTitle}</strong> </p>  
+      <p>You have to resubmit the course
+             </p>
+             
+             `,
+    });
+
+    await this.sendEmail({
+      to: email,
+      subject,
+      text: `Your course ${title} was updated.`,
+      html,
+    });
+  }
   // ========== ADMIN RELATED ==========
 
   async adminInvitationEmail(email: string) {
