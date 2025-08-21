@@ -38,6 +38,9 @@ export class PermissionsGuard implements CanActivate {
       throw customError.forbidden('No permissions assigned yet');
     }
 
+    if (!admin.isActive) {
+      throw customError.forbidden('Your account is suspended');
+    }
     if (admin.permissions.includes(PermissionsEnum.SUPER_ADMIN)) {
       return true;
     }

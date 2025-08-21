@@ -10,6 +10,7 @@ import {
   IsEnum,
   ValidateIf,
 } from 'class-validator';
+import { CourseStatus } from './course.entity';
 
 export enum CourseCategory {
   DEVELOPMENT = 'Development',
@@ -71,22 +72,23 @@ export class UpdateCourseDTO {
   price?: number;
 }
 
-export enum ApprovalStatus {
-  APPROVE = 'approve',
-  REJECT = 'reject',
-}
-export class ApproveCourseDTO {
-  @IsString()
-  @IsNotEmpty()
-  @IsEnum(ApprovalStatus, {
-    message: 'Action must be either approve or reject',
+export class AdminCourseActionDTO {
+  @IsEnum(CourseStatus, {
+    message: 'Action must be one of: approved, pending, suspended, rejected',
   })
-  action: ApprovalStatus;
+  action: CourseStatus;
 
-  @ValidateIf((o) => o.action === ApprovalStatus.REJECT)
+  @ValidateIf((o) => o.status === CourseStatus.REJECTED)
   @IsString()
   @IsNotEmpty({
     message: 'Rejection reason is required when rejecting a course',
   })
   rejectReason?: string;
+
+  @ValidateIf((o) => o.status === CourseStatus.SUSPENDED)
+  @IsString()
+  @IsNotEmpty({
+    message: 'Suspension reason is required when suspending a course',
+  })
+  suspendReason?: string;
 }
