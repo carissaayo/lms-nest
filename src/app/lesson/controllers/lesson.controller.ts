@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { Roles } from 'src/app/common/decorators/roles.decorator';
 import { RolesGuard } from 'src/app/common/guards/role.guard';
@@ -23,11 +24,9 @@ import { UserRole } from 'src/app/user/user.interface';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { LessonService } from '../services/lesson.service';
 import { CreateLessonDTO, UpdateLessonDTO } from '../lesson.dto';
-import {
-  FileFieldsInterceptor,
-  FilesInterceptor,
-} from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { IdParam } from 'src/app/common/decorators/idParam.decorator';
+import { QueryString } from 'src/app/database/dbquery';
 
 @Controller('lessons')
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
@@ -68,21 +67,22 @@ export class LessonController {
     return this.lessonService.updateLesson(dto, files, req, lessonId);
   }
 
-  //   @Delete(':id')
-  //   async deleteLesson(
-  //     @Param('id', ParseIntPipe) lessonId: number,
-  //     @Req() req: CustomRequest,
-  //   ) {
-  //     return this.lessonService.deleteLesson(lessonId, req);
-  //   }
+  @Patch(':id/delete')
+  async deleteLesson(
+    @IdParam('id') lessonId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.lessonService.deleteLesson(lessonId, req);
+  }
 
-  //   @Get('course/:courseId')
-  //   async getLessons(
-  //     @Param('courseId') courseId: string,
-  //     @Req() req: CustomRequest,
-  //   ) {
-  //     return this.lessonService.getLessons(courseId, req);
-  //   }
+  @Get('/:courseId')
+  async getLessons(
+    @IdParam('courseId') courseId: string,
+    @Query() query: QueryString,
+    @Req() req: CustomRequest,
+  ) {
+    return this.lessonService.getLessons(courseId, query, req);
+  }
 
   //   // ✅ New bulk reorder endpoint
   //   @Patch('course/:courseId/reorder')

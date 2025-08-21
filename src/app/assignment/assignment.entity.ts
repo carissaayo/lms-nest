@@ -10,7 +10,9 @@ import {
   BaseEntity,
 } from 'typeorm';
 import { Lesson } from '../lesson/lesson.entity';
-import { Submission } from '../database/main.entity';
+import { Submission } from '../submission/submission.entity';
+import { User } from '../user/user.entity';
+
 @Entity({ name: 'assignments' })
 export class Assignment extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -22,16 +24,30 @@ export class Assignment extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @ManyToOne(() => Lesson, (lesson) => lesson.assignments, { nullable: true })
+  @Column()
+  fileUrl!: string;
+
+  @ManyToOne(() => Lesson, (lesson) => lesson.assignments, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'lesson_id' })
-  lesson?: Lesson;
+  lesson!: Lesson;
 
-  @OneToMany(() => Submission, (s) => s.assignment)
+  @Column()
+  lessonId!: string;
+
+  @ManyToOne(() => User, (user) => user.assignments, { nullable: false })
+  @JoinColumn({ name: 'instructor_id' })
+  instructor!: User;
+  @Column()
+  instructorId!: string;
+
+  @OneToMany(() => Submission, (s) => s.enrollment, { cascade: true })
   submissions?: Submission[];
-
-  @Column({ type: 'timestamptz', nullable: true })
-  dueDate?: Date;
 
   @CreateDateColumn()
   createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }

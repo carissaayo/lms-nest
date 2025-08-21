@@ -343,6 +343,56 @@ export class EmailService {
       html,
     });
   }
+
+  async LessonDeletion(
+    email: string,
+    firstName: string,
+    title: string,
+    lessonTitle: string,
+  ) {
+    const subject = 'Course Lesson Deleted';
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${firstName},`,
+      body: `
+      <p>One of your lessons in the course <strong>${title}</strong> has been deleted successfully </p>
+      <p>Lesson title: <strong>${lessonTitle}</strong> </p>  
+             `,
+    });
+
+    await this.sendEmail({
+      to: email,
+      subject,
+      text: `A lecture ${title} was deleted.`,
+      html,
+    });
+  }
+
+  async AssignmentCreation(
+    email: string,
+    firstName: string,
+    title: string,
+    lessonTitle: string,
+    courseTitle: string,
+  ) {
+    const subject = 'New Assignment Created';
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${firstName},`,
+      body: `<p>A new assignment has been created for lesson <strong>${title}</strong> on your course <strong>${courseTitle}</strong>  </p>
+             <p>Lesson title: ${lessonTitle}</p>
+             <p>Assignment title: ${title}</p>
+`,
+    });
+
+    await this.sendEmail({
+      to: email,
+      subject,
+      text: `Assingment ${title} has been created.`,
+      html,
+    });
+  }
+
   // ========== ADMIN RELATED ==========
 
   async adminInvitationEmail(email: string) {

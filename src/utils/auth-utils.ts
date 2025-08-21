@@ -24,7 +24,7 @@ const appConfig = config();
  * @param usersRepo - TypeORM repository for saving updates
  */
 export async function handleFailedAuthAttempt(
-  user: User | UserAdmin,
+  user: User,
   usersRepo: Repository<User>,
 ): Promise<never> {
   if (user.failedAuthAttempts >= 5) {
