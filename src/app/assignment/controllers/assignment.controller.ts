@@ -8,8 +8,12 @@ import {
   Patch,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 
 import { AssignmentService } from '../services/assignment.service';
 import { CreateAssignmentDTO } from '../assignment.dto';
@@ -23,68 +27,73 @@ import {
 } from 'src/app/common/guards/user-auth.guard';
 import { RolesGuard } from 'src/app/common/guards/role.guard';
 import { Roles } from 'src/app/common/decorators/roles.decorator';
+import { IdParam } from 'src/app/common/decorators/idParam.decorator';
+import { QueryString } from 'src/app/database/dbquery';
 
 @Controller('assignments')
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
 @Roles(UserRole.INSTRUCTOR)
 export class AssignmentController {
   constructor(private readonly assignmentService: AssignmentService) {}
-  @Post(':courseId/:instructorId')
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'file', maxCount: 1 }]))
+  @Post()
+  @UseInterceptors(FileInterceptor('file'))
   async createAssignment(
+    @Body() dto: CreateAssignmentDTO,
+    @UploadedFile()
+    file: Express.Multer.File,
+    @Req() req: CustomRequest,
+  ) {
+    console.log('file', file);
+    return this.assignmentService.createAssignment(dto, file, req);
+  }
+
+  @Patch(':id')
+  async updateAssignment(
+    @IdParam('id') assignmentId: string,
     @UploadedFile()
     files: { file: Express.Multer.File[] },
     @Body() dto: CreateAssignmentDTO,
     @Req() req: CustomRequest,
   ) {
-    return this.assignmentService.createAssignment(dto, files, req);
+    return this.assignmentService.updateAssignment(
+      assignmentId,
+      dto,
+      files,
+      req,
+    );
   }
 
-  //   @Get('course/:courseId')
-  //   async getAssignmentsByCourse(
-  //     @Param('courseId', ParseIntPipe) courseId: number,
-  //   ) {
-  //     return this.assignmentService.getAssignmentsByCourse(courseId);
-  //   }
+  @Patch(':id/delete')
+  async deleteAssignment(
+    @IdParam('id') assignmentId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.assignmentService.deleteAssignment(assignmentId, req);
+  }
 
-  //   // 📌 Get all assignments by instructor
-  //   @Get('instructor/:instructorId')
-  //   async getAssignmentsByInstructor(
-  //     @Param('instructorId') instructorId: string,
-  //   ){
-  //     return this.assignmentService.getAssignmentsByInstructor(instructorId);
-  //   }
+  @Get('course/:courseId')
+  async getAssignmentsByCourse(
+    @IdParam('courseId') courseId: string,
+    @Query() query: QueryString,
+    @Req() req: CustomRequest,
+  ) {
+    return this.assignmentService.getAssignmentsByInstructor(
+      courseId,
+      query,
+      req,
+    );
+  }
 
-  //   // 📌 Update assignment
-  //   @Patch(':id')
-  //   @UseInterceptors(FileInterceptor('file'))
-  //   async updateAssignment(
-  //     @Param('id', ParseIntPipe) id: number,
-  //     @UploadedFile() file: Express.Multer.File,
-  //     @Body('title') title: string,
-  //     @Body('description') description: string,
-  //   ) {
-  //     return this.assignmentService.updateAssignment(
-  //       id,
-  //       title,
-  //       description,
-  //       file,
-  //     );
-  //   }
-
-  //   @Delete(':id')
-  //   async deleteAssignment(
-  //     @Param('id', ParseIntPipe) id: number,
-  //   ): Promise<{ deleted: boolean }> {
-  //     return this.assignmentService.deleteAssignment(id);
-  //   }
-
-  //   @Patch(':assignmentId/solutions/:solutionId/mark')
-  //   async markSolution(
-  //     @Param('assignmentId', ParseIntPipe) assignmentId: number,
-  //     @Param('solutionId', ParseIntPipe) solutionId: number,
-  //     @Body('grade') grade: number,
-  //   ) {
-  //     return this.assignmentService.markSolution(assignmentId, solutionId, grade);
-  //   }
+  @Get('instructor/:instructorId')
+  async getAssignmentsByInstructor(
+    @IdParam('instructorId') instructorId: string,
+    @Query() query: QueryString,
+    @Req() req: CustomRequest,
+  ) {
+    return this.assignmentService.getAssignmentsByInstructor(
+      instructorId,
+      query,
+      req,
+    );
+  }
 }

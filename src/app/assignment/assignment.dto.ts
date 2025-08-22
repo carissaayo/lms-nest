@@ -22,12 +22,17 @@ export class CreateAssignmentDTO {
   description: string;
 }
 
-export class UpdateLessonDTO {
-  @IsOptional()
+export class UpdateAssignmentDTO {
+  @MinLength(10, { message: 'Title must be at least 10 characters long' })
+  @IsNotEmpty({ message: 'Title is required' })
   @IsString()
   title?: string;
 
-  @IsOptional()
+  @IsUUID()
+  //   @IsNotEmpty({ message: 'lessonId is required' })
+  //   lessonId: string;
+  @MinLength(10, { message: 'Description must be at least 10 characters long' })
+  @IsNotEmpty({ message: 'Description is required' })
   @IsString()
   description?: string;
 }

@@ -3,16 +3,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Assignment } from '../assignment.entity';
-import { Submission } from 'src/app/submission/submission.entity';
-import { Enrollment } from 'src/app/database/main.entity';
-import { Course } from 'src/app/course/course.entity';
+// import { Submission } from 'src/app/submission/submission.entity';
+// import { Enrollment } from 'src/app/database/main.entity';
+import { Course, CourseStatus } from 'src/app/course/course.entity';
 import { User } from 'src/app/user/user.entity';
 import { Lesson } from 'src/app/lesson/lesson.entity';
 import { customError } from 'libs/custom-handlers';
 import { CustomRequest } from 'src/utils/auth-utils';
-import { saveFileS3 } from 'src/app/fileUpload/image-upload.service';
+import {
+  deleteFileS3,
+  saveFileS3,
+} from 'src/app/fileUpload/image-upload.service';
 import { EmailService } from 'src/app/email/email.service';
-import { CreateAssignmentDTO } from '../assignment.dto';
+import { CreateAssignmentDTO, UpdateAssignmentDTO } from '../assignment.dto';
+import { DBQuery, QueryString } from 'src/app/database/dbquery';
 
 @Injectable()
 export class AssignmentService {
@@ -20,11 +24,11 @@ export class AssignmentService {
     @InjectRepository(Assignment)
     private assignmentRepo: Repository<Assignment>,
 
-    @InjectRepository(Submission)
-    private solutionRepo: Repository<Submission>,
+    // @InjectRepository(Submission)
+    // private submissionRepo: Repository<Submission>,
 
-    @InjectRepository(Enrollment)
-    private enrollmentRepo: Repository<Enrollment>,
+    // @InjectRepository(Enrollment)
+    // private enrollmentRepo: Repository<Enrollment>,
 
     @InjectRepository(Course)
     private courseRepo: Repository<Course>,
@@ -39,9 +43,10 @@ export class AssignmentService {
 
   async createAssignment(
     dto: CreateAssignmentDTO,
-    files: { file: Express.Multer.File[] },
+    file: Express.Multer.File,
     req: CustomRequest,
   ) {
+    if (!file) throw customError.notFound('file is required');
     const { title, lessonId, description } = dto;
     const lesson = await this.lessonRepo.findOne({ where: { id: lessonId } });
 
@@ -76,10 +81,7 @@ export class AssignmentService {
     if (!course) throw new NotFoundException('Course not found');
     try {
       let fileUrl: string | undefined = undefined;
-      if (files.file && files.file.length > 0) {
-        const file = files.file[0];
-        fileUrl = await saveFileS3(file, `lessons/${courseId}/assignments/`);
-      }
+      fileUrl = await saveFileS3(file, `lessons/${courseId}/assignments/`);
 
       const assignment = this.assignmentRepo.create({
         title,
@@ -117,120 +119,231 @@ export class AssignmentService {
   }
 
   //   // 📌 Update assignment (can re-upload file)
-  //   async updateAssignment(
-  //     assignmentId: number,
-  //     updateData: { title?: string; description?: string },
-  //     file?: Express.Multer.File,
-  //   ): Promise<Assignment> {
-  //     const assignment = await this.assignmentRepo.findOne({
-  //       where: { id: assignmentId },
-  //     });
-  //     if (!assignment) throw new NotFoundException('Assignment not found');
+  async updateAssignment(
+    assignmentId: string,
+    dto: UpdateAssignmentDTO,
+    files: { file: Express.Multer.File[] },
+    req: CustomRequest,
+  ) {
+    // const { title,  description } = dto;
+    const assignment = await this.assignmentRepo.findOne({
+      where: { id: assignmentId },
+    });
 
-  //     if (file) {
-  //       if (assignment.fileUrl) {
-  //         await deleteFileS3(assignment.fileUrl);
-  //       }
-  //       assignment.fileUrl = await uploadFileS3(file, 'assignments');
-  //     }
+    if (!assignment) {
+      throw customError.notFound('Assignment not found');
+    }
 
-  //     if (updateData.title) assignment.title = updateData.title;
-  //     if (updateData.description) assignment.description = updateData.description;
+    const instructor = await this.userRepo.findOne({
+      where: { id: req.userId },
+    });
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
 
-  //     return await this.assignmentRepo.save(assignment);
-  //   }
+    if (!instructor.isActive) {
+      throw customError.notFound('Your account has been suspended');
+    }
+
+    const lesson = await this.lessonRepo.findOne({
+      where: { id: assignment.lessonId },
+    });
+
+    if (!lesson) {
+      throw customError.notFound('Lesson not found');
+    }
+
+    const course = await this.courseRepo.findOne({
+      where: { id: lesson.courseId },
+    });
+    if (!course) throw new NotFoundException('Course not found');
+
+    if (assignment.instructorId !== instructor.id) {
+      throw customError.forbidden('You can only update your  assignment');
+    }
+
+    try {
+      let fileUrl: string | undefined = undefined;
+      if (files && files.file && files.file.length > 0) {
+        if (assignment.fileUrl) {
+          try {
+            await deleteFileS3(assignment.fileUrl);
+          } catch (err) {
+            console.warn(' Failed to delete old video:', err.message);
+          }
+        }
+        const fileFile = files.file[0];
+        fileUrl = await saveFileS3(
+          fileFile,
+          `lessons/${lesson.courseId}/assignments/`,
+        );
+        assignment.fileUrl = fileUrl;
+      }
+
+      console.log('fileUrl======', fileUrl);
+
+      if (dto.title) {
+        assignment.title = dto.title;
+      }
+
+      if (dto.description) {
+        assignment.description = dto.description;
+      }
+
+      course.status = CourseStatus.PENDING;
+      await this.lessonRepo.save(lesson);
+      await this.courseRepo.save(course);
+      await this.assignmentRepo.save(assignment);
+
+      await this.emailService.AssignmentUpdate(
+        instructor.email,
+        instructor.firstName,
+        assignment.title,
+        course.title,
+        lesson.title,
+      );
+
+      return {
+        accessToken: req.token,
+        message: 'Assignment has been updated successfully',
+        lesson,
+        assignment,
+      };
+    } catch (error) {
+      console.log(error);
+      throw customError.internalServerError(
+        error.message || '',
+        error.statusCOde || 500,
+      );
+    }
+  }
 
   //   // 📌 Delete assignment
-  //   async deleteAssignment(assignmentId: number): Promise<void> {
-  //     const assignment = await this.assignmentRepo.findOne({
-  //       where: { id: assignmentId },
-  //     });
-  //     if (!assignment) throw new NotFoundException('Assignment not found');
+  /**
+   Delete a assignment
+      */
+  async deleteAssignment(assignmentId: string, req: CustomRequest) {
+    const assignment = await this.assignmentRepo.findOne({
+      where: { id: assignmentId },
+      relations: ['course', 'course.instructor'],
+    });
 
-  //     if (assignment.fileUrl) {
-  //       await deleteFileS3(assignment.fileUrl);
-  //     }
+    if (!assignment) throw customError.notFound('Assignment not found');
+    if (assignment.instructor.id !== req.userId) {
+      throw customError.forbidden(
+        'You can only delete lessons from your own course',
+      );
+    }
 
-  //     await this.assignmentRepo.remove(assignment);
-  //   }
+    try {
+      if (assignment.fileUrl) {
+        try {
+          await deleteFileS3(assignment.fileUrl);
+        } catch (err) {
+          console.warn(' Failed to delete old video:', err.message);
+        }
+      }
 
-  //   // 📌 Get all assignments for a course
-  //   async getAssignmentsByCourse(courseId: number): Promise<Assignment[]> {
-  //     return await this.assignmentRepo.find({
-  //       where: { course: { id: courseId } },
-  //       relations: ['course'],
-  //     });
-  //   }
+      await this.assignmentRepo.remove(assignment);
 
-  //   // 📌 Submit solution
-  //   async submitSolution(
-  //     enrollmentId: number,
-  //     assignmentId: number,
-  //     file: Express.Multer.File,
-  //   ): Promise<Solution> {
-  //     const enrollment = await this.enrollmentRepo.findOne({
-  //       where: { id: enrollmentId },
-  //     });
-  //     if (!enrollment) throw new NotFoundException('Enrollment not found');
+      const instructor = assignment.instructor;
+      await this.emailService.LessonDeletion(
+        instructor.email,
+        instructor.firstName,
+        assignment.title,
+        assignment.lesson.title,
+      );
 
-  //     const assignment = await this.assignmentRepo.findOne({
-  //       where: { id: assignmentId },
-  //     });
-  //     if (!assignment) throw new NotFoundException('Assignment not found');
+      return {
+        accessToken: req.token,
+        message: 'Lesson deleted successfully',
+      };
+    } catch (error) {
+      console.log(error);
+      throw customError.internalServerError(
+        error.message || '',
+        error.statusCOde || 500,
+      );
+    }
+  }
 
-  //     const fileUrl = await uploadFileS3(file, 'solutions');
+  /**
+   * Get all assignments in a course
+   */
+  async getAssignmentsInCourse(
+    courseId: string,
+    query: QueryString,
+    req: CustomRequest,
+  ) {
+    const course = await this.courseRepo.findOne({
+      where: { id: courseId, deleted: false },
+      relations: ['instructor'],
+    });
 
-  //     const solution = this.solutionRepo.create({
-  //       fileUrl,
-  //       assignment,
-  //       enrollment,
-  //       grade: null,
-  //       feedback: null,
-  //     });
+    if (!course) throw customError.notFound('Course not found');
+    if (course.instructor.id !== req.userId) {
+      throw customError.forbidden(
+        'You can only view assignments from your own course',
+      );
+    }
 
-  //     return await this.solutionRepo.save(solution);
-  //   }
+    const baseQuery = this.assignmentRepo
+      .createQueryBuilder('assignment')
+      .leftJoinAndSelect('assignment.course', 'course')
+      .leftJoinAndSelect('assignment.instructor', 'instructor')
+      .where('course.id = :courseId', { courseId });
 
-  //   // 📌 Update submitted solution
-  //   async updateSolution(
-  //     solutionId: number,
-  //     file: Express.Multer.File,
-  //   ): Promise<Solution> {
-  //     const solution = await this.solutionRepo.findOne({
-  //       where: { id: solutionId },
-  //     });
-  //     if (!solution) throw new NotFoundException('Solution not found');
+    const dbQuery = new DBQuery(baseQuery, 'assignment', query);
 
-  //     if (solution.fileUrl) {
-  //       await deleteFileS3(solution.fileUrl);
-  //     }
+    dbQuery.filter().sort().limitFields().paginate();
 
-  //     solution.fileUrl = await uploadFileS3(file, 'solutions');
-  //     return await this.solutionRepo.save(solution);
-  //   }
+    const [assignments, total] = await Promise.all([
+      dbQuery.getMany(),
+      dbQuery.count(),
+    ]);
 
-  //   // 📌 Mark solution (grade + feedback)
-  //   async markSolution(
-  //     solutionId: number,
-  //     grade: number,
-  //     feedback: string,
-  //   ): Promise<Solution> {
-  //     const solution = await this.solutionRepo.findOne({
-  //       where: { id: solutionId },
-  //     });
-  //     if (!solution) throw new NotFoundException('Solution not found');
+    return {
+      accessToken: req.token,
+      page: dbQuery.page,
+      results: total,
+      assignments,
+      message: 'Assignments fetched successfully',
+    };
+  }
 
-  //     solution.grade = grade;
-  //     solution.feedback = feedback;
+  /**
+   * Get all assignments by instructor
+   */
+  async getAssignmentsByInstructor(
+    instructorId: string,
+    query: QueryString,
+    req: CustomRequest,
+  ) {
+    if (req.userId !== instructorId) {
+      throw customError.forbidden('You can only view your own assignments');
+    }
 
-  //     return await this.solutionRepo.save(solution);
-  //   }
+    const baseQuery = this.assignmentRepo
+      .createQueryBuilder('assignment')
+      .leftJoinAndSelect('assignment.course', 'course')
+      .leftJoinAndSelect('assignment.instructor', 'instructor')
+      .where('assignment.instructorId = :instructorId', { instructorId });
 
-  //   // 📌 Get solutions for an assignment
-  //   async getSolutionsForAssignment(assignmentId: number): Promise<Solution[]> {
-  //     return await this.solutionRepo.find({
-  //       where: { assignment: { id: assignmentId } },
-  //       relations: ['enrollment', 'enrollment.user'],
-  //     });
-  //   }
+    const dbQuery = new DBQuery(baseQuery, 'assignment', query);
+
+    dbQuery.filter().sort().limitFields().paginate();
+
+    const [assignments, total] = await Promise.all([
+      dbQuery.getMany(),
+      dbQuery.count(),
+    ]);
+
+    return {
+      accessToken: req.token,
+      page: dbQuery.page,
+      results: total,
+      assignments,
+      message: 'Assignments fetched successfully',
+    };
+  }
 }
