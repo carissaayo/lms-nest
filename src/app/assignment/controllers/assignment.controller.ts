@@ -43,7 +43,6 @@ export class AssignmentController {
     file: Express.Multer.File,
     @Req() req: CustomRequest,
   ) {
-    console.log('file', file);
     return this.assignmentService.createAssignment(dto, file, req);
   }
 
