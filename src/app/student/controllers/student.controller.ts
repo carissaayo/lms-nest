@@ -6,13 +6,23 @@ import {
   UploadedFile,
   UseInterceptors,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { CustomRequest } from 'src/utils/auth-utils';
 import { StudentService } from '../services/student.service';
+import {
+  AuthenticateTokenUserGuard,
+  ReIssueTokenUserGuard,
+} from 'src/app/common/guards/user-auth.guard';
+import { RolesGuard } from 'src/app/common/guards/role.guard';
+import { Roles } from 'src/app/common/decorators/roles.decorator';
+import { UserRole } from 'src/app/user/user.interface';
 
 @Controller('students')
+@UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
+@Roles(UserRole.STUDENT)
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 

@@ -62,6 +62,10 @@ const config = () => {
       region: env.AWS_REGION,
       bucket_name: env.AWS_BUCKET_NAME,
     },
+    paystack: {
+      secret_key: env.PAYSTACK_SECRET_KEY,
+      url: env.PAYSTACK_BASE_URL
+    },
   };
 };
 

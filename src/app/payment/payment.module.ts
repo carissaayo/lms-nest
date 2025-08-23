@@ -8,11 +8,13 @@ import { EmailService } from '../email/email.service';
 import { StudentService } from '../student/services/student.service';
 import { PaymentService } from './services/payment.service.';
 import { PaymentController } from './controllers/payment.controller';
+import { Enrollment } from '../database/main.entity';
+import { StudentModule } from '../student/student.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Course, User])],
-  providers: [StudentService, EmailService, PaymentService],
+  imports: [TypeOrmModule.forFeature([User]), StudentModule],
+  providers: [PaymentService],
   controllers: [PaymentController],
-  exports: [StudentService, TypeOrmModule],
+  exports: [PaymentService],
 })
 export class PaymentModule {}
