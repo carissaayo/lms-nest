@@ -11,6 +11,7 @@ import { CourseModule } from './app/course/course.module';
 import { AdminModule } from './app/admin/admin.module';
 import { LessonModule } from './app/lesson/lesson.module';
 import { AssignmentModule } from './app/assignment/assignment.module';
+import { StudentModule } from './app/student/student.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AssignmentModule } from './app/assignment/assignment.module';
     AdminModule,
     LessonModule,
     AssignmentModule,
+    StudentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

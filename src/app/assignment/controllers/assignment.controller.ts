@@ -76,11 +76,7 @@ export class AssignmentController {
     @Query() query: QueryString,
     @Req() req: CustomRequest,
   ) {
-    return this.assignmentService.getAssignmentsByInstructor(
-      courseId,
-      query,
-      req,
-    );
+    return this.assignmentService.getAssignmentsInCourse(courseId, query, req);
   }
 
   @Get('instructor/:instructorId')

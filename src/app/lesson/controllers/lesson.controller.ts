@@ -5,9 +5,7 @@ import {
   Req,
   Patch,
   Delete,
-  Param,
   Get,
-  ParseIntPipe,
   UseGuards,
   UseInterceptors,
   UploadedFiles,
@@ -67,7 +65,7 @@ export class LessonController {
     return this.lessonService.updateLesson(dto, files, req, lessonId);
   }
 
-  @Patch(':id/delete')
+  @Delete(':id/delete')
   async deleteLesson(
     @IdParam('id') lessonId: string,
     @Req() req: CustomRequest,
