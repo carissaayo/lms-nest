@@ -193,8 +193,9 @@ export class CourseService {
   async viewCourses(query: QueryString) {
     const baseQuery = this.courseRepo
       .createQueryBuilder('course')
-      .leftJoinAndSelect('course.category', 'category');
-
+      .leftJoinAndSelect('course.category', 'category')
+      .leftJoinAndSelect('course.lessons', 'lessons')
+      .leftJoinAndSelect('lessons.assignments', 'assignments');
     const dbQuery = new DBQuery(baseQuery, 'course', query);
 
     dbQuery.filter().sort().limitFields().paginate();

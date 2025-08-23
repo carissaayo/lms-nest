@@ -29,24 +29,26 @@ export class AdminCoursesService {
   async viewCourses(query: QueryString) {
     const baseQuery = this.courseRepo
       .createQueryBuilder('course')
-      .leftJoinAndSelect('course.category', 'category');
+      .leftJoinAndSelect('course.category', 'category')
+      .leftJoinAndSelect('course.lessons', 'lessons')
+      .leftJoinAndSelect('lessons.assignments', 'assignments');
 
     const dbQuery = new DBQuery(baseQuery, 'course', query);
 
     dbQuery.filter().sort().limitFields().paginate();
-    // // ✅ Category by ID (uuid check)
-    // if (query.categoryId && isUUID(query.categoryId)) {
-    //   dbQuery.query.andWhere('course.category_id = :categoryId', {
-    //     categoryId: query.categoryId,
-    //   });
-    // }
+    // ✅ Category by ID (uuid check)
+    if (query.categoryId && isUUID(query.categoryId)) {
+      dbQuery.query.andWhere('course.category_id = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
 
-    // // ✅ Category by name (text search)
-    // if (query.category && !isUUID(query.category)) {
-    //   dbQuery.query.andWhere('category.name ILIKE :categoryName', {
-    //     categoryName: `%${query.category}%`,
-    //   });
-    // }
+    // ✅ Category by name (text search)
+    if (query.category && !isUUID(query.category)) {
+      dbQuery.query.andWhere('category.name ILIKE :categoryName', {
+        categoryName: `%${query.category}%`,
+      });
+    }
     // Price filtering (exact or range)
     if (query.price) {
       dbQuery.query.andWhere('course.price = :price', {

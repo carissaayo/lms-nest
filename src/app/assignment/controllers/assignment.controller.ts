@@ -16,7 +16,7 @@ import {
 } from '@nestjs/platform-express';
 
 import { AssignmentService } from '../services/assignment.service';
-import { CreateAssignmentDTO } from '../assignment.dto';
+import { CreateAssignmentDTO, UpdateAssignmentDTO } from '../assignment.dto';
 
 import { UserRole } from 'src/app/user/user.interface';
 
@@ -50,8 +50,8 @@ export class AssignmentController {
   async updateAssignment(
     @IdParam('id') assignmentId: string,
     @UploadedFile()
-    files: { file: Express.Multer.File[] },
-    @Body() dto: CreateAssignmentDTO,
+    files: { file?: Express.Multer.File[] },
+    @Body() dto: UpdateAssignmentDTO,
     @Req() req: CustomRequest,
   ) {
     return this.assignmentService.updateAssignment(

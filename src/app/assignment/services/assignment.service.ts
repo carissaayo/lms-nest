@@ -79,6 +79,12 @@ export class AssignmentService {
       throw customError.forbidden('You can only update your  course');
     }
     if (!course) throw new NotFoundException('Course not found');
+    const existingLessonAssignment = await this.assignmentRepo.findOne({
+      where: { lessonId },
+    });
+
+    if (existingLessonAssignment)
+      throw new NotFoundException('Assignment already exist for this course');
     try {
       let fileUrl: string | undefined = undefined;
       fileUrl = await saveFileS3(file, `lessons/${courseId}/assignments/`);
@@ -122,7 +128,7 @@ export class AssignmentService {
   async updateAssignment(
     assignmentId: string,
     dto: UpdateAssignmentDTO,
-    files: { file: Express.Multer.File[] },
+    files: { file?: Express.Multer.File[] },
     req: CustomRequest,
   ) {
     // const { title,  description } = dto;
@@ -225,14 +231,12 @@ export class AssignmentService {
   async deleteAssignment(assignmentId: string, req: CustomRequest) {
     const assignment = await this.assignmentRepo.findOne({
       where: { id: assignmentId },
-      relations: ['course', 'course.instructor'],
+      relations: ['instructor', 'lesson'],
     });
 
     if (!assignment) throw customError.notFound('Assignment not found');
-    if (assignment.instructor.id !== req.userId) {
-      throw customError.forbidden(
-        'You can only delete lessons from your own course',
-      );
+    if (assignment.instructorId !== req.userId) {
+      throw customError.forbidden('You can only delete assignment you created');
     }
 
     try {
@@ -247,7 +251,7 @@ export class AssignmentService {
       await this.assignmentRepo.remove(assignment);
 
       const instructor = assignment.instructor;
-      await this.emailService.LessonDeletion(
+      await this.emailService.AssignmentDeletion(
         instructor.email,
         instructor.firstName,
         assignment.title,
@@ -256,7 +260,7 @@ export class AssignmentService {
 
       return {
         accessToken: req.token,
-        message: 'Lesson deleted successfully',
+        message: 'Assignment deleted successfully',
       };
     } catch (error) {
       console.log(error);
