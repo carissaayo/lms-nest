@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class CreateAssignmentDTO {
   @MinLength(10, { message: 'Title must be at least 10 characters long' })
@@ -11,17 +17,18 @@ export class CreateAssignmentDTO {
   lessonId!: string;
 
   @IsString()
+  @IsNotEmpty({ message: 'Description is required' })
   description?: string;
 }
 
 export class UpdateAssignmentDTO {
-  @MinLength(10, { message: 'Title must be at least 10 characters long' })
-  @IsNotEmpty({ message: 'Title is required' })
+  @IsOptional()
   @IsString()
+  @MinLength(10, { message: 'Title must be at least 10 characters long' })
   title?: string;
 
-  @MinLength(10, { message: 'Description must be at least 10 characters long' })
-  @IsNotEmpty({ message: 'Description is required' })
+  @IsOptional()
   @IsString()
+  @MinLength(10, { message: 'Description must be at least 10 characters long' })
   description?: string;
 }
