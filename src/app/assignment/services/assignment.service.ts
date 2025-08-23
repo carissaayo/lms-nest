@@ -285,7 +285,8 @@ export class AssignmentService {
     });
 
     if (!course) throw customError.notFound('Course not found');
-    if (course.instructor.id !== req.userId) {
+
+    if (course.instructorId !== req.userId) {
       throw customError.forbidden(
         'You can only view assignments from your own course',
       );
@@ -293,9 +294,9 @@ export class AssignmentService {
 
     const baseQuery = this.assignmentRepo
       .createQueryBuilder('assignment')
-      .leftJoinAndSelect('assignment.course', 'course')
-      .leftJoinAndSelect('assignment.instructor', 'instructor')
-      .where('course.id = :courseId', { courseId });
+      .leftJoin('assignment.lesson', 'lesson')
+      .where('lesson.courseId = :courseId', { courseId })
+      .leftJoinAndSelect('assignment.instructor', 'instructor');
 
     const dbQuery = new DBQuery(baseQuery, 'assignment', query);
 
@@ -329,7 +330,6 @@ export class AssignmentService {
 
     const baseQuery = this.assignmentRepo
       .createQueryBuilder('assignment')
-      .leftJoinAndSelect('assignment.course', 'course')
       .leftJoinAndSelect('assignment.instructor', 'instructor')
       .where('assignment.instructorId = :instructorId', { instructorId });
 
