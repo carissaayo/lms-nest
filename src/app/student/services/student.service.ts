@@ -10,10 +10,13 @@ import { Submission } from 'src/app/submission/submission.entity';
 
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'libs/custom-handlers';
+import { PaymentService } from 'src/app/payment/services/payment.service.';
+import { EmailService } from 'src/app/email/email.service';
 
 @Injectable()
 export class StudentService {
   constructor(
+    private readonly paymentService: PaymentService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
 
@@ -28,6 +31,7 @@ export class StudentService {
 
     @InjectRepository(Submission)
     private readonly submissionRepo: Repository<Submission>,
+    private readonly emailService:EmailService,
   ) {}
 
   /**
@@ -46,21 +50,36 @@ export class StudentService {
     const existing = await this.enrollmentRepo.findOne({
       where: { user: { id: student.id }, course: { id: course.id } },
     });
-    if (existing) {
+    if (existing)
       throw customError.forbidden('Already enrolled in this course');
+    try {
+      // Paid course → create payment transaction
+      const payment = await this.paymentService.initPaystackPayment(
+        student.email,
+        course.price,
+        `${process.env.APP_URL}/payment/callback`, // handle callback
+      );
+
+            const paymentLink=payment.data.authorization_url
+              await this.emailService.paymentLinkGenerated(
+                student.email,
+                student.firstName,
+                course.title,
+                course.price,
+                paymentLink,
+              );
+      return {
+        accessToken: req.token,
+        message: 'Payment required',
+        paymentLink
+      };
+    } catch (error) {
+      console.log(error);
+      throw customError.internalServerError(
+        error.message || '',
+        error.statusCOde || 500,
+      );
     }
-
-    const enrollment = this.enrollmentRepo.create({
-      user: student,
-      course,
-      status: 'active',
-    });
-    await this.enrollmentRepo.save(enrollment);
-
-    return {
-      message: 'Enrolled successfully',
-      enrollment,
-    };
   }
 
   /**

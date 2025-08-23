@@ -60,6 +60,8 @@ export const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().min(1, 'AWS_SECRET_ACCESS_KEY is required'),
   AWS_REGION: z.string().min(1, 'AWS_REGION is required'),
   AWS_BUCKET_NAME: z.string().min(1, 'AWS_BUCKET_NAME is required'),
+  PAYSTACK_SECRET_KEY: z.string().min(1, 'PAYSTACK_SECRET_KEY is required'),
+  PAYSTACK_BASE_URL: z.string().min(1, 'PAYSTACK_BASE_URL is required'),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;

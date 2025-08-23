@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
+import config from 'src/app/config/config';
 
+const appConfig = config();
 @Injectable()
 export class PaymentService {
-  private paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+  constructor() {}
+  private paystackSecret = appConfig.paystack.secret_key;
   private monnifySecret = process.env.MONNIFY_SECRET_KEY;
   private monnifyApiKey = process.env.MONNIFY_API_KEY;
   private monnifyContractCode = process.env.MONNIFY_CONTRACT_CODE;
@@ -16,8 +19,9 @@ export class PaymentService {
     amount: number,
     callbackUrl: string,
   ) {
+    const baseUrl = appConfig.paystack.url || `https://api.paystack.co`;
     const response = await axios.post(
-      'https://api.paystack.co/transaction/initialize',
+      `${baseUrl}/transaction/initialize`,
       {
         email,
         amount: amount * 100, // Paystack expects amount in kobo
