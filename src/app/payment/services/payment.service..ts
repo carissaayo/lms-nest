@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import * as crypto from 'crypto';
+import { customError } from 'libs/custom-handlers';
 import config from 'src/app/config/config';
 
 const appConfig = config();
@@ -58,25 +59,27 @@ export class PaymentService {
     return response.data;
   }
 
-  validatePaystackWebhook(payload: any, signature: string) {
-    const hash = crypto
-      .createHmac('sha512', this.paystackSecret)
-      .update(JSON.stringify(payload))
-      .digest('hex');
-
-    if (hash !== signature) {
-      throw new BadRequestException('Invalid Paystack signature');
+  validatePaystackWebhook(body: any, signature: string) {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret) {
+      throw customError.notFound(
+        'PAYSTACK_SECRET_KEY is not set in environment variables',
+      );
     }
 
-    if (payload.event === 'charge.success') {
-      const { reference, customer, metadata, amount } = payload.data;
+    const hash = crypto
+      .createHmac('sha512', secret)
+      .update(JSON.stringify(body))
+      .digest('hex');
+
+    if (hash !== signature) return null; // invalid webhook
+
+    if (body.event === 'charge.success') {
       return {
         status: 'success',
-        reference,
-        email: customer?.email,
-        amount: amount / 100, // back to Naira
-        courseId: metadata?.courseId,
-        studentId: metadata?.studentId,
+        studentId: body.data.metadata.studentId,
+        courseId: body.data.metadata.courseId,
+        reference: body.data.reference,
       };
     }
 
@@ -143,20 +146,14 @@ export class PaymentService {
     return response.data;
   }
 
-  validateMonnifyWebhook(payload: any) {
-    if (payload.eventType === 'SUCCESSFUL_TRANSACTION') {
-      const { paymentReference, customerEmail, amountPaid } = payload.eventData;
-
-      // reference was created as "courseId-studentId-timestamp"
-      const [courseId, studentId] = paymentReference.split('-');
-
+  validateMonnifyWebhook(body: any) {
+    // Monnify usually sends a JSON body with transaction details
+    if (body.eventType === 'SUCCESSFUL_TRANSACTION') {
       return {
         status: 'success',
-        reference: paymentReference,
-        email: customerEmail,
-        amount: amountPaid,
-        courseId,
-        studentId,
+        studentId: body.eventData?.product?.studentId,
+        courseId: body.eventData?.product?.courseId,
+        reference: body.eventData?.transactionReference,
       };
     }
 
