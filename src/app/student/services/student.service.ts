@@ -31,7 +31,7 @@ export class StudentService {
 
     @InjectRepository(Submission)
     private readonly submissionRepo: Repository<Submission>,
-    private readonly emailService:EmailService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -52,34 +52,106 @@ export class StudentService {
     });
     if (existing)
       throw customError.forbidden('Already enrolled in this course');
+
     try {
-      // Paid course → create payment transaction
       const payment = await this.paymentService.initPaystackPayment(
         student.email,
         course.price,
-        `${process.env.APP_URL}/payment/callback`, // handle callback
+        `${process.env.APP_URL}/payment/callback`,
+        course.id,
+        student.id,
       );
 
-            const paymentLink=payment.data.authorization_url
-              await this.emailService.paymentLinkGenerated(
-                student.email,
-                student.firstName,
-                course.title,
-                course.price,
-                paymentLink,
-              );
+      const paymentLink = payment.data.authorization_url;
+
+      await this.emailService.paymentLinkGenerated(
+        student.email,
+        student.firstName,
+        course.title,
+        course.price,
+        paymentLink,
+      );
+
       return {
         accessToken: req.token,
         message: 'Payment required',
-        paymentLink
+        paymentLink,
       };
     } catch (error) {
       console.log(error);
       throw customError.internalServerError(
         error.message || '',
-        error.statusCOde || 500,
+        error.statusCode || 500,
       );
     }
+  }
+
+  /**
+   * Called from webhook → auto-enroll student after successful payment
+   */
+  async handleSuccessfulPayment(
+    studentId: string,
+    courseId: string,
+    reference: string,
+  ) {
+    const student = await this.userRepo.findOne({ where: { id: studentId } });
+    if (!student) throw customError.notFound('Student not found');
+
+    const course = await this.courseRepo.findOne({ where: { id: courseId } });
+    if (!course) throw customError.notFound('Course not found');
+
+    // Avoid duplicate enrollments
+    const existing = await this.enrollmentRepo.findOne({
+      where: { user: { id: student.id }, course: { id: course.id } },
+    });
+    if (existing) return existing;
+
+    // const enrollment = this.enrollmentRepo.create({
+    //   user: student,
+    //   course,
+    //   paymentReference: reference,
+    // });
+
+    // await this.enrollmentRepo.save(enrollment);
+
+    // // send enrollment confirmation email
+    // await this.emailService.courseEnrollmentConfirmation(
+    //   student.email,
+    //   student.firstName,
+    //   course.title,
+    // );
+
+    // return enrollment;
+  }
+
+  async enrollStudentInCourse(studentId: string, courseId: string) {
+    const student = await this.userRepo.findOne({ where: { id: studentId } });
+    if (!student) throw customError.notFound('Student not found');
+
+    const course = await this.courseRepo.findOne({ where: { id: courseId } });
+    if (!course) throw customError.notFound('Course not found');
+
+    // Avoid duplicate enrollments
+    const existing = await this.enrollmentRepo.findOne({
+      where: { user: { id: student.id }, course: { id: course.id } },
+    });
+    if (existing) return existing;
+
+    const enrollment = this.enrollmentRepo.create({
+      user: student,
+      course,
+    });
+
+    await this.enrollmentRepo.save(enrollment);
+
+    // send enrollment confirmation email
+    // await this.emailService.courseEnrollmentConfirmation(
+    //   student.email,
+    //   student.firstName,
+    //   course.title,
+    // );
+
+    return enrollment;
   }
 
   /**
