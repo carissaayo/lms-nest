@@ -13,6 +13,7 @@ import { StudentController } from './controllers/student.controller';
 import { StudentService } from './services/student.service';
 import { PaymentService } from '../payment/services/payment.service.';
 import { AssignmentService } from '../assignment/services/assignment.service';
+import { EnrollmentModule } from '../enrollment/enrollment.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AssignmentService } from '../assignment/services/assignment.service';
       Enrollment,
       Submission,
     ]),
+    EnrollmentModule,
   ],
   providers: [StudentService, EmailService, PaymentService, AssignmentService],
   controllers: [StudentController],

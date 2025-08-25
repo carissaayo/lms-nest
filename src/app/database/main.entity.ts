@@ -52,6 +52,8 @@ export class Enrollment extends BaseEntity {
   @Column({ default: 'active' })
   status!: string;
 
+  @Column()
+  paymentReference: string;
   @OneToMany(() => Submission, (s) => s.enrollment, { cascade: true })
   submissions?: Submission[];
 
