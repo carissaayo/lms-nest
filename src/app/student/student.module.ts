@@ -15,6 +15,7 @@ import { PaymentService } from '../payment/services/payment.service.';
 import { AssignmentService } from '../assignment/services/assignment.service';
 import { EnrollmentModule } from '../enrollment/enrollment.module';
 import { Enrollment } from '../enrollment/enrollment.entity';
+import { LessonProgress } from '../lesson/lesson-progress.entity';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { Enrollment } from '../enrollment/enrollment.entity';
       Lesson,
       Enrollment,
       Submission,
+      LessonProgress,
     ]),
     EnrollmentModule,
   ],

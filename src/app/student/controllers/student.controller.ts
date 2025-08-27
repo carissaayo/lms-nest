@@ -24,6 +24,7 @@ import { Roles } from 'src/app/common/decorators/roles.decorator';
 import { UserRole } from 'src/app/user/user.interface';
 import { QueryString } from 'src/app/database/dbquery';
 import { IdParam } from 'src/app/common/decorators/idParam.decorator';
+import { UpdateLessonProgressDTO } from '../student.dto';
 
 @Controller('students')
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
@@ -51,7 +52,15 @@ export class StudentController {
     return this.studentService.getLessonsForStudent(courseId, query, req);
   }
 
-  @Post('lessons/:courseId')
+  @Get('courses')
+  async getEnrolledCourses(
+    @Query() query: QueryString,
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.viewEnrolledCourses(query, req);
+  }
+
+  @Post('lessons/:lessonId')
   async startLesson(
     @IdParam('lessonId') lessonId: string,
     @Req() req: CustomRequest,
@@ -59,13 +68,21 @@ export class StudentController {
     return this.studentService.startLesson(lessonId, req);
   }
 
-  @Patch('lessons/:courseId')
+  @Patch('lessons/:lessonId')
   async updateProgress(
     @IdParam('lessonId') lessonId: string,
-    @Body() dto: UpdateLessonDTO,
+    @Body() dto: UpdateLessonProgressDTO,
     @Req() req: CustomRequest,
   ) {
-    return this.studentService.updateProgress(lessonId, req);
+    return this.studentService.updateProgress(lessonId, dto, req);
+  }
+
+  @Post('lessons/:courseId/completed')
+  async completeLesson(
+    @IdParam('lessonId') lessonId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.completeLesson(lessonId, req);
   }
   /**
    * Get assignments for a course

@@ -7,7 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class UpdateLessonDTO {
+export class UpdateLessonProgressDTO {
   @IsNotEmpty({ message: 'watchedDuration is required' })
   watchedDuration: number;
 
