@@ -16,6 +16,7 @@ import { UserRole } from './user.interface';
 
 import { Assignment } from '../assignment/assignment.entity';
 import { Enrollment } from '../enrollment/enrollment.entity';
+import { LessonProgress } from '../lesson/lesson-progress.entity';
 
 export enum UserStatus {
   PENDING = 'pending',
@@ -137,4 +138,7 @@ export class User extends BaseEntity {
 
   @Column({ type: 'jsonb', default: [] })
   actions: any[];
+
+  @OneToMany(() => LessonProgress, (progress) => progress.user)
+  lessonProgress: LessonProgress[];
 }

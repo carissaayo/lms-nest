@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Course } from '../course/course.entity';
 import { Assignment } from '../assignment/assignment.entity';
+import { LessonProgress } from './lesson-progress.entity';
 
 @Entity({ name: 'lessons' })
 export class Lesson extends BaseEntity {
@@ -45,4 +46,6 @@ export class Lesson extends BaseEntity {
 
   @Column({ nullable: true })
   noteUrl?: string;
+  @OneToMany(() => LessonProgress, (progress) => progress.lesson)
+  progress: LessonProgress[];
 }
