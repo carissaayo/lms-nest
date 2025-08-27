@@ -20,6 +20,8 @@ import {
   LessonProgress,
   LessonStatus,
 } from 'src/app/lesson/lesson-progress.entity';
+import { UpdateLessonProgressDTO } from '../student.dto';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class StudentService {
@@ -224,7 +226,12 @@ export class StudentService {
       progress.status = LessonStatus.IN_PROGRESS;
     }
 
-    return this.lessonProgressRepo.save(progress);
+    this.lessonProgressRepo.save(progress);
+    return {
+      accessToken: req.token,
+      message: 'Lesson has started successfully',
+      progress,
+    };
   }
 
   /**
@@ -232,18 +239,34 @@ export class StudentService {
    * @param watchedDuration duration in seconds
    */
   async updateProgress(
-    userId: string,
     lessonId: string,
-    watchedDuration: number,
-    videoDuration: number,
-  ): Promise<LessonProgress> {
+    dto: UpdateLessonProgressDTO,
+    req: CustomRequest,
+  ) {
+    const { videoDuration, watchedDuration } = dto;
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) throw customError.notFound('User not found');
+
+    const lesson = await this.lessonRepo.findOne({ where: { id: lessonId } });
+    if (!lesson) throw customError.notFound('Lesson not found');
+
+    const course = await this.courseRepo.findOne({
+      where: { id: lesson.courseId },
+    });
+    if (!course) throw customError.notFound('Course not found');
+    if (course.status !== CourseStatus.APPROVED)
+      throw customError.forbidden('Course is not available');
     let progress = await this.lessonProgressRepo.findOne({
-      where: { user: { id: userId }, lesson: { id: lessonId } },
+      where: { user: { id: user.id }, lesson: { id: lessonId } },
     });
 
     if (!progress) {
       // auto-start lesson if not already started
-      progress = await this.startLesson(userId, lessonId);
+      const { progress: startedProgress } = await this.startLesson(
+        lessonId,
+        req,
+      );
+      progress = startedProgress;
     }
 
     progress.watchedDuration = watchedDuration;
@@ -258,25 +281,106 @@ export class StudentService {
       progress.completed = false;
     }
 
-    return this.lessonProgressRepo.save(progress);
+    this.lessonProgressRepo.save(progress);
+    return {
+      accessToken: req.token,
+      message: 'Lesson progress updated successfully',
+      progress,
+    };
   }
 
   /**
    * Explicitly mark lesson as completed (e.g., after finishing quiz)
    */
-  // async completeLesson(
-  //   userId: string,
-  //   lessonId: string,
-  // ): Promise<LessonProgress> {
-  //   const progress = await this.lessonProgressRepo.findOne({
-  //     where: { user: { id: userId }, lesson: { id: lessonId } },
-  //   });
+  async completeLesson(lessonId: string, req: CustomRequest) {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) throw customError.notFound('User not found');
 
-  //   if (!progress) throw new NotFoundException('Lesson progress not found');
+    const lesson = await this.lessonRepo.findOne({ where: { id: lessonId } });
+    if (!lesson) throw customError.notFound('Lesson not found');
 
-  //   progress.status = LessonStatus.COMPLETED;
-  //   progress.completed = true;
+    const course = await this.courseRepo.findOne({
+      where: { id: lesson.courseId },
+    });
+    if (!course) throw customError.notFound('Course not found');
+    if (course.status !== CourseStatus.APPROVED)
+      throw customError.forbidden('Course is not available');
+    const progress = await this.lessonProgressRepo.findOne({
+      where: { user: { id: user.id }, lesson: { id: lessonId } },
+    });
 
-  //   return this.lessonProgressRepo.save(progress);
-  // }
+    if (!progress) throw customError.notFound('Lesson progress not found');
+
+    progress.status = LessonStatus.COMPLETED;
+    progress.completed = true;
+
+    this.lessonProgressRepo.save(progress);
+
+    return {
+      accessToken: req.token,
+      message: 'Lesson has been completed successfully',
+      progress,
+    };
+  }
+
+  /**
+   * Get all courses a student is enrolled in
+   */
+  async viewEnrolledCourses(query: QueryString, req: CustomRequest) {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) throw customError.notFound('User not found');
+
+    const baseQuery = this.courseRepo
+      .createQueryBuilder('course')
+      .innerJoin('course.enrollments', 'enrollment')
+      .where('enrollment.user_id = :userId', { userId: user.id })
+      .leftJoinAndSelect('course.category', 'category')
+      .leftJoinAndSelect('course.lessons', 'lessons')
+      .leftJoinAndSelect('lessons.assignments', 'assignments');
+
+    const dbQuery = new DBQuery(baseQuery, 'course', query);
+
+    dbQuery.filter().sort().limitFields().paginate();
+
+    // ✅ Filter by category ID
+    if (query.categoryId && isUUID(query.categoryId)) {
+      dbQuery.query.andWhere('course.category_id = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
+
+    // ✅ Filter by category name
+    if (query.category && !isUUID(query.category)) {
+      dbQuery.query.andWhere('category.name ILIKE :categoryName', {
+        categoryName: `%${query.category}%`,
+      });
+    }
+
+    // ✅ Price filtering (rare for enrolled, but still possible)
+    if (query.price) {
+      dbQuery.query.andWhere('course.price = :price', { price: query.price });
+    }
+    if (query.minPrice) {
+      dbQuery.query.andWhere('course.price >= :minPrice', {
+        minPrice: query.minPrice,
+      });
+    }
+    if (query.maxPrice) {
+      dbQuery.query.andWhere('course.price <= :maxPrice', {
+        maxPrice: query.maxPrice,
+      });
+    }
+
+    const [courses, total] = await Promise.all([
+      dbQuery.getMany(),
+      dbQuery.count(),
+    ]);
+
+    return {
+      page: dbQuery.page,
+      results: total,
+      courses,
+      message: 'Enrolled courses fetched successfully',
+    };
+  }
 }
