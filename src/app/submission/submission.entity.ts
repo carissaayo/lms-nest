@@ -9,7 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Assignment } from '../assignment/assignment.entity';
-import { Enrollment } from '../database/main.entity';
+import { Enrollment } from '../enrollment/enrollment.entity';
 
 @Entity({ name: 'submissions' })
 export class Submission extends BaseEntity {

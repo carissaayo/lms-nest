@@ -5,15 +5,21 @@ import { Course } from '../course/course.entity';
 import { User } from '../user/user.entity';
 
 import { EmailService } from '../email/email.service';
-import { StudentService } from '../student/services/student.service';
+
 import { PaymentService } from './services/payment.service.';
 import { PaymentController } from './controllers/payment.controller';
-import { Enrollment } from '../database/main.entity';
+
 import { StudentModule } from '../student/student.module';
+import { EnrollmentService } from '../enrollment/services/enrollment.service';
+import { Enrollment } from '../enrollment/enrollment.entity';
+import { UserAdmin } from '../admin/admin.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), StudentModule],
-  providers: [PaymentService],
+  imports: [
+    TypeOrmModule.forFeature([User, Enrollment, UserAdmin]),
+    StudentModule,
+  ],
+  providers: [PaymentService, EnrollmentService, EmailService],
   controllers: [PaymentController],
   exports: [PaymentService],
 })

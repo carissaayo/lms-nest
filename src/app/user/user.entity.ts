@@ -13,8 +13,9 @@ import { Course } from '../course/course.entity';
 
 import { Transaction } from '../transaction/transaction.entity';
 import { UserRole } from './user.interface';
-import { Enrollment } from '../database/main.entity';
+
 import { Assignment } from '../assignment/assignment.entity';
+import { Enrollment } from '../enrollment/enrollment.entity';
 
 export enum UserStatus {
   PENDING = 'pending',

@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 
 import { Course } from 'src/app/course/course.entity';
 import { User } from 'src/app/user/user.entity';
-import { Enrollment } from 'src/app/database/main.entity';
+
 import { Assignment } from 'src/app/assignment/assignment.entity';
 import { Submission } from 'src/app/submission/submission.entity';
 
@@ -12,6 +12,9 @@ import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'libs/custom-handlers';
 import { PaymentService } from 'src/app/payment/services/payment.service.';
 import { EmailService } from 'src/app/email/email.service';
+import { DBQuery, QueryString } from 'src/app/database/dbquery';
+import { Enrollment } from 'src/app/enrollment/enrollment.entity';
+import { Lesson } from 'src/app/lesson/lesson.entity';
 
 @Injectable()
 export class StudentService {
@@ -28,6 +31,8 @@ export class StudentService {
 
     @InjectRepository(Assignment)
     private readonly assignmentRepo: Repository<Assignment>,
+    @InjectRepository(Lesson)
+    private readonly lessonRepo: Repository<Lesson>,
 
     @InjectRepository(Submission)
     private readonly submissionRepo: Repository<Submission>,
@@ -57,7 +62,8 @@ export class StudentService {
       const payment = await this.paymentService.initPaystackPayment(
         student.email,
         course.price,
-        `${process.env.APP_URL}/payment/callback`,
+        // `${process.env.APP_URL}/payment/callback`,
+        'http://localhost:5000',
         course.id,
         student.id,
       );
@@ -66,7 +72,7 @@ export class StudentService {
 
       await this.emailService.paymentLinkGenerated(
         student.email,
-        student.firstName,
+        `${student.firstName} ${student.lastName}`,
         course.title,
         course.price,
         paymentLink,
@@ -124,34 +130,57 @@ export class StudentService {
     // return enrollment;
   }
 
-  async enrollStudentInCourse(studentId: string, courseId: string) {
-    const student = await this.userRepo.findOne({ where: { id: studentId } });
-    if (!student) throw customError.notFound('Student not found');
-
-    const course = await this.courseRepo.findOne({ where: { id: courseId } });
-    if (!course) throw customError.notFound('Course not found');
-
-    // Avoid duplicate enrollments
-    const existing = await this.enrollmentRepo.findOne({
-      where: { user: { id: student.id }, course: { id: course.id } },
+  /**
+   * Get all lessons in a course
+   */
+  async getLessonsForStudent(
+    courseId: string,
+    query: QueryString,
+    req: CustomRequest,
+  ) {
+    // Check if student is enrolled in the course
+    const enrollment = await this.enrollmentRepo.findOne({
+      where: {
+        course: { id: courseId, deleted: false },
+        user: { id: req.userId },
+        status: 'active',
+      },
+      relations: ['course'],
     });
-    if (existing) return existing;
 
-    const enrollment = this.enrollmentRepo.create({
-      user: student,
-      course,
-    });
+    if (!enrollment) {
+      throw customError.forbidden(
+        'You must be enrolled in this course to view lessons',
+      );
+    }
 
-    await this.enrollmentRepo.save(enrollment);
+    // Build lessons query
+    const baseQuery = this.lessonRepo
+      .createQueryBuilder('lesson')
+      .leftJoinAndSelect('lesson.course', 'course')
+      .leftJoinAndSelect('lesson.assignments', 'assignments')
+      .where('course.id = :courseId', { courseId });
 
-    // send enrollment confirmation email
-    // await this.emailService.courseEnrollmentConfirmation(
-    //   student.email,
-    //   student.firstName,
-    //   course.title,
-    // );
+    const dbQuery = new DBQuery(baseQuery, 'lesson', query);
 
-    return enrollment;
+    dbQuery.filter().sort().limitFields().paginate();
+
+    if (!query.sort) {
+      dbQuery.query.addOrderBy('lesson.position', 'ASC');
+    }
+
+    const [lessons, total] = await Promise.all([
+      dbQuery.getMany(),
+      dbQuery.count(),
+    ]);
+
+    return {
+      accessToken: req.token,
+      page: dbQuery.page,
+      results: total,
+      lessons,
+      message: 'Lessons fetched successfully',
+    };
   }
 
   /**
