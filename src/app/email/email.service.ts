@@ -441,6 +441,55 @@ export class EmailService {
       html,
     });
   }
+
+  async courseEnrollmentInstructorNotification(
+    instructorEmail: string,
+    instructorName: string,
+    studentName: string,
+    courseTitle: string,
+  ) {
+    const subject = 'New Student Enrollment in Your Course';
+
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${instructorName},`,
+      body: `<p>A new student has enrolled in your course <strong>${courseTitle}</strong>.</p>
+           <p><strong>Student Name:</strong> ${studentName}</p>
+           <p>You can view this student’s progress in your instructor dashboard.</p>`,
+    });
+
+    await this.sendEmail({
+      to: instructorEmail,
+      subject,
+      text: `New student enrolled: ${studentName} in ${courseTitle}.`,
+      html,
+    });
+  }
+
+  // ========== STUDENT RELATED ==========
+
+  async courseEnrollmentConfirmation(
+    email: string,
+    firstName: string,
+    courseTitle: string,
+  ) {
+    const subject = 'Payment Confirmed and Course Enrollment Successful';
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${firstName},`,
+      body: `<p>Congratulations! You have been successfully enrolled in <strong>${courseTitle}</strong> .</p>
+           <p>You can now start learning at your own pace. Head over to your dashboard to begin.</p>
+           <p>We wish you success in your learning journey 🚀</p>`,
+    });
+
+    await this.sendEmail({
+      to: email,
+      subject,
+      text: `You have been successfully enrolled in ${courseTitle}.`,
+      html,
+    });
+  }
+
   // ========== ADMIN RELATED ==========
 
   async adminInvitationEmail(email: string) {
@@ -482,6 +531,34 @@ export class EmailService {
       text: `Your account was ${action}d.`,
       html,
     });
+  }
+  async courseEnrollmentAdminNotification(
+    studentName: string,
+    studentEmail: string,
+    courseTitle: string,
+    coursePrice: number,
+    admins: { email: string }[],
+  ) {
+    const subject = 'New  Enrollment Payment Notification';
+
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hello Admin,`,
+      body: `<p>A new student has successfully enrolled in <strong>${courseTitle}</strong> and made payment of ${coursePrice}.</p>
+           <p><strong>Student Name:</strong> ${studentName}</p>
+           <p><strong>Student Email:</strong> ${studentEmail}</p>
+           <p><strong> Payment made:</strong> ${coursePrice}</p>
+           <p>Login to the admin dashboard to view more details.</p>`,
+    });
+
+    for (const admin of admins) {
+      await this.sendEmail({
+        to: admin.email,
+        subject,
+        text: `New enrollment: ${studentName} (${studentEmail}) in ${courseTitle}.`,
+        html,
+      });
+    }
   }
 
   // ========== PAYMENT RELATED ==========

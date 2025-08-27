@@ -29,34 +29,3 @@ export class Category extends BaseEntity {
   @OneToMany(() => Course, (course) => course.category)
   courses?: Course[];
 }
-
-@Entity({ name: 'enrollments' })
-export class Enrollment extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @ManyToOne(() => User, (user) => user.enrollments, {
-    nullable: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'user_id' })
-  user!: User;
-
-  @ManyToOne(() => Course, (course) => course.enrollments, {
-    nullable: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'course_id' })
-  course!: Course;
-
-  @Column({ default: 'active' })
-  status!: string;
-
-  @Column()
-  paymentReference: string;
-  @OneToMany(() => Submission, (s) => s.enrollment, { cascade: true })
-  submissions?: Submission[];
-
-  @CreateDateColumn()
-  createdAt!: Date;
-}

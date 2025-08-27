@@ -1,6 +1,8 @@
-import { Controller, Post, Body, Headers } from '@nestjs/common';
-import { PaymentService } from './services/payment.service';
-import { EnrollmentService } from '../enrollment/enrollment.service';
+import { Controller, Post, Body, Headers, Req } from '@nestjs/common';
+import { PaymentService } from '../services/payment.service.';
+import { EnrollmentService } from 'src/app/enrollment/services/enrollment.service';
+import { CustomRequest } from 'src/utils/auth-utils';
+import { EnrollStudentAfterPayment } from 'src/app/enrollment/enrollment.dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -14,19 +16,16 @@ export class PaymentController {
    */
   @Post('paystack/webhook')
   async paystackWebhook(
-    @Body() body: any,
+    @Body() dto: EnrollStudentAfterPayment,
+    @Req() req: CustomRequest,
     @Headers('x-paystack-signature') signature: string,
   ) {
-    console.log('Paystack webhook received:', body);
+    console.log('Paystack webhook received:', dto);
 
-    const result = this.paymentService.validatePaystackWebhook(body, signature);
+    const result = this.paymentService.validatePaystackWebhook(dto, signature);
 
     if (result?.status === 'success') {
-      await this.enrollmentService.enrollStudentAfterPayment(
-        result.studentId,
-        result.courseId,
-        result.reference,
-      );
+      await this.enrollmentService.enrollStudentAfterPayment(dto, req);
     }
 
     return { received: true };
@@ -36,17 +35,16 @@ export class PaymentController {
    * Monnify Webhook → called automatically by Monnify after payment
    */
   @Post('monnify/webhook')
-  async monnifyWebhook(@Body() body: any) {
-    console.log('Monnify webhook received:', body);
+  async monnifyWebhook(
+    @Body() dto: EnrollStudentAfterPayment,
+    @Req() req: CustomRequest,
+  ) {
+    console.log('Monnify webhook received:', dto);
 
-    const result = this.paymentService.validateMonnifyWebhook(body);
+    const result = this.paymentService.validateMonnifyWebhook(dto);
 
     if (result?.status === 'success') {
-      await this.enrollmentService.enrollStudentAfterPayment(
-        result.studentId,
-        result.courseId,
-        result.reference,
-      );
+      await this.enrollmentService.enrollStudentAfterPayment(dto, req);
     }
 
     return { received: true };

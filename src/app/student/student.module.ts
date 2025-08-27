@@ -5,7 +5,7 @@ import { Course } from '../course/course.entity';
 import { User } from '../user/user.entity';
 import { Assignment } from '../assignment/assignment.entity';
 import { Lesson } from '../lesson/lesson.entity';
-import { Enrollment } from '../database/main.entity';
+
 import { Submission } from '../submission/submission.entity';
 
 import { EmailService } from '../email/email.service';
@@ -14,6 +14,7 @@ import { StudentService } from './services/student.service';
 import { PaymentService } from '../payment/services/payment.service.';
 import { AssignmentService } from '../assignment/services/assignment.service';
 import { EnrollmentModule } from '../enrollment/enrollment.module';
+import { Enrollment } from '../enrollment/enrollment.entity';
 
 @Module({
   imports: [

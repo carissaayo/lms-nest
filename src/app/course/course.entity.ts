@@ -10,9 +10,10 @@ import {
   BaseEntity,
 } from 'typeorm';
 import { User } from '../user/user.entity';
-import { Category, Enrollment } from '../database/main.entity';
+import { Category } from '../database/main.entity';
 import { Lesson } from '../lesson/lesson.entity';
 import { UserAdmin } from '../admin/admin.entity';
+import { Enrollment } from '../enrollment/enrollment.entity';
 
 export enum CourseStatus {
   PENDING = 'pending',
