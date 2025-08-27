@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { Course } from 'src/app/course/course.entity';
+import { Course, CourseStatus } from 'src/app/course/course.entity';
 import { User } from 'src/app/user/user.entity';
 
 import { Assignment } from 'src/app/assignment/assignment.entity';
@@ -15,6 +16,10 @@ import { EmailService } from 'src/app/email/email.service';
 import { DBQuery, QueryString } from 'src/app/database/dbquery';
 import { Enrollment } from 'src/app/enrollment/enrollment.entity';
 import { Lesson } from 'src/app/lesson/lesson.entity';
+import {
+  LessonProgress,
+  LessonStatus,
+} from 'src/app/lesson/lesson-progress.entity';
 
 @Injectable()
 export class StudentService {
@@ -36,6 +41,10 @@ export class StudentService {
 
     @InjectRepository(Submission)
     private readonly submissionRepo: Repository<Submission>,
+
+    @InjectRepository(LessonProgress)
+    private readonly lessonProgressRepo: Repository<LessonProgress>,
+
     private readonly emailService: EmailService,
   ) {}
 
@@ -182,73 +191,92 @@ export class StudentService {
       message: 'Lessons fetched successfully',
     };
   }
+  /**
+   * Start a lesson for a user
+   */
+  async startLesson(lessonId: string, req: CustomRequest) {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) throw customError.notFound('User not found');
+
+    const lesson = await this.lessonRepo.findOne({ where: { id: lessonId } });
+    if (!lesson) throw customError.notFound('Lesson not found');
+
+    const course = await this.courseRepo.findOne({
+      where: { id: lesson.courseId },
+    });
+    if (!course) throw customError.notFound('Course not found');
+    if (course.status !== CourseStatus.APPROVED)
+      throw customError.forbidden('Course is not available');
+
+    // Check if progress already exists
+    let progress = await this.lessonProgressRepo.findOne({
+      where: { user: { id: user.id }, lesson: { id: lessonId } },
+    });
+
+    if (!progress) {
+      progress = this.lessonProgressRepo.create({
+        user,
+        lesson,
+        status: LessonStatus.IN_PROGRESS,
+        watchedDuration: 0,
+      });
+    } else {
+      progress.status = LessonStatus.IN_PROGRESS;
+    }
+
+    return this.lessonProgressRepo.save(progress);
+  }
 
   /**
-   * Get assignments for a course (student must be enrolled)
+   * Update lesson progress
+   * @param watchedDuration duration in seconds
    */
-  //   async getAssignments(courseId: string, req: CustomRequest) {
-  //     const enrollment = await this.enrollmentRepo.findOne({
-  //       where: { user: { id: req.userId }, course: { id: courseId } },
-  //       relations: ['course'],
-  //     });
-  //     if (!enrollment) {
-  //       throw customError.forbidden('You are not enrolled in this course');
-  //     }
+  async updateProgress(
+    userId: string,
+    lessonId: string,
+    watchedDuration: number,
+    videoDuration: number,
+  ): Promise<LessonProgress> {
+    let progress = await this.lessonProgressRepo.findOne({
+      where: { user: { id: userId }, lesson: { id: lessonId } },
+    });
 
-  //     const assignments = await this.assignmentRepo.find({
-  //       where: { course: { id: courseId } },
-  //       relations: ['course'],
-  //     });
+    if (!progress) {
+      // auto-start lesson if not already started
+      progress = await this.startLesson(userId, lessonId);
+    }
 
-  //     return {
-  //       message: 'Assignments fetched successfully',
-  //       assignments,
-  //     };
-  //   }
+    progress.watchedDuration = watchedDuration;
 
-  //   /**
-  //    * Submit an assignment
-  //    */
-  //   async submitAssignment(
-  //     assignmentId: string,
-  //     file: Express.Multer.File,
-  //     req: CustomRequest,
-  //   ) {
-  //     const enrollment = await this.enrollmentRepo.findOne({
-  //       where: { user: { id: req.userId } },
-  //       relations: ['user', 'course'],
-  //     });
-  //     if (!enrollment) {
-  //       throw customError.forbidden('You are not enrolled in any course');
-  //     }
+    // Check if completed (threshold: 70%)
+    const percentWatched = (watchedDuration / videoDuration) * 100;
+    if (percentWatched >= 70) {
+      progress.status = LessonStatus.COMPLETED;
+      progress.completed = true;
+    } else {
+      progress.status = LessonStatus.IN_PROGRESS;
+      progress.completed = false;
+    }
 
-  //     const assignment = await this.assignmentRepo.findOne({
-  //       where: { id: assignmentId },
-  //       relations: ['course'],
-  //     });
-  //     if (!assignment) throw customError.notFound('Assignment not found');
+    return this.lessonProgressRepo.save(progress);
+  }
 
-  //     // Ensure enrollment is for the same course
-  //     if (enrollment.course.id !== assignment.course.id) {
-  //       throw customError.forbidden('You are not enrolled in this course');
-  //     }
+  /**
+   * Explicitly mark lesson as completed (e.g., after finishing quiz)
+   */
+  // async completeLesson(
+  //   userId: string,
+  //   lessonId: string,
+  // ): Promise<LessonProgress> {
+  //   const progress = await this.lessonProgressRepo.findOne({
+  //     where: { user: { id: userId }, lesson: { id: lessonId } },
+  //   });
 
-  //     if (!file) throw customError.badRequest('Assignment file is required');
-  //     singleImageValidation(file, 'an assignment submission file');
+  //   if (!progress) throw new NotFoundException('Lesson progress not found');
 
-  //     const fileUrl = await saveImageS3(file, `submissions/${req.userId}`);
-  //     if (!fileUrl) throw customError.badRequest('File upload failed');
+  //   progress.status = LessonStatus.COMPLETED;
+  //   progress.completed = true;
 
-  //     const submission = this.submissionRepo.create({
-  //       assignment,
-  //       enrollment,
-  //       fileUrl,
-  //     });
-  //     await this.submissionRepo.save(submission);
-
-  //     return {
-  //       message: 'Assignment submitted successfully',
-  //       submission,
-  //     };
-  //   }
+  //   return this.lessonProgressRepo.save(progress);
+  // }
 }
