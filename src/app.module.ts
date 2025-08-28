@@ -13,6 +13,7 @@ import { LessonModule } from './app/lesson/lesson.module';
 import { AssignmentModule } from './app/assignment/assignment.module';
 import { StudentModule } from './app/student/student.module';
 import { PaymentModule } from './app/payment/payment.module';
+import { InstructorModule } from './app/instructor/instructor.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PaymentModule } from './app/payment/payment.module';
     AssignmentModule,
     StudentModule,
     PaymentModule,
+    InstructorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,26 +1,193 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
-import * as crypto from 'crypto';
 import { customError } from 'libs/custom-handlers';
 import config from 'src/app/config/config';
+import { createHmac } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 
 const appConfig = config();
-
 @Injectable()
 export class PaymentService {
-  constructor() {}
-
   private paystackSecret = appConfig.paystack.secret_key;
   private monnifySecret = process.env.MONNIFY_SECRET_KEY;
   private monnifyApiKey = process.env.MONNIFY_API_KEY;
   private monnifyContractCode = process.env.MONNIFY_CONTRACT_CODE;
 
-  /**
-   * ------------------------
-   * PAYSTACK
-   * ------------------------
-   */
+  // private readonly logger = new Logger(MonnifyService.name);
+  private readonly baseUrl: string = `https://sandbox.monnify.com`;
+  private readonly apiKey: string;
+  private readonly secretKey: string;
 
+  private accessToken: string | null = null;
+  private tokenExpiry: number | null = null;
+
+  constructor(private readonly configService: ConfigService) {
+    // this.baseUrl =
+    //   this.configService.get<string>('monify.baseUrl') ||
+    //   'https://sandbox.monnify.com';
+    // this.apiKey = this.configService.get<string>('monify.apiKey');
+    // this.secretKey = this.configService.get<string>('monify.secretKey');
+  }
+
+  /**
+   * Generate Monnify access token and cache it until expiry.
+   */
+  async generateToken(): Promise<{
+    isValid: boolean;
+    accessToken?: string;
+    message: string;
+  }> {
+    try {
+      // Check if token exists and is still valid
+      if (
+        this.accessToken &&
+        this.tokenExpiry &&
+        Date.now() < this.tokenExpiry
+      ) {
+        return {
+          isValid: true,
+          accessToken: this.accessToken,
+          message: 'Using cached access token',
+        };
+      }
+
+      const credentials = `${this.apiKey}:${this.secretKey}`;
+      const encodedCredentials = Buffer.from(credentials).toString('base64');
+
+      const response = await axios.post(
+        `${this.baseUrl}/api/v1/auth/login`,
+        {},
+        {
+          headers: {
+            Authorization: `Basic ${encodedCredentials}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const { requestSuccessful, responseBody, responseMessage } =
+        response.data;
+
+      if (!requestSuccessful || !responseBody) {
+        return {
+          isValid: false,
+          message: responseMessage || 'Verification failed',
+        };
+      }
+
+      this.accessToken = responseBody.accessToken;
+      // Monnify returns expiresIn as seconds → convert to ms
+      this.tokenExpiry = Date.now() + responseBody.expiresIn * 1000;
+
+      return {
+        isValid: true,
+        // accessToken: this.accessToken,
+        message: 'Access token generated successfully',
+      };
+    } catch (err) {
+      // this.logger.error('generateToken error', err);
+      return {
+        isValid: false,
+        message: 'Error during token generation',
+      };
+    }
+  }
+  /**
+   * Fetch all supported banks from Monnify
+   */
+  async getNigierianBanks(): Promise<{
+    isValid: boolean;
+    data?: any[];
+    message: string;
+  }> {
+    try {
+      //   // Ensure valid token
+      // const tokenResult = await this.generateToken();
+      // if (!tokenResult.isValid || !tokenResult.accessToken) {
+      //   return { isValid: false, message: 'Unable to generate access token' };
+      // }
+
+      const response = await axios.get(`${this.baseUrl}/api/v1/banks`, {
+        headers: {
+          // ${tokenResult.accessToken}
+          Authorization: `Bearer ${appConfig.monnify.access_token}
+          `,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const { requestSuccessful, responseBody, responseMessage } =
+        response.data;
+
+      if (!requestSuccessful || !responseBody) {
+        return {
+          isValid: false,
+          message: responseMessage || 'Failed to fetch banks',
+        };
+      }
+
+      return {
+        isValid: true,
+        data: responseBody, // contains array of { name, code }
+        message: responseMessage,
+      };
+    } catch (err) {
+      // this.logger.error('getBanks error', err);
+      // return {
+      //   isValid: false,
+      //   message: 'Error fetching banks',
+      // };
+      throw customError.internalServerError(err.message);
+    }
+  }
+
+  /**
+   * Verify a bank account with Monnify.
+   */
+  async verifyBankAccount(
+    accountNumber: string,
+    bankCode: string,
+  ): Promise<{ isValid: boolean; data?: any; message: string }> {
+    try {
+      // Ensure we have a valid token
+      const tokenResult = await this.generateToken();
+      if (!tokenResult.isValid || !tokenResult.accessToken) {
+        return { isValid: false, message: 'Unable to generate access token' };
+      }
+
+      const response = await axios.get(
+        `${this.baseUrl}/api/v1/disbursements/account/validate?accountNumber=${accountNumber}&bankCode=${bankCode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${tokenResult.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const { requestSuccessful, responseBody, responseMessage } =
+        response.data;
+
+      if (!requestSuccessful || !responseBody) {
+        return {
+          isValid: false,
+          message: responseMessage || 'Verification failed',
+        };
+      }
+
+      return {
+        isValid: true,
+        data: responseBody,
+        message: responseMessage,
+      };
+    } catch (err) {
+      // this.logger.error('verifyBankAccount error', err);
+      return {
+        isValid: false,
+        message: 'Error during verification',
+      };
+    }
+  }
   async initPaystackPayment(
     email: string,
     amount: number,
@@ -49,43 +216,49 @@ export class PaymentService {
     return response.data; // contains authorization_url
   }
 
-  async verifyPaystackPayment(reference: string) {
-    const response = await axios.get(
-      `https://api.paystack.co/transaction/verify/${reference}`,
-      {
-        headers: { Authorization: `Bearer ${this.paystackSecret}` },
-      },
-    );
-    return response.data;
-  }
-
-  validatePaystackWebhook(body: any, signature: string) {
-    const secret = process.env.PAYSTACK_SECRET_KEY;
-    if (!secret) {
-      throw customError.notFound(
-        'PAYSTACK_SECRET_KEY is not set in environment variables',
-      );
-    }
-
-    const hash = crypto
-      .createHmac('sha512', secret)
-      .update(JSON.stringify(body))
+  validatePaystackWebhook(rawBody: Buffer, signature: string): boolean {
+    const secret = process.env.PAYSTACK_SECRET_KEY!;
+    const hash = createHmac('sha512', secret)
+      .update(rawBody) // Buffer works here
       .digest('hex');
 
-    if (hash !== signature) return null; // invalid webhook
-
-    if (body.event === 'charge.success') {
-      return {
-        status: 'success',
-        studentId: body.data.metadata.studentId,
-        courseId: body.data.metadata.courseId,
-        reference: body.data.reference,
-      };
-    }
-
-    return null;
+    return hash === signature;
   }
+  async initiateTransfer({
+    accountNumber,
+    bankCode,
+    amount,
+    accountName,
+  }: {
+    accountNumber: string;
+    bankCode: string;
+    amount: number;
+    accountName: string;
+  }) {
+    // Example for Paystack
+    const res = await fetch('https://api.paystack.co/transfer', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        source: 'balance',
+        reason: 'Instructor withdrawal',
+        amount: Math.round(amount * 100), // in kobo
+        recipient: {
+          type: 'nuban',
+          name: accountName,
+          account_number: accountNumber,
+          bank_code: bankCode,
+          currency: 'NGN',
+        },
+      }),
+    });
 
+    if (!res.ok) throw new Error('Transfer failed');
+    return await res.json();
+  }
   /**
    * ------------------------
    * MONNIFY

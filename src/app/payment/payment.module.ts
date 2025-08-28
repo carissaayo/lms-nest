@@ -13,10 +13,12 @@ import { StudentModule } from '../student/student.module';
 import { EnrollmentService } from '../enrollment/services/enrollment.service';
 import { Enrollment } from '../enrollment/enrollment.entity';
 import { UserAdmin } from '../admin/admin.entity';
+import { Payment } from './payment.entity';
+import { Earning } from '../instructor/entities/earning.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Enrollment, UserAdmin]),
+    TypeOrmModule.forFeature([User, Enrollment, UserAdmin, Payment, Earning]),
     StudentModule,
   ],
   providers: [PaymentService, EnrollmentService, EmailService],

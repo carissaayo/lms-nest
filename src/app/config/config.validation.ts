@@ -62,6 +62,10 @@ export const envSchema = z.object({
   AWS_BUCKET_NAME: z.string().min(1, 'AWS_BUCKET_NAME is required'),
   PAYSTACK_SECRET_KEY: z.string().min(1, 'PAYSTACK_SECRET_KEY is required'),
   PAYSTACK_BASE_URL: z.string().min(1, 'PAYSTACK_BASE_URL is required'),
+  MONNIFY_ENV: z.string().min(1, 'MONNIFY_ENV is required'),
+  MONNIFY_APIKEY: z.string().min(1, 'MONNIFY_APIKEY is required'),
+  MONNIFY_SECRET: z.string().min(1, 'MONNIFY_SECRET is required'),
+  MONNIFY_ACCESSTOKEN: z.string().min(1, 'MONNIFY_SECRET is required'),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;
