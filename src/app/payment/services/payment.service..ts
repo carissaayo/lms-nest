@@ -32,11 +32,7 @@ export class PaymentService {
   /**
    * Generate Monnify access token and cache it until expiry.
    */
-  async generateToken(): Promise<{
-    isValid: boolean;
-    accessToken?: string;
-    message: string;
-  }> {
+  async generateToken() {
     try {
       // Check if token exists and is still valid
       if (
@@ -51,7 +47,7 @@ export class PaymentService {
         };
       }
 
-      const credentials = `${this.apiKey}:${this.secretKey}`;
+      const credentials = `${appConfig.monnify.api_key}:${appConfig.monnify.secret_key}`;
       const encodedCredentials = Buffer.from(credentials).toString('base64');
 
       const response = await axios.post(
@@ -78,18 +74,21 @@ export class PaymentService {
       this.accessToken = responseBody.accessToken;
       // Monnify returns expiresIn as seconds → convert to ms
       this.tokenExpiry = Date.now() + responseBody.expiresIn * 1000;
+      console.log('this', this.accessToken);
 
       return {
         isValid: true,
-        // accessToken: this.accessToken,
+        accessToken: this.accessToken,
         message: 'Access token generated successfully',
       };
     } catch (err) {
       // this.logger.error('generateToken error', err);
-      return {
-        isValid: false,
-        message: 'Error during token generation',
-      };
+      // return {
+      //   isValid: false,
+      //   message: 'Error during token generation',
+      // };
+      console.log(err);
+      throw customError.internalServerError(err.message);
     }
   }
   /**
@@ -102,16 +101,23 @@ export class PaymentService {
   }> {
     try {
       //   // Ensure valid token
-      // const tokenResult = await this.generateToken();
-      // if (!tokenResult.isValid || !tokenResult.accessToken) {
-      //   return { isValid: false, message: 'Unable to generate access token' };
-      // }
+      const tokenResult = await this.generateToken();
+      console.log('token', tokenResult);
+
+      if (!tokenResult.isValid || !tokenResult.accessToken) {
+        return { isValid: false, message: 'Unable to generate access token' };
+      }
+
+      // Force token into a single line
+      const cleanToken = tokenResult.accessToken
+        .replace(/(\r\n|\n|\r)/gm, '')
+        .trim();
+
+      console.log('Sanitized token (first 50 chars):', cleanToken.slice(0, 50));
 
       const response = await axios.get(`${this.baseUrl}/api/v1/banks`, {
         headers: {
-          // ${tokenResult.accessToken}
-          Authorization: `Bearer ${appConfig.monnify.access_token}
-          `,
+          Authorization: 'Bearer ' + cleanToken,
           'Content-Type': 'application/json',
         },
       });
