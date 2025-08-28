@@ -26,7 +26,10 @@ export class WithdrawalService {
       throw new Error(banks.message);
     }
 
-    return banks.data; // return list of { name, code }
+    return {
+      message: 'Banks fetched successfully',
+      banks: banks.data,
+    };
   }
   // Add bank account
   async addBank(dto: AddBankDto, req: CustomRequest) {
@@ -34,19 +37,33 @@ export class WithdrawalService {
       where: { id: req.userId },
     });
     if (!instructor) throw customError.notFound('Instructor not found');
-    const nigerianBanks = await this.getSupportedBanks();
-    console.log(nigerianBanks);
 
-    const result = this.paymentProvider.verifyBankAccount(
+    const { data } = await this.paymentProvider.verifyBankAccount(
       dto.accountNumber,
       dto.bankCode,
     );
-    // const bank = this.bankRepo.create({ ...dto, instructor });
-    // return await this.bankRepo.save(bank);
-    console.log('result', result);
+    const existingBank = await this.bankRepo.find({
+      where: {
+        accountName: data.accountName,
+        accountNumber: dto.accountNumber,
+        bankCode: data.bankCode,
+      },
+    });
+
+    console.log('existingBank', existingBank);
+
+    if (existingBank.length > 0)
+      throw customError.conflict('Bank already exist');
+    const bank = this.bankRepo.create({
+      ...dto,
+      instructor,
+      accountName: data.accountName,
+    });
+    await this.bankRepo.save(bank);
 
     return {
       message: 'bank added successfully',
+      bank,
     };
   }
 
@@ -58,12 +75,16 @@ export class WithdrawalService {
   }
 
   // Delete bank
-  async deleteBank(instructorId: string, bankId: string) {
+  async deleteBank(req: CustomRequest, bankId: string) {
     const bank = await this.bankRepo.findOne({
-      where: { id: bankId, instructor: { id: instructorId } },
+      where: { id: bankId, instructor: { id: req.userId } },
     });
     if (!bank) throw customError.notFound('Bank not found');
-    return await this.bankRepo.remove(bank);
+    await this.bankRepo.remove(bank);
+
+    return {
+      message: 'Bank has removed successfuully',
+    };
   }
 
   // Withdraw funds

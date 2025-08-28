@@ -5,7 +5,11 @@ export class AddBankDto {
   accountNumber: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'accountNumber is required' })
+  @IsNotEmpty({ message: 'bankName is required' })
+  bankName: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'bankCode is required' })
   bankCode: string;
 }
 

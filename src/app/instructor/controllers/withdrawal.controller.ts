@@ -1,4 +1,12 @@
-import { Controller, Post, Req, UseGuards, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Req,
+  UseGuards,
+  Body,
+  Get,
+  Patch,
+} from '@nestjs/common';
 
 import { CustomRequest } from 'src/utils/auth-utils';
 
@@ -12,6 +20,7 @@ import { UserRole } from 'src/app/user/user.interface';
 
 import { WithdrawalService } from '../services/withdrawal.service';
 import { AddBankDto } from '../dtos/withdrawal.dto';
+import { IdParam } from 'src/app/common/decorators/idParam.decorator';
 
 @Controller('withdrawals')
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
@@ -25,5 +34,19 @@ export class WithdrawalController {
   @Post('banks')
   async addBank(@Body() dto: AddBankDto, @Req() req: CustomRequest) {
     return this.withdrawalService.addBank(dto, req);
+  }
+
+  //   Delete a bank
+  @Patch('banks/:bankId')
+  async deleteBank(
+    @IdParam('bankId') bankId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.withdrawalService.deleteBank(req, bankId);
+  }
+
+  @Get('nigerian-banks')
+  async getSupportedBanks() {
+    return this.withdrawalService.getSupportedBanks();
   }
 }
