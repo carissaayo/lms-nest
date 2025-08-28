@@ -14,6 +14,17 @@ export class AddBankDto {
 }
 
 export class WithdrawDto {
+  @IsString()
+  @IsNotEmpty({ message: 'bankId is required' })
   bankId: string;
+
+  @IsNumber()
+  @IsNotEmpty({ message: 'amount is required' })
   amount: number;
+}
+
+export class ConfirmWithdrawDto {
+  @IsString()
+  @IsNotEmpty({ message: 'code is required' })
+  code: string;
 }

@@ -19,7 +19,11 @@ import { Roles } from 'src/app/common/decorators/roles.decorator';
 import { UserRole } from 'src/app/user/user.interface';
 
 import { WithdrawalService } from '../services/withdrawal.service';
-import { AddBankDto } from '../dtos/withdrawal.dto';
+import {
+  AddBankDto,
+  ConfirmWithdrawDto,
+  WithdrawDto,
+} from '../dtos/withdrawal.dto';
 import { IdParam } from 'src/app/common/decorators/idParam.decorator';
 
 @Controller('withdrawals')
@@ -48,5 +52,22 @@ export class WithdrawalController {
   @Get('nigerian-banks')
   async getSupportedBanks() {
     return this.withdrawalService.getSupportedBanks();
+  }
+
+  @Post('initiate')
+  async requestWithdrawCode(
+    @Body() dto: WithdrawDto,
+    @Req() req: CustomRequest,
+  ) {
+    return this.withdrawalService.requestWithdrawCode(req, dto);
+  }
+
+  @Patch(':withdrawalId')
+  async confirmWithdrawalCode(
+    @IdParam('withdrawalId') withdrawalId: string,
+    @Body() dto: ConfirmWithdrawDto,
+    @Req() req: CustomRequest,
+  ) {
+    return this.withdrawalService.confirmWithdrawalCode(req, dto, withdrawalId);
   }
 }

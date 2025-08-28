@@ -241,14 +241,11 @@ export class PaymentService {
     amount: number;
     accountName: string;
   }) {
-    // Example for Paystack
-    const res = await fetch('https://api.paystack.co/transfer', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const baseUrl = appConfig.paystack.url || `https://api.paystack.co`;
+
+    const res = await axios.post(
+      `${baseUrl}/transfer`,
+      {
         source: 'balance',
         reason: 'Instructor withdrawal',
         amount: Math.round(amount * 100), // in kobo
@@ -259,11 +256,19 @@ export class PaymentService {
           bank_code: bankCode,
           currency: 'NGN',
         },
-      }),
-    });
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.paystackSecret}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
 
-    if (!res.ok) throw new Error('Transfer failed');
-    return await res.json();
+    console.log('res', res);
+
+    if (!res.data) throw new Error('Transfer failed');
+    return await res.data;
   }
   /**
    * ------------------------
