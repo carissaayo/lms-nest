@@ -19,6 +19,8 @@ import { WithdrawalService } from './services/withdrawal.service';
 import { WithdrawalController } from './controllers/withdrawal.controller';
 import { Bank } from './entities/bank.entity';
 import { PaymentModule } from '../payment/payment.module';
+import { Otp } from './entities/otp.entity';
+import { Withdrawal } from './entities/withdrawal.entity';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { PaymentModule } from '../payment/payment.module';
       Payment,
       Earning,
       Bank,
+      Otp,
+      Withdrawal,
     ]),
     StudentModule,
     PaymentModule,

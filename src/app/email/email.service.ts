@@ -466,6 +466,32 @@ export class EmailService {
     });
   }
 
+  // ========== WITHDRAWAL RELATED ==========
+
+  async withdrawalCodeNotification(
+    instructorEmail: string,
+    instructorName: string,
+    code: string,
+  ) {
+    const subject = 'Withdrawal Confirmation Code';
+
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${instructorName},`,
+      body: `<p>You requested to withdraw funds from your instructor account.</p>
+           <p>Please use the code below to confirm your withdrawal:</p>
+           <h2 style="letter-spacing: 3px; text-align: center;">${code}</h2>
+           <p>This code will expire in 10 minutes.</p>`,
+    });
+
+    await this.sendEmail({
+      to: instructorEmail,
+      subject,
+      text: `Your withdrawal confirmation code is: ${code}`,
+      html,
+    });
+  }
+
   // ========== STUDENT RELATED ==========
 
   async courseEnrollmentConfirmation(

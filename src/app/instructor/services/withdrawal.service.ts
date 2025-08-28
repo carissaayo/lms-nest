@@ -5,10 +5,18 @@ import { Repository } from 'typeorm';
 import { Earning } from '../entities/earning.entity';
 import { User } from 'src/app/user/user.entity';
 import { PaymentService } from 'src/app/payment/services/payment.service.';
-import { AddBankDto, WithdrawDto } from '../dtos/withdrawal.dto';
+import {
+  AddBankDto,
+  ConfirmWithdrawDto,
+  WithdrawDto,
+} from '../dtos/withdrawal.dto';
 import { customError } from 'libs/custom-handlers';
 import { CustomRequest } from 'src/utils/auth-utils';
 import axios from 'axios';
+import { EmailService } from 'src/app/email/email.service';
+import { generateOtp } from 'src/utils/utils';
+import { Withdrawal } from '../entities/withdrawal.entity';
+import { Otp } from '../entities/otp.entity';
 
 @Injectable()
 export class WithdrawalService {
@@ -16,7 +24,13 @@ export class WithdrawalService {
     @InjectRepository(Bank) private bankRepo: Repository<Bank>,
     @InjectRepository(Earning) private earningRepo: Repository<Earning>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Withdrawal)
+    private withdrawalRepo: Repository<Withdrawal>,
+    @InjectRepository(Otp)
+    private otpRepo: Repository<Otp>,
+
     private paymentProvider: PaymentService,
+    private readonly emailService: EmailService,
   ) {}
 
   async getSupportedBanks() {
@@ -87,19 +101,19 @@ export class WithdrawalService {
     };
   }
 
-  // Withdraw funds
-  async withdraw(instructorId: string, dto: WithdrawDto) {
+  //Request for withdrawal code
+  async requestWithdrawCode(req: CustomRequest, dto: WithdrawDto) {
     const { bankId, amount } = dto;
 
     // Validate instructor
     const instructor = await this.userRepo.findOne({
-      where: { id: instructorId },
+      where: { id: req.userId },
     });
     if (!instructor) throw customError.notFound('Instructor not found');
 
     // Validate bank
     const bank = await this.bankRepo.findOne({
-      where: { id: bankId, instructor: { id: instructorId } },
+      where: { id: bankId, instructor: { id: instructor.id } },
     });
     if (!bank) throw customError.notFound('Bank not found');
 
@@ -107,25 +121,90 @@ export class WithdrawalService {
     const totalEarnings = await this.earningRepo
       .createQueryBuilder('earning')
       .select('SUM(earning.amount)', 'sum')
-      .where('earning.instructor_id = :id', { id: instructorId })
+      .where('earning.instructor_id = :id', { id: instructor.id })
       .getRawOne();
 
     const availableBalance = Number(totalEarnings?.sum || 0);
-    if (availableBalance < amount)
+    if (amount > availableBalance)
       throw customError.badRequest('Insufficient balance');
 
-    // Call Flutterwave/Paystack transfer
-    // const transferResult = await this.paymentProvider.initiateTransfer({
-    //   accountNumber: bank.accountNumber,
-    //   bankCode: bank.bankCode,
-    //   amount,
-    //   accountName: bank.accountName,
-    // });
+    const withdrawal = this.withdrawalRepo.create({
+      user: instructor,
+      amount,
+      status: 'pending',
+      bankId,
+    });
+    await this.withdrawalRepo.save(withdrawal);
+    const code = generateOtp('numeric', 8);
+    const otp = this.otpRepo.create({
+      user: instructor,
+      withdrawal,
+      code,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+    await this.otpRepo.save(otp);
 
-    // Mark withdrawal as done (optional: create a Withdrawal entity)
+    await this.emailService.withdrawalCodeNotification(
+      instructor.email,
+      `${instructor.firstName} ${instructor.lastName}`,
+      code,
+    );
+
     return {
       message: 'Withdrawal initiated successfully',
-      //   transferResult,
+      accesToken: req.token,
+      withdrawal,
+    };
+  }
+
+  async confirmWithdrawalCode(
+    req: CustomRequest,
+    dto: ConfirmWithdrawDto,
+    withdrawalId: string,
+  ) {
+    const { code } = dto;
+
+    // Validate instructor
+    const instructor = await this.userRepo.findOne({
+      where: { id: req.userId },
+    });
+    if (!instructor) throw customError.notFound('Instructor not found');
+
+    const withdrawal = await this.withdrawalRepo.findOne({
+      where: { id: withdrawalId, user: { id: instructor.id } },
+    });
+    if (!withdrawal) throw customError.notFound('Withdrawal not found');
+
+    const record = await this.otpRepo.findOne({
+      where: { withdrawal: { id: withdrawal.id }, code },
+    });
+    console.log(record);
+
+    if (!record || record.expiresAt < new Date()) {
+      throw customError.badRequest('Invalid or expired code');
+    }
+    const bank = await this.bankRepo.findOne({
+      where: { id: withdrawal.bankId, instructor: { id: instructor.id } },
+    });
+    if (!bank) throw customError.notFound('Bank not found');
+
+    const transferResult = await this.paymentProvider.initiateTransfer({
+      accountNumber: bank.accountNumber,
+      bankCode: bank.bankCode,
+      amount: withdrawal.amount,
+      accountName: bank.accountName,
+    });
+    console.log(transferResult);
+
+    //    await this.emailService.withdrawalCodeNotification(
+    //      instructor.email,
+    //      `${instructor.firstName} ${instructor.lastName}`,
+    //      code,
+    //    );
+
+    return {
+      message: 'Withdrawal initiated successfully',
+      accesToken: req.token,
     };
   }
 }
