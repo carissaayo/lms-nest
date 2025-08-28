@@ -11,10 +11,20 @@ import { PaymentService } from '../payment/services/payment.service.';
 import { Enrollment } from './enrollment.entity';
 import { UserAdmin } from '../admin/admin.entity';
 import { Lesson } from '../lesson/lesson.entity';
+import { Payment } from '../payment/payment.entity';
+import { Earning } from '../instructor/entities/earning.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Course, User, Enrollment, UserAdmin, Lesson]),
+    TypeOrmModule.forFeature([
+      Course,
+      User,
+      Enrollment,
+      UserAdmin,
+      Lesson,
+      Payment,
+      Earning,
+    ]),
   ],
   providers: [EnrollmentService, EmailService, PaymentService],
   controllers: [],

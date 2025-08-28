@@ -29,12 +29,6 @@ const config = () => {
     },
     // app_url: env.APP_URL,
     salt_rounds: env.SALTROUNDS,
-    // cloudinary: {
-    //   cloud_name: env.CLOUDINARY_CLOUD_NAME,
-    //   api_key: env.CLOUDINARY_API_KEY,
-    //   api_secret: env.CLOUDINARY_API_SECRET,
-    // },
-    // client_url: env.CLIENT_URL,
     admin: {
       email: env.ADMIN_EMAIL,
     },
@@ -64,7 +58,13 @@ const config = () => {
     },
     paystack: {
       secret_key: env.PAYSTACK_SECRET_KEY,
-      url: env.PAYSTACK_BASE_URL
+      url: env.PAYSTACK_BASE_URL,
+    },
+    monnify: {
+      env: env.MONNIFY_ENV,
+      api_key: env.MONNIFY_APIKEY,
+      secret_key: env.MONNIFY_SECRET,
+      access_token: env.MONNIFY_ACCESSTOKEN,
     },
   };
 };

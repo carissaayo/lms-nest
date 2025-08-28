@@ -20,9 +20,6 @@ export class Transaction extends BaseEntity {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount!: number;
 
-  @Column({ default: 'payment' })
-  type!: string;
-
   @Column({ default: 'pending' })
   status!: string;
 

@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Headers, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Headers,
+  Req,
+  HttpCode,
+  Res,
+} from '@nestjs/common';
 import { PaymentService } from '../services/payment.service.';
 import { EnrollmentService } from 'src/app/enrollment/services/enrollment.service';
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -16,21 +24,25 @@ export class PaymentController {
    */
   @Post('paystack/webhook')
   async paystackWebhook(
-    @Body() dto: EnrollStudentAfterPayment,
-    @Req() req: CustomRequest,
+    @Req() req: any,
     @Headers('x-paystack-signature') signature: string,
   ) {
-    console.log('Paystack webhook received:', dto);
+    const rawBody = req.rawBody; // should be Buffer
 
-    const result = this.paymentService.validatePaystackWebhook(dto, signature);
+    const isValid = this.paymentService.validatePaystackWebhook(
+      rawBody,
+      signature,
+    );
 
-    if (result?.status === 'success') {
+    if (isValid) {
+      const dto = JSON.parse(rawBody.toString());
+      console.log('dto===', dto);
+
       await this.enrollmentService.enrollStudentAfterPayment(dto, req);
     }
 
     return { received: true };
   }
-
   /**
    * Monnify Webhook → called automatically by Monnify after payment
    */

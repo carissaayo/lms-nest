@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsString, IsUUID, IsNotEmpty } from 'class-validator';
+import { IsString, IsUUID, IsNotEmpty, IsNumber } from 'class-validator';
 export class EnrollStudentAfterPayment {
   @IsUUID()
   @IsNotEmpty({ message: 'StudentId is required' })
@@ -12,4 +12,8 @@ export class EnrollStudentAfterPayment {
   @IsString()
   @IsNotEmpty({ message: 'reference is required' })
   reference!: string;
+
+  @IsNumber()
+  @IsNotEmpty({ message: 'amount is required' })
+  amount!: string;
 }

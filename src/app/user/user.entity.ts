@@ -17,6 +17,9 @@ import { UserRole } from './user.interface';
 import { Assignment } from '../assignment/assignment.entity';
 import { Enrollment } from '../enrollment/enrollment.entity';
 import { LessonProgress } from '../lesson/lesson-progress.entity';
+import { Payment } from '../payment/payment.entity';
+import { Earning } from '../instructor/entities/earning.entity';
+import { Bank } from '../instructor/entities/bank.entity';
 
 export enum UserStatus {
   PENDING = 'pending',
@@ -141,4 +144,13 @@ export class User extends BaseEntity {
 
   @OneToMany(() => LessonProgress, (progress) => progress.user)
   lessonProgress: LessonProgress[];
+
+  @OneToMany(() => Payment, (payment) => payment.student)
+  payments: Payment[];
+
+  @OneToMany(() => Earning, (earning) => earning.instructor)
+  earnings: Earning[];
+
+  @OneToMany(() => Bank, (bank) => bank.instructor)
+  banks: Bank[];
 }
