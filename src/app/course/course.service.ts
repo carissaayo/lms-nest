@@ -324,10 +324,7 @@ export class CourseService {
       };
     } catch (error) {
       console.log(error);
-      throw new Error(
-        error.message || 'Internal Server Error',
-        error.status || 500,
-      );
+      throw new Error(error.message || 'Internal Server Error');
     }
   }
 
@@ -372,10 +369,7 @@ export class CourseService {
       };
     } catch (error) {
       console.log(error);
-      throw new Error(
-        error.message || 'Internal Server Error',
-        error.status || 500,
-      );
+      throw new Error(error.message || 'Internal Server Error');
     }
   }
 }
