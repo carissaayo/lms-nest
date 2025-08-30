@@ -6,12 +6,15 @@ import { customError } from 'libs/custom-handlers';
 import { User } from 'src/app/user/user.entity';
 import { ProfileInterface } from 'src/app/auth/auth.interface';
 import { UserAdmin } from 'src/app/admin/admin.entity';
+
 export interface CustomRequest extends Request {
   verifyAccessToken?: 'nil' | 'failed' | 'success';
   verifyAccessTokenMessage?: string | undefined;
   userId?: string;
   token?: string;
   files?: any;
+  ip: string; // Explicitly add ip property
+  headers: any; // Explicitly add headers property
 }
 
 const appConfig = config();
