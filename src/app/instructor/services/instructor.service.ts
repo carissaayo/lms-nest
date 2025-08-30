@@ -13,6 +13,7 @@ import { DBQuery, QueryString } from 'src/app/database/dbquery';
 import { Enrollment } from 'src/app/enrollment/enrollment.entity';
 import { UserRole } from 'src/app/user/user.interface';
 import { Earning } from '../entities/earning.entity';
+import { Withdrawal, withdrawalStatus } from '../entities/withdrawal.entity';
 
 @Injectable()
 export class InstructorService {
@@ -21,9 +22,8 @@ export class InstructorService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
 
-    // @InjectRepository(Course)
-    // private readonly courseRepo: Repository<Course>,
-
+    @InjectRepository(Withdrawal)
+    private withdrawalRepo: Repository<Withdrawal>,
     @InjectRepository(Earning)
     private readonly earningRepo: Repository<Earning>,
 
@@ -38,51 +38,48 @@ export class InstructorService {
 
     const earnings = await this.earningRepo.find({
       where: { instructor: { id: instructor.id } },
-      //   relations: ['course', 'payment'],
+
       order: { createdAt: 'DESC' },
     });
 
-    console.log('earnings', earnings);
+    const withdrawals = await this.withdrawalRepo.find({
+      where: {
+        user: { id: instructor.id },
+        status: withdrawalStatus.SUCCESSFUL,
+      },
+      order: { createdAt: 'DESC' },
+    });
 
+    // Handle no earnings
     if (!earnings || earnings.length === 0) {
       return {
-        // instructor: {
-        //   id: instructor.id,
-        //   name: `${instructor.firstName} ${instructor.lastName}`,
-        //   email: instructor.email,
-        // },
         totalEarnings: 0,
-        // totalPlatformShare: 0,
-        // earnings: [],
+        totalWithdrawals: 0,
+        availableBalance: 0,
       };
     }
 
-    // 3. Compute totals
+    // Compute totals
     const totalEarnings = earnings.reduce(
       (sum, e) => sum + Number(e.amount),
       0,
     );
-    // const totalPlatformShare = earnings.reduce(
-    //   (sum, e) => sum + Number(e.platformShare),
-    //   0,
-    // );
+
+    const totalWithdrawals = withdrawals.reduce(
+      (sum, w) => sum + Number(w.amount),
+      0,
+    );
+
+    const availableBalance = totalEarnings - totalWithdrawals;
 
     return {
-      //   instructor: {
-      //     id: instructor.id,
-      //     name: `${instructor.firstName} ${instructor.lastName}`,
-      //     email: instructor.email,
-      //   },
-      totalEarnings,
-      //   totalPlatformShare,
-      //   earnings: earnings.map((e) => ({
-      //     courseId: e.course.id,
-      //     courseTitle: e.course.title,
-      //     paymentReference: e.payment.reference,
-      //     amount: Number(e.amount),
-      //     platformShare: Number(e.platformShare),
-      //     date: e.createdAt,
-      //   })),
+      message: 'Wallet has been fetched successfully',
+      wallet: {
+        availableBalance,
+        totalEarnings,
+        totalWithdrawals,
+      },
+      accessToken: req.token,
     };
   }
 }
