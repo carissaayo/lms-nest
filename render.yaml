@@ -11,8 +11,10 @@ services:
     name: lms-nest
     env: node
     plan: free # or "starter"/"standard"
-    buildCommand: npm run build
-    startCommand: npm run start:prod
+    # Fixed build command - ensure clean install and successful build
+    buildCommand: npm ci && npm run build && echo "Build complete. Contents of dist:" && ls -la dist/
+    # Fixed start command - use relative path
+    startCommand: node dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
