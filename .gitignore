@@ -45,7 +45,7 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
-dist/
+# REMOVED: dist/ - this was preventing deployment
 
 # Runtime data
 pids
