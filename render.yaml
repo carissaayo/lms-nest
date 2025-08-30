@@ -11,7 +11,7 @@ services:
     name: lms-nest
     env: node
     plan: free
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && npm run build && echo "=== BUILD DEBUG ===" && ls -la && echo "=== DIST CONTENTS ===" && ls -la dist/ && echo "=== MAIN.JS EXISTS? ===" && ls -la dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
