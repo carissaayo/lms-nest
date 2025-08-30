@@ -1,5 +1,4 @@
 # compiled output
-
 /node_modules
 /build
 
@@ -45,7 +44,6 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
-# REMOVED: dist/ - this was preventing deployment
 
 # Runtime data
 pids
