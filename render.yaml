@@ -13,8 +13,8 @@ services:
     plan: free # or "starter"/"standard"
     # Fixed build command - ensure clean install and successful build
     buildCommand: npm ci && npm run build && echo "Build complete. Project structure:" && ls -la && echo "Dist contents:" && ls -la dist/ && echo "Current working directory:" && pwd
-    # Fixed start command - use absolute path with explicit working directory
-    startCommand: cd /opt/render/project && /usr/local/bin/node /opt/render/project/dist/main.js
+    # Debug start command - see what's happening
+    startCommand: echo "Current directory:" && pwd && echo "Project contents:" && ls -la /opt/render/project && echo "Dist contents:" && ls -la /opt/render/project/dist && node /opt/render/project/dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
