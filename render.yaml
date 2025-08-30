@@ -12,9 +12,9 @@ services:
     env: node
     plan: free # or "starter"/"standard"
     # Fixed build command - ensure clean install and successful build
-    buildCommand: npm ci && npm run build && echo "Build complete. Contents of dist:" && ls -la dist/
-    # Fixed start command - use relative path
-    startCommand: node dist/main.js
+    buildCommand: npm ci && npm run build && echo "Build complete. Project structure:" && ls -la && echo "Dist contents:" && ls -la dist/ && echo "Current working directory:" && pwd
+    # Fixed start command - use absolute path
+    startCommand: node /opt/render/project/dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
