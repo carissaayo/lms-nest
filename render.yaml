@@ -12,7 +12,6 @@ services:
     env: node
     plan: free
     buildCommand: npm ci && npm run build
-    startCommand: cd /opt/render/project && node dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
