@@ -6,6 +6,7 @@ import {
   Body,
   Get,
   Patch,
+  Query,
 } from '@nestjs/common';
 
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -25,6 +26,7 @@ import {
   WithdrawDto,
 } from '../dtos/withdrawal.dto';
 import { IdParam } from 'src/app/common/decorators/idParam.decorator';
+import { QueryString } from 'src/app/database/dbquery';
 
 @Controller('withdrawals')
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
@@ -69,5 +71,14 @@ export class WithdrawalController {
     @Req() req: CustomRequest,
   ) {
     return this.withdrawalService.confirmWithdrawalCode(req, dto, withdrawalId);
+  }
+
+  @Get('')
+  async getWithdrawals(
+    @Query() query: QueryString,
+
+    @Req() req: CustomRequest,
+  ) {
+    return this.withdrawalService.getWithdrawals(query, req);
   }
 }

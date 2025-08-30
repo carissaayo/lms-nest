@@ -21,6 +21,10 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { AdminUserService } from '../services/admin-users.service';
 import { SuspendUserDTO } from '../admin.dto';
 import { PermissionsEnum } from '../admin.interface';
+import {
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+} from 'src/app/common/guards/admin-auth.guard';
 
 @Controller('admin-users')
 @UsePipes(
@@ -29,8 +33,11 @@ import { PermissionsEnum } from '../admin.interface';
     transform: true,
   }),
 )
-@UseGuards(RolesGuard)
-@UseGuards(PermissionsGuard)
+@UseGuards(
+  AuthenticateTokenAdminGuard,
+  ReIssueTokenAdminGuard,
+  PermissionsGuard,
+)
 @Roles(UserRole.ADMIN)
 @Permissions(PermissionsEnum.ADMIN_USERS)
 export class AdminUserController {

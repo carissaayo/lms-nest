@@ -492,6 +492,35 @@ export class EmailService {
     });
   }
 
+  async withdrawalNotification(
+    instructorEmail: string,
+    instructorName: string,
+    amount: number,
+    accountNumber: string,
+    accountName: string,
+    code: string,
+  ) {
+    const subject = 'Withdrawal Initiated';
+
+    const html = this.buildTemplate({
+      title: subject,
+      greeting: `Hi ${instructorName},`,
+      body: `<p>A withdrawal of ${amount} has been initiated  successfully</p>
+           <p>Please use the code below to confirm your withdrawal:</p>
+           <p>Account Name: <strong>${accountName}</strong> </p>
+           <p>Account NUmber: <strong>${accountNumber}</strong> </p>
+                 <p>Withdrawal Amount: <strong>${amount}</strong> </p>
+           <p>Thanks for doing business with us</p>`,
+    });
+
+    await this.sendEmail({
+      to: instructorEmail,
+      subject,
+      text: `Your withdrawal confirmation code is: ${code}`,
+      html,
+    });
+  }
+
   // ========== STUDENT RELATED ==========
 
   async courseEnrollmentConfirmation(

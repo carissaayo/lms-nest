@@ -9,6 +9,11 @@ import {
   BaseEntity,
 } from 'typeorm';
 
+export enum withdrawalStatus {
+  PENDING = 'pending',
+  FAILED = 'failed',
+  SUCCESSFUL = 'successful',
+}
 @Entity({ name: 'withdrawals' })
 export class Withdrawal extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -21,8 +26,12 @@ export class Withdrawal extends BaseEntity {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount!: number;
 
-  @Column({ default: 'pending' })
-  status!: string;
+  @Column({
+    type: 'enum',
+    enum: withdrawalStatus,
+    default: withdrawalStatus.PENDING,
+  })
+  status!: withdrawalStatus;
 
   @CreateDateColumn()
   createdAt!: Date;

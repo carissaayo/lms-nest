@@ -243,19 +243,15 @@ export class PaymentService {
   }) {
     const baseUrl = appConfig.paystack.url || `https://api.paystack.co`;
 
-    const res = await axios.post(
-      `${baseUrl}/transfer`,
+    // Step 1: Create recipient
+    const recipientRes = await axios.post(
+      `${baseUrl}/transferrecipient`,
       {
-        source: 'balance',
-        reason: 'Instructor withdrawal',
-        amount: Math.round(amount * 100), // in kobo
-        recipient: {
-          type: 'nuban',
-          name: accountName,
-          account_number: accountNumber,
-          bank_code: bankCode,
-          currency: 'NGN',
-        },
+        type: 'nuban',
+        name: accountName,
+        account_number: accountNumber,
+        bank_code: bankCode,
+        currency: 'NGN',
       },
       {
         headers: {
@@ -265,11 +261,29 @@ export class PaymentService {
       },
     );
 
-    console.log('res', res);
+    const recipientCode = recipientRes.data.data.recipient_code;
 
-    if (!res.data) throw new Error('Transfer failed');
-    return await res.data;
+    // Step 2: Initiate transfer
+    const transferRes = await axios.post(
+      `${baseUrl}/transfer`,
+      {
+        source: 'balance',
+        reason: 'Instructor withdrawal',
+        amount: Math.round(amount * 100),
+        recipient: recipientCode,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.paystackSecret}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    if (!transferRes.data) throw new Error('Transfer failed');
+    return transferRes.data;
   }
+
   /**
    * ------------------------
    * MONNIFY

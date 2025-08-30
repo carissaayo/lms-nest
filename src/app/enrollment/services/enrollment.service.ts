@@ -62,7 +62,7 @@ export class EnrollmentService {
     });
     if (existing) return existing;
 
-    const newAmount = Number(amount);
+    const newAmount = Number(course.price);
 
     // --- 1. Save Payment ---
     const payment = this.paymentRepo.create({
