@@ -7,7 +7,7 @@ import { EmailService } from '../../email/email.service';
 
 import { DBQuery, QueryString } from 'src/app/database/dbquery';
 import { Payment } from 'src/app/payment/payment.entity';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { Withdrawal } from 'src/app/instructor/entities/withdrawal.entity';
 
 @Injectable()

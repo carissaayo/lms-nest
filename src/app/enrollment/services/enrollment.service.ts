@@ -6,7 +6,7 @@ import { Course } from 'src/app/course/course.entity';
 import { User } from 'src/app/user/user.entity';
 
 import { CustomRequest } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 
 import { EmailService } from 'src/app/email/email.service';
 import { PaymentService } from 'src/app/payment/services/payment.service.';

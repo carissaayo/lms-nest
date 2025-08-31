@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { Lesson } from '../lesson.entity';
 import { Course, CourseStatus } from 'src/app/course/course.entity';

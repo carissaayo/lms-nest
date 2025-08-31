@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import config from 'src/app/config/config';
 import { createHmac } from 'crypto';
 import { ConfigService } from '@nestjs/config';

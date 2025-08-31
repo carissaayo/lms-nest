@@ -1,7 +1,7 @@
 import { Repository } from 'typeorm';
 import { Request } from 'express';
 
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 
 import { UserAdmin } from 'src/app/admin/admin.entity';
 import { AdminProfileInterface } from 'src/app/admin/admin.interface';

@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { JwtPayload } from 'src/utils/jwt-utils';
 import * as jwt from 'jsonwebtoken';
 import config from 'src/app/config/config';

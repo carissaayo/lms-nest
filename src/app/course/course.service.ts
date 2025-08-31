@@ -11,11 +11,12 @@ import { User } from '../user/user.entity';
 import { Category } from '../database/main.entity';
 import { CreateCourseDTO } from './course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
+
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
 
 import { DBQuery, QueryString } from '../database/dbquery';
+import { customError } from 'src/libs/custom-handlers';
 
 @Injectable()
 export class CourseService {

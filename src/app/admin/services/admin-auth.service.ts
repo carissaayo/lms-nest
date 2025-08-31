@@ -10,7 +10,7 @@ import {
 
 import { MoreThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
 import { EmailService } from '../../email/email.service';
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';

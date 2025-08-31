@@ -9,7 +9,7 @@ import { UpdateUserDTO } from './user.dto';
 import { ProfileInterface } from '../auth/auth.interface';
 
 import { CustomRequest, GET_PROFILE } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 
 @Injectable()
 export class UsersService {

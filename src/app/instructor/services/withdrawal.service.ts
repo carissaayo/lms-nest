@@ -10,7 +10,7 @@ import {
   ConfirmWithdrawDto,
   WithdrawDto,
 } from '../dtos/withdrawal.dto';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { CustomRequest } from 'src/utils/auth-utils';
 import axios from 'axios';
 import { EmailService } from 'src/app/email/email.service';
