@@ -9,6 +9,8 @@ export interface CustomRequest extends Request {
     userId?: string;
     token?: string;
     files?: any;
+    ip: string;
+    headers: any;
 }
 export declare function handleFailedAuthAttempt(user: User, usersRepo: Repository<User>): Promise<never>;
 export declare const generateToken: (user: User | UserAdmin, req: CustomRequest) => Promise<{
@@ -16,7 +18,7 @@ export declare const generateToken: (user: User | UserAdmin, req: CustomRequest)
     refreshToken: string;
     session: {
         ipAddress: string;
-        userAgent: string;
+        userAgent: any;
         date: Date;
         refreshtoken: string;
         active: boolean;
