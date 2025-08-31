@@ -11,7 +11,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       password: 'password', // change
       database: 'lms_db',
       autoLoadEntities: true,
-      synchronize: true, // ❌ Turn off in production, use migrations instead
+      synchronize: false, // ❌ Turn off in production, use migrations instead
     }),
   ],
 })
