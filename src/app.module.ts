@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import config from './app/config/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import AppDataSource from './app/config/database.config';
+import AppDataSource, {
+  getDataSourceOptions,
+} from './app/config/database.config';
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
 import { CourseModule } from './app/course/course.module';
@@ -17,9 +19,14 @@ import { InstructorModule } from './app/instructor/instructor.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [config] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     TypeOrmModule.forRootAsync({
-      useFactory: async () => AppDataSource.options,
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) =>
+        getDataSourceOptions(configService),
+      inject: [ConfigService],
     }),
     AuthModule,
     UserModule,
