@@ -10,7 +10,7 @@ import { SuspendUserDTO } from '../admin.dto';
 import { AdminProfileInterface } from '../admin.interface';
 
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
 
 @Injectable()

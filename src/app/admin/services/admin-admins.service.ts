@@ -3,7 +3,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LoginDto, VerifyEmailDTO } from '../../auth/auth.dto';
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { AdminStatus, UserAdmin } from '../admin.entity';
 import { EmailService } from '../../email/email.service';
 import {

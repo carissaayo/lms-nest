@@ -10,7 +10,7 @@ import { Assignment } from 'src/app/assignment/assignment.entity';
 import { Submission } from 'src/app/submission/submission.entity';
 
 import { CustomRequest } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { PaymentService } from 'src/app/payment/services/payment.service.';
 import { EmailService } from 'src/app/email/email.service';
 import { DBQuery, QueryString } from 'src/app/database/dbquery';

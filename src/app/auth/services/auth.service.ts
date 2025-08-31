@@ -15,7 +15,7 @@ import {
 import { User } from 'src/app/user/user.entity';
 import { ProfileInterface } from '../auth.interface';
 
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
 import {
   CustomRequest,

@@ -11,7 +11,7 @@ import { Course, CourseStatus } from 'src/app/course/course.entity';
 import { UserRole } from 'src/app/user/user.interface';
 
 import { CustomRequest } from 'src/utils/auth-utils';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 
 import { DBQuery, QueryString } from 'src/app/database/dbquery';
 import { AdminCourseActionDTO } from 'src/app/course/course.dto';

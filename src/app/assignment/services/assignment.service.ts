@@ -8,7 +8,7 @@ import { Assignment } from '../assignment.entity';
 import { Course, CourseStatus } from 'src/app/course/course.entity';
 import { User } from 'src/app/user/user.entity';
 import { Lesson } from 'src/app/lesson/lesson.entity';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { CustomRequest } from 'src/utils/auth-utils';
 import {
   deleteFileS3,

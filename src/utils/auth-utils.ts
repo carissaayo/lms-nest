@@ -2,7 +2,7 @@ import { Repository } from 'typeorm';
 import { Request } from 'express';
 import { generateAccessToken, generateRefreshToken } from './jwt-utils';
 import config from 'src/app/config/config';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { User } from 'src/app/user/user.entity';
 import { ProfileInterface } from 'src/app/auth/auth.interface';
 import { UserAdmin } from 'src/app/admin/admin.entity';

@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { PermissionsEnum } from 'src/app/admin/admin.interface';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';

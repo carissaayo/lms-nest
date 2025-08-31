@@ -1,4 +1,4 @@
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 
 export const singleImageValidation = (
   imageFile: any | undefined,

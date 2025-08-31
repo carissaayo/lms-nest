@@ -1,7 +1,7 @@
 import AWS from 'aws-sdk';
 import crypto from 'crypto';
 import fs from 'fs';
-import { customError } from 'libs/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 import { imagePath } from 'src/utils/file-validation';
 import config from '../config/config';
 
