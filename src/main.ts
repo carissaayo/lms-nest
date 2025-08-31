@@ -6,13 +6,21 @@ import bodyParser from 'body-parser';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
-
+  // Debug environment variables before app creation
   console.log('=== ENVIRONMENT VARIABLES ===');
   console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Exists' : 'Missing');
   console.log('NODE_ENV:', process.env.NODE_ENV);
   console.log('PORT:', process.env.PORT);
+  console.log('=============================');
+  const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+
+  // Debug ConfigService values
+  console.log('=== CONFIG SERVICE VALUES ===');
+  console.log(
+    'DATABASE_URL from ConfigService:',
+    configService.get('DATABASE_URL') ? 'Exists' : 'Missing',
+  );
   console.log('=============================');
   app.useGlobalPipes(
     new ValidationPipe({
