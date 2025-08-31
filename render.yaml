@@ -11,7 +11,23 @@ services:
     name: lms-nest
     env: node
     plan: free
-    buildCommand: npm ci && npm run build && echo "=== BUILD DEBUG ===" && ls -la && echo "=== DIST CONTENTS ===" && ls -la dist/ && echo "=== MAIN.JS EXISTS? ===" && ls -la dist/main.js
+    buildCommand: |
+      echo "=== Installing dependencies ===" &&
+      npm ci &&
+      echo "=== Building application ===" &&
+      npm run build &&
+      echo "=== BUILD COMPLETE - Checking outputs ===" &&
+      ls -la &&
+      echo "=== DIST DIRECTORY ===" &&
+      ls -la dist/ &&
+      echo "=== CHECKING FOR MAIN.JS ===" &&
+      if [ -f "dist/main.js" ]; then
+        echo "✅ main.js found"
+      else
+        echo "❌ main.js NOT found - listing all dist files:"
+        find dist -type f -name "*.js" | head -10
+      fi
+    startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
