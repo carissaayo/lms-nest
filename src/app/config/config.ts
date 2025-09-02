@@ -64,7 +64,6 @@ const config = () => {
       env: env.MONNIFY_ENV,
       api_key: env.MONNIFY_APIKEY,
       secret_key: env.MONNIFY_SECRET,
-      access_token: env.MONNIFY_ACCESSTOKEN,
     },
   };
 };

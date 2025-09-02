@@ -65,7 +65,6 @@ export const envSchema = z.object({
   MONNIFY_ENV: z.string().min(1, 'MONNIFY_ENV is required'),
   MONNIFY_APIKEY: z.string().min(1, 'MONNIFY_APIKEY is required'),
   MONNIFY_SECRET: z.string().min(1, 'MONNIFY_SECRET is required'),
-  MONNIFY_ACCESSTOKEN: z.string().min(1, 'MONNIFY_SECRET is required'),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;
