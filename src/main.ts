@@ -37,6 +37,16 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Enable CORS for your frontend
+  app.enableCors({
+    origin: [
+      'http://localhost:5173',
+      'https://your-frontend-domain.com', // prod (when deployed)
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
   setupSecurity(app.getHttpAdapter().getInstance());
   console.log('=== CONFIG SERVICE VALUES ===');
   console.log(
