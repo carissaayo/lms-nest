@@ -1,6 +1,8 @@
 databases:
   - name: lms-db
     plan: free
+    databaseName: lms
+    user: lms_user
 
 services:
   - type: redis
@@ -11,26 +13,13 @@ services:
     name: lms-nest
     env: node
     plan: free
-    buildCommand: |
-      echo "=== Installing dependencies ===" &&
-      npm ci &&
-      echo "=== Building application ===" &&
-      npm run build &&
-      echo "=== BUILD COMPLETE - Checking outputs ===" &&
-      ls -la &&
-      echo "=== DIST DIRECTORY ===" &&
-      ls -la dist/ &&
-      echo "=== CHECKING FOR MAIN.JS ===" &&
-      if [ -f "dist/main.js" ]; then
-        echo "✅ main.js found"
-      else
-        echo "❌ main.js NOT found - listing all dist files:"
-        find dist -type f -name "*.js" | head -10
-      fi
+    buildCommand: npm ci && npm run build
     startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 8000
       - key: DATABASE_URL
         fromDatabase:
           name: lms-db
