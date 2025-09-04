@@ -100,4 +100,5 @@ export function setupSecurity(app: Application): void {
       next();
     });
   }
+  app.set('trust proxy', 1);
 }
