@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build --deleteOutDir false",
+    "build": "nest build ",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch --deleteOutDir false",
     "dev": "nest start --watch --deleteOutDir false",
