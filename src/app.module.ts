@@ -4,9 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import config from './app/config/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import AppDataSource, {
-  getDataSourceOptions,
-} from './app/config/database.config';
+import { getDataSourceOptions } from './app/config/database.config';
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
 import { CourseModule } from './app/course/course.module';
