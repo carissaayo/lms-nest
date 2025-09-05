@@ -14,7 +14,7 @@ const config = () => {
   return {
     port: env.PORT,
     jwtSecret: env.JWT_SECRET_KEY,
-    // mongoUri: env.MONGO_URI,
+    mongoUri: env.MONGO_URI,
     // redis: {
     //   host: env.REDIS_HOST,
     //   port: env.REDIS_PORT,

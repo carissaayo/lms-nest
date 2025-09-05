@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import config from './app/config/config';
+
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDataSourceOptions } from './app/config/database.config';
 import { AuthModule } from './app/auth/auth.module';
@@ -15,11 +17,13 @@ import { StudentModule } from './app/student/student.module';
 import { PaymentModule } from './app/payment/payment.module';
 import { InstructorModule } from './app/instructor/instructor.module';
 
+const appConfig = config();
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    MongooseModule.forRoot(appConfig.mongoUri),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) =>
