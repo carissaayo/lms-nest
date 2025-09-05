@@ -11,7 +11,7 @@ export const envSchema = z.object({
       10,
       'JWT_SECRET_KEY is required and must be at least 10 characters long',
     ),
-  // MONGO_URI: z.string().url('Invalid MongoDB connection URL'),
+  MONGO_URI: z.string().url('Invalid MongoDB connection URL'),
   // REDIS_HOST: z.string().default('127.0.0.1'),
   // REDIS_PORT: z.string().regex(/^\d+$/).transform(Number).default('6379'),
   // PAYSTACK_BASE_URL: z.string().url('Invalid Paystack base URL'),
