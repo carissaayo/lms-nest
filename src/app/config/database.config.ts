@@ -17,9 +17,16 @@ export const getDataSourceOptions = (
     process.env.DATABASE_URL || configService?.get<string>('DATABASE_URL');
 
   // Always use source files for development, only use dist for actual production deployment
-  const entitiesPath = join(__dirname, '../**/*.entity.{ts,js}');
-  const migrationsPath = join(__dirname, '../migrations/*.{ts,js}');
+  // const entitiesPath = join(__dirname, '../**/*.entity.{ts,js}');
+  // const migrationsPath = join(__dirname, '../migrations/*.{ts,js}');
 
+  const entitiesPath = isProd
+    ? join(__dirname, '../**/*.entity.js') // use JS in dist
+    : join(__dirname, '../**/*.entity.ts'); // use TS in dev
+
+  const migrationsPath = isProd
+    ? join(__dirname, '../migrations/*.js')
+    : join(__dirname, '../migrations/*.ts');
   // Production configuration with DATABASE_URL
   if (databaseUrl && isProd) {
     console.log('🔧 Using DATABASE_URL for production connection');
