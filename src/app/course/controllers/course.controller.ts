@@ -29,8 +29,8 @@ import { QueryString } from 'src/app/database/dbquery';
 import { IdParam } from 'src/app/common/decorators/idParam.decorator';
 
 @Controller('courses')
-@UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
-@Roles(UserRole.INSTRUCTOR)
+// @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
+// @Roles(UserRole.INSTRUCTOR)
 export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 
