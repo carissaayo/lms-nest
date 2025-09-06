@@ -24,7 +24,7 @@ export class Course extends Document {
   instructorName: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Category' })
-  categoryId: string;
+  category: string;
 
   @Prop()
   categoryName: string;
@@ -87,7 +87,7 @@ export class Course extends Document {
   suspendReason: string;
 
   @Prop()
-  submittedAt: Date;
+  submittedAt: Date | undefined;
 
   @Prop({ required: true })
   price: number;
