@@ -1,7 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { Lesson } from './lesson.schema';
+import { User } from './user.schema';
 
-@Schema({ timestamps: true, collection: 'assignments' })
+@Schema({ timestamps: true })
 export class Assignment extends Document {
   @Prop({ required: true })
   title: string;
@@ -13,13 +15,13 @@ export class Assignment extends Document {
   fileUrl: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Lesson', required: true })
-  lesson: string;
+  lesson: MongooseSchema.Types.ObjectId | Lesson;
 
   @Prop({ required: true })
   lessonId: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  instructor: string;
+  instructor: string | User;
 
   @Prop({ required: true })
   instructorId: string;

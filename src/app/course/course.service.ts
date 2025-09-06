@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -102,11 +103,15 @@ export class CourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-
-    if (course.instructorId !== req.userId) {
+    const instructorId = course.instructor.toString();
+    if (instructorId !== req.userId) {
       throw customError.forbidden('You can only update your course');
     }
 
+    const instructor = await this.userModel.findById(course.instructor);
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
     const { title, description, category, price } = updateCourseDto || {};
 
     if (category) {
@@ -114,7 +119,7 @@ export class CourseService {
       if (!foundCategory) {
         throw customError.notFound('Category not found');
       }
-      course.category = foundCategory._id;
+      course.category = foundCategory.id;
       course.categoryName = foundCategory.name;
     }
 
@@ -145,7 +150,6 @@ export class CourseService {
 
     await course.save();
 
-    const instructor = await this.userModel.findById(course.instructorId);
     await this.emailService.courseUpdating(
       instructor.email,
       instructor.firstName,
@@ -209,15 +213,17 @@ export class CourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-
-    if (course.instructorId !== req.userId) {
+    const instructor = await this.userModel.findById(course.instructor);
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
+    if (String(course.instructor) !== req.userId) {
       throw customError.forbidden('You can only delete your courses');
     }
 
     course.deleted = true;
     await course.save();
 
-    const instructor = await this.userModel.findById(course.instructorId);
     await this.emailService.courseDeletion(
       instructor.email,
       instructor.firstName,
@@ -234,9 +240,12 @@ export class CourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-
+    const instructor = await this.userModel.findById(course.instructor);
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
     if (course.deleted) throw customError.notFound('Course has been deleted');
-    if (course.instructorId !== req.userId) {
+    if (String(course.instructor) !== req.userId) {
       throw customError.forbidden('You can only submit your courses');
     }
     if (course.isSubmitted) {
@@ -251,7 +260,6 @@ export class CourseService {
       course.submittedAt = new Date();
       await course.save();
 
-      const instructor = await this.userModel.findById(course.instructorId);
       await this.emailService.courseSubmission(
         instructor.email,
         instructor.firstName,
@@ -276,7 +284,12 @@ export class CourseService {
     }
 
     if (course.deleted) throw customError.notFound('Course has been deleted');
-    if (course.instructorId !== req.userId) {
+
+    const instructor = await this.userModel.findById(course.instructor);
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
+    if (String(course.instructor) !== req.userId) {
       throw customError.forbidden('You can only publish your courses');
     }
     if (course.status !== CourseStatus.APPROVED) {
@@ -288,7 +301,6 @@ export class CourseService {
       course.publishedAt = new Date();
       await course.save();
 
-      const instructor = await this.userModel.findById(course.instructorId);
       await this.emailService.coursePublish(
         instructor.email,
         instructor.firstName,

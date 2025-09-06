@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -5,7 +6,7 @@ import { Model } from 'mongoose';
 import {
   Assignment,
   AssignmentDocument,
-} from 'src/app/model/assignment.schema';
+} from 'src/app/models/assignment.schema';
 import { Course, CourseDocument } from 'src/app/models/course.schema';
 import { User, UserDocument } from 'src/app/models/user.schema';
 import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
@@ -17,6 +18,7 @@ import {
 } from 'src/app/fileUpload/image-upload.service';
 import { EmailService } from 'src/app/email/email.service';
 import { CreateAssignmentDTO, UpdateAssignmentDTO } from '../assignment.dto';
+import { CourseStatus } from 'src/app/course/course.entity';
 
 @Injectable()
 export class AssignmentService {
@@ -56,7 +58,7 @@ export class AssignmentService {
       throw customError.notFound('Course not found');
     }
 
-    if (course.instructorId !== req.userId) {
+    if (String(course.instructor) !== req.userId) {
       throw customError.forbidden('You can only update your course');
     }
 
@@ -160,7 +162,7 @@ export class AssignmentService {
       if (dto.title) assignment.title = dto.title;
       if (dto.description) assignment.description = dto.description;
 
-      course.status = 'pending';
+      course.status = CourseStatus.PENDING;
       await course.save();
       await assignment.save();
 
@@ -188,14 +190,22 @@ export class AssignmentService {
   }
 
   async deleteAssignment(assignmentId: string, req: CustomRequest) {
-    const assignment = await this.assignmentModel
-      .findById(assignmentId)
-      .populate('instructor')
-      .populate('lesson');
+    const assignment = await this.assignmentModel.findById(assignmentId);
 
-    if (!assignment) throw customError.notFound('Assignment not found');
+    if (!assignment) {
+      throw customError.notFound('Assignment not found');
+    }
+
     if (assignment.instructorId !== req.userId) {
       throw customError.forbidden('You can only delete assignment you created');
+    }
+    const instructor = await this.userModel.findById(assignment.instructor);
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
+    const lesson = await this.lessonModel.findById(assignment.lesson);
+    if (!lesson) {
+      throw customError.notFound('Lesson not found');
     }
 
     try {
@@ -209,12 +219,11 @@ export class AssignmentService {
 
       await this.assignmentModel.findByIdAndDelete(assignmentId);
 
-      const instructor = assignment.instructor;
       await this.emailService.AssignmentDeletion(
         instructor.email,
         instructor.firstName,
         assignment.title,
-        assignment.lesson.title,
+        lesson.title,
       );
 
       return {
@@ -238,7 +247,7 @@ export class AssignmentService {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw customError.notFound('Course not found');
 
-    if (course.instructorId !== req.userId) {
+    if (String(course.instructor) !== req.userId) {
       throw customError.forbidden(
         'You can only view assignments from your own course',
       );
