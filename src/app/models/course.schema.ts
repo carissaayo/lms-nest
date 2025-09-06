@@ -86,7 +86,7 @@ export class Course extends Document {
   @Prop({ type: String, default: undefined })
   suspendReason: string;
 
-  @Prop()
+  @Prop({ type: Date })
   submittedAt: Date | undefined;
 
   @Prop({ required: true })
