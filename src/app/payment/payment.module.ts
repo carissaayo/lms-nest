@@ -13,6 +13,7 @@ import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
 import { Payment, PaymentSchema } from '../models/payment.schema';
 import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
 import { Earning, EarningSchema } from '../models/earning.schema';
+import { Course, CourseSchema } from '../models/course.schema';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { Earning, EarningSchema } from '../models/earning.schema';
       { name: Payment.name, schema: PaymentSchema },
       { name: Enrollment.name, schema: EnrollmentSchema },
       { name: Earning.name, schema: EarningSchema },
+      { name: Course.name, schema: CourseSchema },
     ]),
     StudentModule,
   ],

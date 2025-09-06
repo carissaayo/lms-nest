@@ -20,6 +20,7 @@ import { User, UserSchema } from '../models/user.schema';
 import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
 import { Payment, PaymentSchema } from '../models/payment.schema';
 import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
+import { Course, CourseSchema } from '../models/course.schema';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
       { name: UserAdmin.name, schema: UserAdminSchema },
       { name: Payment.name, schema: PaymentSchema },
       { name: Withdrawal.name, schema: WithdrawalSchema },
+      { name: Course.name, schema: CourseSchema },
     ]),
     EmailModule,
     CourseModule,

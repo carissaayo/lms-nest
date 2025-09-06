@@ -7,23 +7,22 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 import { verifyRefreshToken } from 'src/utils/jwt-utils';
 import config from 'src/app/config/config';
-import { UserAdmin } from 'src/app/admin/admin.entity';
+import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+
 const appConfig = config();
+
 @Injectable()
 export class AuthenticateTokenAdminGuard implements CanActivate {
-  constructor() {}
-
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>() as any;
 
     const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
     const authHeader = req.headers['authorization'];
-
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token || token === 'null') {
@@ -42,14 +41,13 @@ export class AuthenticateTokenAdminGuard implements CanActivate {
         role: verifiedToken.role,
       };
       return true;
-    } catch (err) {
+    } catch (err: any) {
       if (err.message === 'jwt expired') {
         const decoded = jwt.decode(token) as { id: string } | null;
         req.userId = decoded?.id;
         req.token = token;
         throw new UnauthorizedException('Token expired');
       }
-      console.log('err===', err);
 
       throw new UnauthorizedException(
         'Access denied. Please re-authorize token',
@@ -61,8 +59,8 @@ export class AuthenticateTokenAdminGuard implements CanActivate {
 @Injectable()
 export class ReIssueTokenAdminGuard implements CanActivate {
   constructor(
-    @InjectRepository(UserAdmin)
-    private readonly userRepo: Repository<UserAdmin>,
+    @InjectModel(UserAdmin.name)
+    private readonly adminModel: Model<UserAdminDocument>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -77,31 +75,31 @@ export class ReIssueTokenAdminGuard implements CanActivate {
       );
     }
 
-    const user = await this.userRepo.findOne({
-      where: { id: req.userId },
-    });
-
-    if (!user) {
+    // 🔹 Find admin by ID
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) {
       throw new UnauthorizedException('Authorization failed');
     }
 
-    if (!user.isActive) {
+    if (!admin.isActive) {
       throw new ForbiddenException(
         'Your account has been suspended. Please contact the administrator',
       );
     }
 
-    user.lastSeen = new Date();
-    await this.userRepo.save(user);
+    // 🔹 Update last seen
+    admin.lastSeen = new Date();
+    await admin.save();
 
     const userAgent = req.headers['user-agent'];
     const activeSessions =
-      user.sessions
+      admin.sessions
         ?.filter(
           (obj: any) => obj.active === true && obj.userAgent === userAgent,
         )
         .map((obj: any) => obj.refreshtoken) || [];
 
+    // 🔹 Verify refresh token
     const validSession = await verifyRefreshToken(
       req.headers.refreshtoken as string,
       activeSessions,
