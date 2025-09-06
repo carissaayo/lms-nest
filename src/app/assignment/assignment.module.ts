@@ -1,19 +1,26 @@
 import { Module } from '@nestjs/common';
 
-import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { EmailService } from '../email/email.service';
-import { Assignment } from './assignment.entity';
-import { Course } from '../course/course.entity';
-import { User } from '../user/user.entity';
-import { Lesson } from '../lesson/lesson.entity';
+
 import { AssignmentService } from './services/assignment.service';
 import { AssignmentController } from './controllers/assignment.controller';
+import { MongooseModule } from '@nestjs/mongoose';
+import { User, UserSchema } from '../models/user.schema';
+import { Course, CourseSchema } from '../models/course.schema';
+import { Assignment, AssignmentSchema } from '../models/assignment.schema';
+import { Lesson, LessonSchema } from '../models/lesson.schema';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Course, User, Assignment, Lesson])],
+  imports: [
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: Course.name, schema: CourseSchema },
+      { name: Assignment.name, schema: AssignmentSchema },
+      { name: Lesson.name, schema: LessonSchema },
+    ]),
+  ],
   providers: [AssignmentService, EmailService],
   controllers: [AssignmentController],
-  exports: [AssignmentService, TypeOrmModule],
+  exports: [AssignmentService],
 })
 export class AssignmentModule {}
