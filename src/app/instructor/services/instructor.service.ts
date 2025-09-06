@@ -10,7 +10,7 @@ import { Earning, EarningDocument } from 'src/app/models/earning.schema';
 import {
   Withdrawal,
   WithdrawalDocument,
-  withdrawalStatus,
+  WithdrawalStatus,
 } from 'src/app/models/withdrawal.schema';
 
 @Injectable()
@@ -34,7 +34,7 @@ export class InstructorService {
     const withdrawals = await this.withdrawalModel
       .find({
         user: instructor._id,
-        status: withdrawalStatus.SUCCESSFUL,
+        status: WithdrawalStatus.SUCCESSFUL,
       })
       .sort({ createdAt: -1 });
 

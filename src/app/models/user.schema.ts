@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { UserRole } from '../user/user.interface';
+import { Model } from 'mongoose';
 
 export enum UserStatus {
   PENDING = 'pending',
@@ -29,13 +31,13 @@ export class User extends Document {
   emailVerified: boolean;
 
   @Prop()
-  emailCode: string;
+  emailCode: string | null;
 
   @Prop()
-  passwordResetCode: string;
+  passwordResetCode: string | null;
 
   @Prop()
-  resetPasswordExpires: Date;
+  resetPasswordExpires: Date | null;
 
   @Prop({ default: true })
   isActive: boolean;
@@ -115,9 +117,18 @@ export class User extends Document {
   @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Bank' }])
   banks: string[];
 }
-export type UserDocument = HydratedDocument<User>;
 
 export const UserSchema = SchemaFactory.createForClass(User);
+export interface UserMethods {
+  hasNewPassword(newPassword: string): Promise<void>;
+  validatePassword(password: string): Promise<boolean>;
+}
+
+// Now merge methods into document
+export type UserDocument = HydratedDocument<User> & UserMethods;
+
+// Also define model type if you want static methods later
+export type UserAdminModel = Model<User, {}, UserMethods>;
 
 // Add password hashing middleware
 UserSchema.pre('save', async function (next) {
