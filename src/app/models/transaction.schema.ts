@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument } from 'mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
 @Schema({ timestamps: true, collection: 'transactions' })
@@ -15,5 +16,6 @@ export class Transaction extends Document {
   @Prop()
   createdAt: Date;
 }
+export type TransactionDocument = HydratedDocument<Transaction>;
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

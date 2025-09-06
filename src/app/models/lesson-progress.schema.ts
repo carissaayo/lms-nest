@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 export enum LessonStatus {
   NOT_STARTED = 'not_started',
@@ -30,6 +30,8 @@ export class LessonProgress extends Document {
   @Prop()
   updatedAt: Date;
 }
+
+export type LessonProgressDocument = HydratedDocument<LessonProgress>;
 
 export const LessonProgressSchema =
   SchemaFactory.createForClass(LessonProgress);

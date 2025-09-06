@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { Course } from './course.schema';
+import { Assignment } from './assignment.schema';
 
 @Schema({ timestamps: true, collection: 'lessons' })
 export class Lesson extends Document {
@@ -13,10 +15,10 @@ export class Lesson extends Document {
   position: number;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Course', required: true })
-  course: string;
+  course: MongooseSchema.Types.ObjectId | Course;
 
   @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Assignment' }])
-  assignments: string[];
+  assignments: MongooseSchema.Types.ObjectId[] | Assignment[];
 
   @Prop({ required: true })
   courseId: string;
@@ -28,7 +30,7 @@ export class Lesson extends Document {
   noteUrl: string;
 
   @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'LessonProgress' }])
-  progress: string[];
+  progress: MongooseSchema.Types.ObjectId[];
 
   @Prop()
   createdAt: Date;
@@ -37,4 +39,5 @@ export class Lesson extends Document {
   updatedAt: Date;
 }
 
+export type LessonDocument = HydratedDocument<Lesson>;
 export const LessonSchema = SchemaFactory.createForClass(Lesson);

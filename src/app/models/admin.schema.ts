@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 import { UserRole } from '../user/user.interface';
 import { PermissionsEnum } from '../admin/admin.interface';
@@ -10,7 +10,7 @@ export enum AdminStatus {
   REJECTED = 'rejected',
 }
 
-@Schema({ timestamps: true, collection: 'user_admins' })
+@Schema({ timestamps: true })
 export class UserAdmin extends Document {
   @Prop()
   firstName: string;
@@ -46,7 +46,7 @@ export class UserAdmin extends Document {
   emailVerified: boolean;
 
   @Prop()
-  emailCode: string;
+  emailCode: string | null;
 
   @Prop()
   passwordResetCode: string;
@@ -121,8 +121,13 @@ export class UserAdmin extends Document {
   deleted: boolean;
 }
 
-export const UserAdminSchema = SchemaFactory.createForClass(UserAdmin);
+export type UserAdminDocument = HydratedDocument<UserAdmin>;
 
+export const UserAdminSchema = SchemaFactory.createForClass(UserAdmin);
+export interface UserAdminMethods {
+  hasNewPassword(newPassword: string): Promise<void>;
+  validatePassword(password: string): Promise<boolean>;
+}
 // Add password hashing middleware
 UserAdminSchema.pre('save', async function (next) {
   if (this.isModified('password') && this.password) {
@@ -138,7 +143,9 @@ UserAdminSchema.methods.hasNewPassword = async function (newPassword: string) {
   this.password = await bcrypt.hash(newPassword, 10);
 };
 
-UserAdminSchema.methods.validatePassword = async function (password: string) {
+UserAdminSchema.methods.validatePassword = async function (
+  password: string,
+): Promise<boolean> {
   const bcrypt = await import('bcryptjs');
   return bcrypt.compare(password, this.password);
 };

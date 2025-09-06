@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { UserAdmin } from './admin.schema';
 
 export enum CourseStatus {
   PENDING = 'pending',
@@ -8,7 +9,7 @@ export enum CourseStatus {
   SUSPENDED = 'suspended',
 }
 
-@Schema({ timestamps: true, collection: 'courses' })
+@Schema({ timestamps: true })
 export class Course extends Document {
   @Prop({ required: true })
   title: string;
@@ -17,18 +18,12 @@ export class Course extends Document {
   description: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  instructor: string;
-
-  @Prop({ required: true })
-  instructorId: string;
+  instructor: MongooseSchema.Types.ObjectId | UserAdmin;
 
   @Prop({ required: true })
   instructorName: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Category' })
-  category: string;
-
-  @Prop()
   categoryId: string;
 
   @Prop()
@@ -44,7 +39,7 @@ export class Course extends Document {
   coverImage: string;
 
   @Prop({ enum: CourseStatus, default: CourseStatus.PENDING })
-  status: string;
+  status: CourseStatus;
 
   @Prop({ default: false })
   isApproved: boolean;
@@ -56,13 +51,13 @@ export class Course extends Document {
   publishedAt: Date;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'UserAdmin' })
-  approvedBy: string;
+  approvedBy: MongooseSchema.Types.ObjectId | UserAdmin;
 
   @Prop()
   approvedByName: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'UserAdmin' })
-  rejectedBy: string;
+  rejectedBy: MongooseSchema.Types.ObjectId | UserAdmin;
 
   @Prop()
   rejectedByName: string;
@@ -80,7 +75,7 @@ export class Course extends Document {
   isSubmitted: boolean;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'UserAdmin' })
-  suspendedBy: string;
+  suspendedBy: MongooseSchema.Types.ObjectId | UserAdmin;
 
   @Prop()
   suspendedByName: string;
@@ -88,7 +83,7 @@ export class Course extends Document {
   @Prop()
   suspensionDate: Date;
 
-  @Prop()
+  @Prop({ type: String, default: undefined })
   suspendReason: string;
 
   @Prop()
@@ -106,5 +101,7 @@ export class Course extends Document {
   @Prop()
   updatedAt: Date;
 }
+
+export type CourseDocument = HydratedDocument<Course>;
 
 export const CourseSchema = SchemaFactory.createForClass(Course);

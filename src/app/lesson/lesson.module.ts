@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Course } from '../course/course.entity';
 import { User } from '../user/user.entity';
-import { Category } from '../database/main.entity';
+import { Category } from '../models/main.schema';
 import { LessonService } from './services/lesson.service';
 import { Lesson } from './lesson.entity';
 import { EmailService } from '../email/email.service';

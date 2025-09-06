@@ -5,7 +5,7 @@ import { Course } from './course.entity';
 import { CourseService } from './course.service';
 import { CourseController } from './course.controller';
 
-import { Category } from '../database/main.entity';
+import { Category } from '../models/main.schema';
 import { User } from '../user/user.entity';
 import { EmailService } from '../email/email.service';
 

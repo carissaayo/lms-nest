@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 @Schema({ timestamps: true, collection: 'assignments' })
 export class Assignment extends Document {
@@ -33,5 +33,7 @@ export class Assignment extends Document {
   @Prop()
   updatedAt: Date;
 }
+
+export type AssignmentDocument = HydratedDocument<Assignment>;
 
 export const AssignmentSchema = SchemaFactory.createForClass(Assignment);
