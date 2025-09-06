@@ -1,5 +1,11 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import {
+  Document,
+  HydratedDocument,
+  Model,
+  Schema as MongooseSchema,
+} from 'mongoose';
 
 import { UserRole } from '../user/user.interface';
 import { PermissionsEnum } from '../admin/admin.interface';
@@ -49,10 +55,10 @@ export class UserAdmin extends Document {
   emailCode: string | null;
 
   @Prop()
-  passwordResetCode: string;
+  passwordResetCode: string | null;
 
   @Prop()
-  resetPasswordExpires: Date;
+  resetPasswordExpires: Date | null;
 
   @Prop({ default: true })
   isActive: boolean;
@@ -112,7 +118,7 @@ export class UserAdmin extends Document {
   isSignedUp: boolean;
 
   @Prop()
-  passwordResetExpires: Date;
+  passwordResetExpires: Date | null;
 
   @Prop({ type: [Object], default: [] })
   actions: any[];
@@ -121,13 +127,17 @@ export class UserAdmin extends Document {
   deleted: boolean;
 }
 
-export type UserAdminDocument = HydratedDocument<UserAdmin>;
-
 export const UserAdminSchema = SchemaFactory.createForClass(UserAdmin);
 export interface UserAdminMethods {
   hasNewPassword(newPassword: string): Promise<void>;
   validatePassword(password: string): Promise<boolean>;
 }
+
+// Now merge methods into document
+export type UserAdminDocument = HydratedDocument<UserAdmin> & UserAdminMethods;
+
+// Also define model type if you want static methods later
+export type UserAdminModel = Model<UserAdmin, {}, UserAdminMethods>;
 // Add password hashing middleware
 UserAdminSchema.pre('save', async function (next) {
   if (this.isModified('password') && this.password) {

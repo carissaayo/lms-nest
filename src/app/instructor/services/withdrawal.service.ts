@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -18,7 +19,7 @@ import { generateOtp } from 'src/utils/utils';
 import {
   Withdrawal,
   WithdrawalDocument,
-  withdrawalStatus,
+  WithdrawalStatus,
 } from 'src/app/models/withdrawal.schema';
 import { Otp, OtpDocument } from 'src/app/models/otp.schema';
 
@@ -163,7 +164,7 @@ export class WithdrawalService {
       throw customError.notFound('Withdrawal not found');
     }
 
-    if (withdrawal.status !== withdrawalStatus.PENDING) {
+    if (withdrawal.status !== WithdrawalStatus.PENDING) {
       throw customError.notFound('This withdrawal is no longer active');
     }
 
@@ -193,13 +194,13 @@ export class WithdrawalService {
     record.consumed = true;
 
     if (!transferResult.status) {
-      withdrawal.status = withdrawalStatus.FAILED;
+      withdrawal.status = WithdrawalStatus.FAILED;
       await withdrawal.save();
       await record.save();
       throw customError.notFound('Withdrawal failed, please try again');
     }
 
-    withdrawal.status = withdrawalStatus.SUCCESSFUL;
+    withdrawal.status = WithdrawalStatus.SUCCESSFUL;
     await withdrawal.save();
     await record.save();
 

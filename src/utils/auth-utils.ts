@@ -1,11 +1,11 @@
-import { Repository } from 'typeorm';
 import { Request } from 'express';
 import { generateAccessToken, generateRefreshToken } from './jwt-utils';
 import config from 'src/app/config/config';
 import { customError } from 'src/libs/custom-handlers';
-import { User } from 'src/app/models/user.schema';
+import { UserDocument } from 'src/app/models/user.schema';
 import { ProfileInterface } from 'src/app/auth/auth.interface';
-import { UserAdmin } from 'src/app/models/admin.schema';
+import { UserAdminDocument } from 'src/app/models/admin.schema';
+import { Model } from 'mongoose';
 
 export interface CustomRequest extends Request {
   verifyAccessToken?: 'nil' | 'failed' | 'success';
@@ -23,12 +23,12 @@ const appConfig = config();
  * Handles failed authentication attempts for a user.
  * Locks account temporarily after 5 or more failed attempts.
  *
- * @param user - The user entity
- * @param usersRepo - TypeORM repository for saving updates
+ * @param user - The user document (Mongoose)
+ * @param userModel - Mongoose model for saving updates
  */
 export async function handleFailedAuthAttempt(
-  user: User,
-  usersRepo: Repository<User>,
+  user: UserDocument,
+  userModel: Model<UserDocument>,
 ): Promise<never> {
   if (user.failedAuthAttempts >= 5) {
     user.nextAuthDate = new Date(
@@ -37,15 +37,14 @@ export async function handleFailedAuthAttempt(
   }
 
   user.failedAuthAttempts += 1;
-
-  await usersRepo.save(user);
+  await user.save(); // save directly on the document
 
   throw customError.unauthorized('Invalid credentials');
 }
 
 // Generate access and refresh tokens
 export const generateToken = async (
-  user: User | UserAdmin,
+  user: UserDocument | UserAdminDocument,
   req: CustomRequest,
 ) => {
   const JWT_REFRESH_TOKEN_SECRET = appConfig.jwt.refresh_token;
@@ -55,13 +54,13 @@ export const generateToken = async (
   const userAgent = req.headers['user-agent'];
 
   const token = await generateAccessToken(
-    user.id,
+    user.id.toString(),
     user.role,
     JWT_ACCESS_TOKEN_SECRET,
   );
 
   const refreshToken = await generateRefreshToken(
-    user.id,
+    user.id.toString(),
     user.role,
     JWT_REFRESH_TOKEN_SECRET,
   );
@@ -69,7 +68,7 @@ export const generateToken = async (
   const session = {
     ipAddress: clientIpAddress || '',
     userAgent: userAgent || '',
-    date: new Date(Date.now()),
+    date: new Date(),
     refreshtoken: refreshToken,
     active: true,
   };

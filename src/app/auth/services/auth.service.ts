@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { MoreThan, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 import { EmailService } from 'src/app/email/email.service';
 
@@ -12,8 +12,9 @@ import {
   ResetPasswordDTO,
   VerifyEmailDTO,
 } from '../auth.dto';
-import { User } from 'src/app/user/user.entity';
+
 import { ProfileInterface } from '../auth.interface';
+import { User, UserDocument } from 'src/app/models/user.schema';
 
 import { customError } from 'src/libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
@@ -27,7 +28,7 @@ import {
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User) private usersRepo: Repository<User>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private emailService: EmailService,
   ) {}
 
@@ -42,25 +43,26 @@ export class AuthService {
       role,
     } = body;
 
-    // Check password match
     if (password !== confirmPassword) {
-      throw customError.conflict('Passwords do not match ', 409);
+      throw customError.conflict('Passwords do not match', 409);
     }
+
     const formattedPhone = formatPhoneNumber(phoneNumber, '234');
     if (formattedPhone?.toString()?.length !== 13) {
       throw customError.badRequest(
         'The phone number you entered is not correct. Please follow this format: 09012345678',
       );
     }
-    // Check if user already exists
-    const existingUser = await this.usersRepo.findOne({ where: { email } });
+
+    const existingUser = await this.userModel.findOne({ email });
     if (existingUser) {
-      throw customError.conflict('Email has already been used ', 409);
+      throw customError.conflict('Email has already been used', 409);
     }
+
     try {
       const emailCode = generateOtp('numeric', 8);
-      // Create new user entity
-      const user = this.usersRepo.create({
+
+      const user = new this.userModel({
         email,
         password,
         phoneNumber: formattedPhone,
@@ -70,12 +72,9 @@ export class AuthService {
         emailCode,
       });
 
-      // Save to DB
-      const savedUser = await this.usersRepo.save(user);
+      const savedUser = await user.save();
+      const { emailVerified, _id } = savedUser;
 
-      const { emailVerified, id } = savedUser;
-
-      // // Send verification email
       await this.emailService.sendVerificationEmail(email, emailCode);
 
       return {
@@ -88,47 +87,44 @@ export class AuthService {
           lastName,
           emailVerified,
           role,
-          id,
+          id: _id,
         },
       };
     } catch (error) {
-      throw customError.internalServerError('Internal Server Error ', 500);
+      throw customError.internalServerError('Internal Server Error', 500);
     }
   }
 
   async login(loginDto: LoginDto, req: CustomRequest) {
     const { email, password } = loginDto;
 
-    // Find user by email in Postgres (TypeORM)
-    const user = await this.usersRepo.findOne({ where: { email } });
+    const user = await this.userModel.findOne({ email });
     if (!user) {
       throw customError.unauthorized('User not found');
     }
-    try {
-      // validate password using entity method
-      const isPasswordValid = await user.validatePassword(password);
 
+    try {
+      const isPasswordValid = await user.validatePassword(password);
       if (!isPasswordValid) {
-        await handleFailedAuthAttempt(user, this.usersRepo);
+        await handleFailedAuthAttempt(user, this.userModel);
       }
 
       user.failedAuthAttempts = 0;
-      await this.usersRepo.save(user);
+      await user.save();
 
-      // Regenerate access token
       const { token, refreshToken, session } = await generateToken(user, req);
 
-      // Store session in an array as required by the schema
       user.sessions = [session];
       user.failedSignInAttempts = 0;
       user.nextSignInAttempt = new Date();
-      await this.usersRepo.save(user);
+      await user.save();
+
       const profile: ProfileInterface = GET_PROFILE(user);
 
       return {
         accessToken: token,
-        refreshToken: refreshToken,
-        profile: profile,
+        refreshToken,
+        profile,
         message: 'Signed In successfully',
       };
     } catch (error) {
@@ -145,9 +141,7 @@ export class AuthService {
       throw customError.unauthorized('Please enter the verification code');
     }
 
-    const user = await this.usersRepo.findOne({
-      where: { id: req.userId },
-    });
+    const user = await this.userModel.findById(req.userId);
     if (!user) {
       throw customError.badRequest('Access Denied');
     }
@@ -159,10 +153,10 @@ export class AuthService {
     if (user.emailCode !== trimmedEmailCode) {
       throw customError.badRequest('Invalid verification code');
     }
+
     user.emailVerified = true;
     user.emailCode = null;
-
-    await this.usersRepo.save(user);
+    await user.save();
 
     const profile: ProfileInterface = GET_PROFILE(user);
 
@@ -174,12 +168,9 @@ export class AuthService {
   }
 
   async requestResetPassword(resetPasswordDto: RequestResetPasswordDTO) {
-    console.log('requestResetPassword');
-
     const { email } = resetPasswordDto;
 
-    const user = await this.usersRepo.findOne({ where: { email } });
-
+    const user = await this.userModel.findOne({ email });
     if (!user) {
       throw customError.badRequest('User not found');
     }
@@ -189,36 +180,29 @@ export class AuthService {
         'Your account has been suspended. Please contact the administrator',
       );
     }
+
     try {
       const resetCode = generateOtp('numeric', 8);
       user.passwordResetCode = resetCode;
-      user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+      user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
 
-      await this.usersRepo.save(user);
-
-      // Send password reset email
+      await user.save();
       await this.emailService.sendPasswordResetEmail(email, resetCode);
 
-      return {
-        message: 'PASSWORD RESET CODE SENT TO YOUR EMAIL',
-      };
+      return { message: 'PASSWORD RESET CODE SENT TO YOUR EMAIL' };
     } catch (error) {
       console.log(error);
       throw customError.internalServerError('Internal Server Error', 500);
     }
   }
-  async resetPassword(resetPasswordDto: ResetPasswordDTO) {
-    console.log('resetPassword');
 
+  async resetPassword(resetPasswordDto: ResetPasswordDTO) {
     const { email, passwordResetCode, newPassword } = resetPasswordDto;
 
-    // Find user with matching code and unexpired reset time
-    const user = await this.usersRepo.findOne({
-      where: {
-        email,
-        passwordResetCode,
-        resetPasswordExpires: MoreThan(new Date()),
-      },
+    const user = await this.userModel.findOne({
+      email,
+      passwordResetCode,
+      resetPasswordExpires: { $gt: new Date() },
     });
 
     if (!user) {
@@ -233,37 +217,31 @@ export class AuthService {
 
     try {
       await user.hasNewPassword(newPassword);
-
       user.passwordResetCode = null;
       user.resetPasswordExpires = null;
 
-      await this.usersRepo.save(user);
+      await user.save();
 
-      return {
-        message: 'Password reset successfully',
-      };
+      return { message: 'Password reset successfully' };
     } catch (error) {
       console.log(error);
       throw customError.internalServerError('Internal Server Error', 500);
     }
   }
+
   async changePassword(
     changePasswordDto: ChangePasswordDTO,
     req: CustomRequest,
   ) {
-    console.log('changePassword');
-
     const { password, newPassword, confirmNewPassword } = changePasswordDto;
 
-    const user = await this.usersRepo.findOne({ where: { id: req.userId } });
-
+    const user = await this.userModel.findById(req.userId);
     if (!user) {
       throw customError.forbidden('Access Denied');
     }
 
     try {
       const isPasswordValid = await user.validatePassword(password);
-
       if (!isPasswordValid) {
         throw customError.badRequest('Current password is incorrect');
       }
@@ -273,12 +251,9 @@ export class AuthService {
       }
 
       await user.hasNewPassword(newPassword);
+      await user.save();
 
-      await this.usersRepo.save(user);
-
-      return {
-        message: 'Password changed successfully',
-      };
+      return { message: 'Password changed successfully' };
     } catch (error) {
       console.log(error);
       throw customError.internalServerError('Internal Server Error', 500);
