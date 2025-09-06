@@ -7,22 +7,22 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from 'src/app/user/user.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+
+import { User, UserDocument } from 'src/app/models/user.schema';
 import { verifyRefreshToken } from 'src/utils/jwt-utils';
 import config from 'src/app/config/config';
+
 const appConfig = config();
+
 @Injectable()
 export class AuthenticateTokenUserGuard implements CanActivate {
-  constructor() {}
-
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>() as any;
 
     const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
     const authHeader = req.headers['authorization'];
-
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token || token === 'null') {
@@ -33,7 +33,6 @@ export class AuthenticateTokenUserGuard implements CanActivate {
 
     try {
       const verifiedToken = jwt.verify(token, JWT_ACCESS_TOKEN_SECRET) as any;
-      console.log("verifiedToken",verifiedToken);
 
       req.userId = verifiedToken.id;
       req.token = token;
@@ -42,14 +41,13 @@ export class AuthenticateTokenUserGuard implements CanActivate {
         role: verifiedToken.role,
       };
       return true;
-    } catch (err) {
+    } catch (err: any) {
       if (err.message === 'jwt expired') {
         const decoded = jwt.decode(token) as { id: string } | null;
         req.userId = decoded?.id;
         req.token = token;
         throw new UnauthorizedException('Token expired');
       }
-      console.log('err===', err);
 
       throw new UnauthorizedException(
         'Access denied. Please re-authorize token',
@@ -61,8 +59,7 @@ export class AuthenticateTokenUserGuard implements CanActivate {
 @Injectable()
 export class ReIssueTokenUserGuard implements CanActivate {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -77,10 +74,8 @@ export class ReIssueTokenUserGuard implements CanActivate {
       );
     }
 
-    const user = await this.userRepo.findOne({
-      where: { id: req.userId },
-    });
-
+    // 🔹 Find user by request userId
+    const user = await this.userModel.findById(req.userId);
     if (!user) {
       throw new UnauthorizedException('Authorization failed');
     }
@@ -91,10 +86,12 @@ export class ReIssueTokenUserGuard implements CanActivate {
       );
     }
 
+    // Update last seen
     user.lastSeen = new Date();
-    await this.userRepo.save(user);
+    await user.save();
 
     const userAgent = req.headers['user-agent'];
+
     const activeSessions =
       user.sessions
         ?.filter(
@@ -102,6 +99,7 @@ export class ReIssueTokenUserGuard implements CanActivate {
         )
         .map((obj: any) => obj.refreshtoken) || [];
 
+    // 🔹 Verify refresh token
     const validSession = await verifyRefreshToken(
       req.headers.refreshtoken as string,
       activeSessions,

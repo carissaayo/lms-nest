@@ -1,22 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { Course } from 'src/app/course/course.entity';
-import { User } from 'src/app/user/user.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 
 import { EmailService } from 'src/app/email/email.service';
 import { PaymentService } from 'src/app/payment/services/payment.service.';
+import { User, UserDocument } from 'src/app/models/user.schema';
+import { Course, CourseDocument } from 'src/app/models/course.schema';
+import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
+import {
+  Enrollment,
+  EnrollmentDocument,
+} from 'src/app/models/enrollment.schema';
+import { Earning, EarningDocument } from 'src/app/models/earning.schema';
+
 import { UserRole } from 'src/app/user/user.interface';
-import { UserAdmin } from 'src/app/admin/admin.entity';
 import { PermissionsEnum } from 'src/app/admin/admin.interface';
-import { Enrollment } from '../enrollment.entity';
 import { EnrollStudentAfterPayment } from '../enrollment.dto';
-import { Payment } from 'src/app/payment/payment.entity';
-import { Earning } from 'src/app/instructor/entities/earning.entity';
 
 @Injectable()
 export class EnrollmentService {
@@ -24,90 +27,88 @@ export class EnrollmentService {
     private readonly paymentService: PaymentService,
     private readonly emailService: EmailService,
 
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-    @InjectRepository(UserAdmin)
-    private readonly adminRepo: Repository<UserAdmin>,
-
-    @InjectRepository(Course)
-    private readonly courseRepo: Repository<Course>,
-
-    @InjectRepository(Enrollment)
-    private readonly enrollmentRepo: Repository<Enrollment>,
-    @InjectRepository(Payment)
-    private readonly paymentRepo: Repository<Payment>,
-    @InjectRepository(Earning)
-    private readonly earningRepo: Repository<Earning>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(UserAdmin.name)
+    private readonly adminModel: Model<UserAdminDocument>,
+    @InjectModel(Course.name)
+    private readonly courseModel: Model<CourseDocument>,
+    @InjectModel(Enrollment.name)
+    private readonly enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(Payment.name)
+    private readonly paymentModel: Model<PaymentDocument>,
+    @InjectModel(Earning.name)
+    private readonly earningModel: Model<EarningDocument>,
   ) {}
 
   /**
-   Enroll A Student After Payment is confirmed
+   * Enroll a student after payment is confirmed
    */
-  async enrollStudentAfterPayment(dto, req: CustomRequest) {
-    const { reference, amount } = dto.data;
+  async enrollStudentAfterPayment(dto: any, req: CustomRequest) {
+    const { reference } = dto.data;
     const { studentId, courseId } = dto.data.metadata;
 
-    const student = await this.userRepo.findOne({ where: { id: studentId } });
+    // --- 1. Find student ---
+    const student = await this.userModel.findById(studentId);
     if (!student) throw customError.notFound('Student not found');
 
-    const course = await this.courseRepo.findOne({
-      where: { id: courseId },
-      relations: ['instructor'],
-    });
-    if (!course) throw customError.notFound('Course not found');
+    // --- 2. Find course with instructor populated ---
+    const course = await this.courseModel.findById(courseId);
 
-    // Prevent duplicate enrollment
-    const existing = await this.enrollmentRepo.findOne({
-      where: { user: { id: student.id }, course: { id: course.id } },
+    if (!course) throw customError.notFound('Course not found');
+    const instructor = await this.userModel.findById(course.instructor);
+    if (!instructor) throw customError.notFound('Instructor not found');
+
+    // --- 3. Prevent duplicate enrollment ---
+    const existing = await this.enrollmentModel.findOne({
+      user: student._id,
+      course: course._id,
     });
     if (existing) return existing;
 
     const newAmount = Number(course.price);
 
-    // --- 1. Save Payment ---
-    const payment = this.paymentRepo.create({
-      student: { id: student.id } as any,
-      course: { id: course.id } as any,
+    // --- 4. Save Payment ---
+    const payment = new this.paymentModel({
+      student: student._id,
+      course: course._id,
       amount: newAmount,
       provider: 'paystack',
       reference,
       status: 'success',
     });
-    await this.paymentRepo.save(payment);
+    await payment.save();
 
-    // --- 2. Save Enrollment ---
-    const enrollment = this.enrollmentRepo.create({
-      user: { id: student.id } as any,
-      course: { id: course.id } as any,
+    // --- 5. Save Enrollment ---
+    const enrollment = new this.enrollmentModel({
+      user: student._id,
+      course: course._id,
       paymentReference: reference,
     });
-    await this.enrollmentRepo.save(enrollment);
+    await enrollment.save();
 
-    // --- 3. Compute platform & instructor share ---
+    // --- 6. Compute platform & instructor share ---
     const platformCut = newAmount * 0.2; // 20%
     const instructorCut = newAmount - platformCut;
 
-    // --- 4. Save Earning
-    const earning = this.earningRepo.create({
-      instructor: { id: course.instructor.id } as any,
-      course: { id: course.id } as any,
-      payment: { id: payment.id } as any,
+    // --- 7. Save Earning ---
+    const earning = new this.earningModel({
+      instructor: instructor._id,
+      course: course._id,
+      payment: payment._id,
       amount: instructorCut,
       platformShare: platformCut,
     });
-    await this.earningRepo.save(earning);
+    await earning.save();
 
-    // --- 5. Notify Student ---
+    // --- 8. Notify Student ---
     await this.emailService.courseEnrollmentConfirmation(
       student.email,
       student.firstName,
       course.title,
     );
 
-    // --- 6. Notify Admins with payment permission ---
-    const admins = await this.adminRepo.find({
-      where: { role: UserRole.ADMIN },
-    });
+    // --- 9. Notify Admins with payment permission ---
+    const admins = await this.adminModel.find({ role: UserRole.ADMIN });
     const paymentAdmins = admins.filter((a) =>
       a.permissions?.includes(PermissionsEnum.ADMIN_PAYMENTS),
     );
@@ -122,19 +123,21 @@ export class EnrollmentService {
       );
     }
 
-    // --- 7. Notify Instructor ---
+    // --- 10. Notify Instructor ---
+
     await this.emailService.courseEnrollmentInstructorNotification(
-      course.instructor.email,
-      course.instructor.firstName,
+      instructor.email,
+      instructor.firstName,
       `${student.firstName} ${student.lastName}`,
       course.title,
     );
 
-    // --- Reload earning with relations (so it's not undefined in response) ---
-    const savedEarning = await this.earningRepo.findOne({
-      where: { id: earning.id },
-      relations: ['instructor', 'course', 'payment'],
-    });
+    // --- 11. Reload earning with populated refs ---
+    const savedEarning = await this.earningModel
+      .findById(earning._id)
+      .populate('instructor')
+      .populate('course')
+      .populate('payment');
 
     return {
       enrollment,

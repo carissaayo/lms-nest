@@ -15,18 +15,18 @@ import {
   Delete,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { CourseService } from './course.service';
-import { UserRole } from '../user/user.interface';
-import { Roles } from '../common/decorators/roles.decorator';
+import { CourseService } from '../services/course.service';
+import { UserRole } from 'src/app/user/user.interface';
+import { Roles } from 'src/app/common/decorators/roles.decorator';
 import { CustomRequest } from 'src/utils/auth-utils';
-import { CreateCourseDTO, UpdateCourseDTO } from './course.dto';
-import { RolesGuard } from '../common/guards/role.guard';
+import { CreateCourseDTO, UpdateCourseDTO } from '../course.dto';
+import { RolesGuard } from 'src/app/common/guards/role.guard';
 import {
   AuthenticateTokenUserGuard,
   ReIssueTokenUserGuard,
-} from '../common/guards/user-auth.guard';
-import { QueryString } from '../database/dbquery';
-import { IdParam } from '../common/decorators/idParam.decorator';
+} from 'src/app/common/guards/user-auth.guard';
+import { QueryString } from 'src/app/database/dbquery';
+import { IdParam } from 'src/app/common/decorators/idParam.decorator';
 
 @Controller('courses')
 @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)

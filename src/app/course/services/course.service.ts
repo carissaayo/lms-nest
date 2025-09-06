@@ -3,18 +3,21 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-import { EmailService } from '../email/email.service';
+import { EmailService } from 'src/app/email/email.service';
 import {
   Course,
   CourseDocument,
   CourseStatus,
 } from 'src/app/models/course.schema';
 import { User, UserDocument } from 'src/app/models/user.schema';
-import { Category, CategoryDocument } from '../models/main.schema';
-import { CreateCourseDTO } from './course.dto';
+import { Category, CategoryDocument } from 'src/app/models/main.schema';
+import { CreateCourseDTO } from '../course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { singleImageValidation } from 'src/utils/file-validation';
-import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
+import {
+  deleteImageS3,
+  saveImageS3,
+} from 'src/app/fileUpload/image-upload.service';
 import { customError } from 'src/libs/custom-handlers';
 
 @Injectable()

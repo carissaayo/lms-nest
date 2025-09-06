@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { CourseService } from './services/course.service';
-import { CourseController } from './course.controller';
+import { CourseController } from './controllers/course.controller';
 
 import { Category, CategorySchema } from '../models/main.schema';
 
