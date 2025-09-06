@@ -25,6 +25,8 @@ import {
   handleFailedAuthAttempt,
 } from 'src/utils/auth-utils';
 
+import * as bcrypt from 'bcryptjs';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -32,6 +34,19 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
+  /** ----------------- PASSWORD HELPERS ----------------- */
+  private async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
+
+  private async validatePassword(
+    password: string,
+    hashed: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashed);
+  }
+
+  /** ----------------- REGISTER ----------------- */
   async register(body: RegisterDto) {
     const {
       email,
@@ -61,10 +76,11 @@ export class AuthService {
 
     try {
       const emailCode = generateOtp('numeric', 8);
+      const hashedPassword = await this.hashPassword(password);
 
       const user = new this.userModel({
         email,
-        password,
+        password: hashedPassword,
         phoneNumber: formattedPhone,
         firstName,
         lastName,
@@ -95,6 +111,7 @@ export class AuthService {
     }
   }
 
+  /** ----------------- LOGIN ----------------- */
   async login(loginDto: LoginDto, req: CustomRequest) {
     const { email, password } = loginDto;
 
@@ -104,7 +121,10 @@ export class AuthService {
     }
 
     try {
-      const isPasswordValid = await user.validatePassword(password);
+      const isPasswordValid = await this.validatePassword(
+        password,
+        user.password,
+      );
       if (!isPasswordValid) {
         await handleFailedAuthAttempt(user, this.userModel);
       }
@@ -133,6 +153,7 @@ export class AuthService {
     }
   }
 
+  /** ----------------- VERIFY EMAIL ----------------- */
   async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
     const { emailCode } = verifyEmailDto;
     const trimmedEmailCode = emailCode?.trim();
@@ -167,6 +188,7 @@ export class AuthService {
     };
   }
 
+  /** ----------------- REQUEST RESET PASSWORD ----------------- */
   async requestResetPassword(resetPasswordDto: RequestResetPasswordDTO) {
     const { email } = resetPasswordDto;
 
@@ -196,6 +218,7 @@ export class AuthService {
     }
   }
 
+  /** ----------------- RESET PASSWORD ----------------- */
   async resetPassword(resetPasswordDto: ResetPasswordDTO) {
     const { email, passwordResetCode, newPassword } = resetPasswordDto;
 
@@ -216,7 +239,7 @@ export class AuthService {
     }
 
     try {
-      await user.hasNewPassword(newPassword);
+      user.password = await this.hashPassword(newPassword);
       user.passwordResetCode = null;
       user.resetPasswordExpires = null;
 
@@ -229,6 +252,7 @@ export class AuthService {
     }
   }
 
+  /** ----------------- CHANGE PASSWORD ----------------- */
   async changePassword(
     changePasswordDto: ChangePasswordDTO,
     req: CustomRequest,
@@ -241,7 +265,10 @@ export class AuthService {
     }
 
     try {
-      const isPasswordValid = await user.validatePassword(password);
+      const isPasswordValid = await this.validatePassword(
+        password,
+        user.password,
+      );
       if (!isPasswordValid) {
         throw customError.badRequest('Current password is incorrect');
       }
@@ -250,7 +277,7 @@ export class AuthService {
         throw customError.badRequest('New passwords do not match');
       }
 
-      await user.hasNewPassword(newPassword);
+      user.password = await this.hashPassword(newPassword);
       await user.save();
 
       return { message: 'Password changed successfully' };
