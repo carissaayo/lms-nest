@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { LoginDto, VerifyEmailDTO } from '../../auth/auth.dto';
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
-import { AdminStatus, UserAdmin } from '../admin.entity';
+import {
+  UserAdmin,
+  UserAdminDocument,
+  AdminStatus,
+} from 'src/app/models/admin.schema';
 import { EmailService } from '../../email/email.service';
 import {
   GET_ADMIN_PROFILE,
@@ -21,23 +25,18 @@ import {
 @Injectable()
 export class AdminAdminsService {
   constructor(
-    @InjectRepository(UserAdmin) private adminRepo: Repository<UserAdmin>,
+    @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     private emailService: EmailService,
   ) {}
 
   async viewProfile(req: CustomRequest) {
     console.log('viewProfile');
 
-    const user = await this.adminRepo.findOne({
-      where: { id: req.userId },
-    });
-    console.log('req===', req.userId);
-    console.log('token', req.token);
-    console.log('user====', user);
-
+    const user = await this.adminModel.findById(req.userId);
     if (!user) {
       throw customError.forbidden('Access Denied');
     }
+
     const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
 
     return {
@@ -46,17 +45,16 @@ export class AdminAdminsService {
       message: 'Profile fetched successfully',
     };
   }
-  /**
-   * Add admin by email
-   */
+
   async addAdminByEmail(dto: AddAnAdminDTO, req: CustomRequest) {
     const { email } = dto;
 
-    const existing = await this.adminRepo.findOne({ where: { email } });
+    const existing = await this.adminModel.findOne({ email });
     if (existing) {
       throw customError.conflict('Admin with this email already exists');
     }
-    const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
+
+    const admin = await this.adminModel.findById(req.userId);
     if (!admin) throw customError.notFound('Admin not found');
 
     if (!admin.isActive) {
@@ -64,7 +62,7 @@ export class AdminAdminsService {
     }
 
     try {
-      const newAdmin = this.adminRepo.create({
+      const newAdmin = new this.adminModel({
         email,
         signedUp: false,
         isActive: false,
@@ -72,12 +70,13 @@ export class AdminAdminsService {
         status: AdminStatus.PENDING,
       });
 
-      this.adminRepo.save(newAdmin);
+      await newAdmin.save();
 
       await this.emailService.adminInvitationEmail(email);
+
       return {
         accessToken: req.token,
-        message: 'Admin has ben added successfully',
+        message: 'Admin has been added successfully',
       };
     } catch (error) {
       console.log(error);
@@ -85,9 +84,6 @@ export class AdminAdminsService {
     }
   }
 
-  /**
-   * : Suspend an User
-   */
   async suspendAdmin(
     userId: string,
     suspendDto: SuspendUserDTO,
@@ -100,17 +96,16 @@ export class AdminAdminsService {
       throw customError.badRequest('Action is required');
     }
 
-    const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
+    const admin = await this.adminModel.findById(req.userId);
     if (!admin) throw customError.notFound('Admin not found');
 
     if (!admin.isActive) {
       throw customError.forbidden('Your account has been suspended');
     }
-    const user = await this.adminRepo.findOne({
-      where: { id: userId },
-    });
 
+    const user = await this.adminModel.findById(userId);
     if (!user) throw customError.notFound('User not found');
+
     try {
       const newAction = {
         action: `User is ${action}ed by ${admin.id}`,
@@ -119,16 +114,17 @@ export class AdminAdminsService {
       };
 
       const newAdminAction = {
-        action: `${action}ed a User  ${user.id}`,
+        action: `${action}ed a User ${user.id}`,
         ...(suspensionReason ? { suspensionReason } : {}),
         date: new Date(),
       };
 
       user.isActive = false;
-      user.actions.push(newAction);
-      admin.actions.push(newAdminAction);
-      this.adminRepo.save(user);
-      this.adminRepo.save(admin);
+      user.actions = [...(user.actions || []), newAction];
+      admin.actions = [...(admin.actions || []), newAdminAction];
+
+      await user.save();
+      await admin.save();
 
       await this.emailService.suspensionEmail(
         user.email,
@@ -136,6 +132,7 @@ export class AdminAdminsService {
         action,
         suspensionReason || '',
       );
+
       const { token, refreshToken } = await generateToken(admin, req);
       return {
         accessToken: token,
@@ -161,19 +158,16 @@ export class AdminAdminsService {
       throw customError.badRequest('Permission array is required');
     }
 
-    const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
+    const admin = await this.adminModel.findById(req.userId);
     if (!admin) throw customError.notFound('Admin not found');
 
     if (!admin.isActive) {
       throw customError.forbidden('Your account has been suspended');
     }
-    const user = await this.adminRepo.findOne({
-      where: { id: userId },
-    });
 
+    const user = await this.adminModel.findById(userId);
     if (!user) throw customError.notFound('User not found');
-    // if (admin.id === user.id )
-    //   throw customError.forbidden('You can not give yourself permissions');
+
     try {
       if (!user.permissions) {
         user.permissions = [];
@@ -192,7 +186,7 @@ export class AdminAdminsService {
       }
 
       user.permissions = updatedPermissions;
-      await this.adminRepo.save(user);
+      await user.save();
 
       const { token, refreshToken } = await generateToken(admin, req);
       return {
@@ -205,30 +199,32 @@ export class AdminAdminsService {
       throw customError.internalServerError('Internal Server Error', 500);
     }
   }
+
   async login(loginDto: LoginDto, req: CustomRequest) {
     const { email, password } = loginDto;
 
-    const admin = await this.adminRepo.findOne({ where: { email } });
+    const admin = await this.adminModel.findOne({ email });
     if (!admin) {
-      throw customError.unauthorized('admin not found');
+      throw customError.unauthorized('Admin not found');
     }
 
     try {
       const isPasswordValid = await admin.validatePassword(password);
 
       if (!isPasswordValid) {
-        await handleFailedAuthAttempt(admin, this.adminRepo);
+        await handleFailedAuthAttempt(admin, this.adminModel);
       }
 
       admin.failedAuthAttempts = 0;
-      await this.adminRepo.save(admin);
+      await admin.save();
 
       const { token, refreshToken, session } = await generateToken(admin, req);
 
       admin.sessions = [session];
       admin.failedSignInAttempts = 0;
       admin.nextSignInAttempt = new Date();
-      await this.adminRepo.save(admin);
+      await admin.save();
+
       const profile: AdminProfileInterface = GET_ADMIN_PROFILE(admin);
 
       return {
@@ -243,9 +239,6 @@ export class AdminAdminsService {
     }
   }
 
-  /**
-   *  Verify email
-   */
   async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
     const { emailCode } = verifyEmailDto;
     const trimmedEmailCode = emailCode?.trim();
@@ -254,9 +247,7 @@ export class AdminAdminsService {
       throw customError.unauthorized('Please enter the verification code');
     }
 
-    const admin = await this.adminRepo.findOne({
-      where: { id: req.userId },
-    });
+    const admin = await this.adminModel.findById(req.userId);
     if (!admin) {
       throw customError.badRequest('Access Denied');
     }
@@ -272,8 +263,7 @@ export class AdminAdminsService {
     try {
       admin.emailVerified = true;
       admin.emailCode = null;
-
-      await this.adminRepo.save(admin);
+      await admin.save();
 
       const profile: AdminProfileInterface = GET_ADMIN_PROFILE(admin);
 
@@ -289,10 +279,7 @@ export class AdminAdminsService {
   }
 
   async findAdminById(id: string) {
-    const admin = await this.adminRepo.findOne({ where: { id } });
-
-    return {
-      admin,
-    };
+    const admin = await this.adminModel.findById(id);
+    return { admin };
   }
 }

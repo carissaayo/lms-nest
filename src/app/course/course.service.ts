@@ -1,44 +1,30 @@
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { isUUID } from 'class-validator';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 import { EmailService } from '../email/email.service';
-
-import { Course, CourseStatus } from './course.entity';
-import { User } from '../user/user.entity';
-import { Category } from '../database/main.entity';
+import {
+  Course,
+  CourseDocument,
+  CourseStatus,
+} from 'src/app/models/course.schema';
+import { User, UserDocument } from 'src/app/models/user.schema';
+import { Category, CategoryDocument } from '../models/main.schema';
 import { CreateCourseDTO } from './course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
-
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
-
-import { DBQuery, QueryString } from '../database/dbquery';
 import { customError } from 'src/libs/custom-handlers';
 
 @Injectable()
 export class CourseService {
   constructor(
-    @InjectRepository(Course)
-    private readonly courseRepo: Repository<Course>,
-
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-
-    @InjectRepository(Category)
-    private readonly categoryRepo: Repository<Category>,
-
+    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     private readonly emailService: EmailService,
-
-    // @InjectRepository(Lesson)
-    // private readonly lessonRepo: Repository<Lesson>,
   ) {}
 
-  /**
-   * Create a new course
-   */
   async createCourse(
     createCourseDto: CreateCourseDTO,
     coverImage: Express.Multer.File,
@@ -51,42 +37,35 @@ export class CourseService {
     const { title, description, category, price } = createCourseDto;
 
     if (!coverImage) {
-      throw customError.badRequest('coverImage is required found');
+      throw customError.badRequest('coverImage is required');
     }
 
-    const instructor = await this.userRepo.findOne({
-      where: { id: req.userId },
-    });
+    const instructor = await this.userModel.findById(req.userId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    let categoryEntity: Category | undefined;
 
+    let categoryEntity: CategoryDocument | null = null;
     if (category) {
-      const found = await this.categoryRepo.findOne({
-        where: { id: category },
-      });
-
-      if (!found) {
+      categoryEntity = await this.categoryModel.findById(category);
+      if (!categoryEntity) {
         throw new NotFoundException('Category not found');
       }
-
-      categoryEntity = found;
     }
 
     singleImageValidation(coverImage, 'a cover image for the course');
 
     const uploadImg = await saveImageS3(coverImage, `images/courses`);
-    if (!uploadImg || uploadImg.length <= 0) {
+    if (!uploadImg) {
       throw customError.badRequest('Invalid cover Image');
     }
 
-    const course = this.courseRepo.create({
+    const course = new this.courseModel({
       title,
       description,
-      category: categoryEntity,
+      category: categoryEntity?._id,
       price,
-      instructor,
+      instructor: instructor._id,
       coverImage: uploadImg,
       instructorId: instructor.id,
       categoryId: category,
@@ -94,14 +73,14 @@ export class CourseService {
       instructorName: `${instructor.firstName} ${instructor.lastName}`,
     });
 
-    await this.courseRepo.save(course);
+    await course.save();
 
-    // // Send submission email
     await this.emailService.courseCreation(
       instructor.email,
       instructor.firstName,
       course.title,
     );
+
     return {
       accessToken: req.token,
       course,
@@ -109,9 +88,6 @@ export class CourseService {
     };
   }
 
-  /**
-   * Edit an existing course
-   */
   async updateCourse(
     courseId: string,
     updateCourseDto: Partial<CreateCourseDTO>,
@@ -122,46 +98,39 @@ export class CourseService {
       throw customError.badRequest('No update data provided');
     }
 
-    const course = await this.courseRepo.findOne({
-      where: { id: courseId },
-      relations: ['instructor', 'category'],
-    });
-
+    const course = await this.courseModel.findById(courseId);
     if (!course) {
       throw customError.notFound('Course not found');
     }
 
-    if (course.instructor.id !== req.userId) {
-      throw customError.forbidden('You can only update your  course');
+    if (course.instructorId !== req.userId) {
+      throw customError.forbidden('You can only update your course');
     }
 
     const { title, description, category, price } = updateCourseDto || {};
 
     if (category) {
-      const foundCategory = await this.categoryRepo.findOne({
-        where: { id: category },
-      });
+      const foundCategory = await this.categoryModel.findById(category);
       if (!foundCategory) {
         throw customError.notFound('Category not found');
       }
-      course.category = foundCategory;
+      course.category = foundCategory._id;
+      course.categoryName = foundCategory.name;
     }
 
     if (coverImage) {
       singleImageValidation(coverImage, 'a cover image for the course');
 
-      // Delete old image from S3 if exists
       if (course.coverImage) {
         try {
           await deleteImageS3(course.coverImage);
         } catch (err) {
-          console.warn(' Failed to delete old cover image:', err.message);
+          console.warn('Failed to delete old cover image:', err.message);
         }
       }
 
-      // Upload new one
       const uploadImg = await saveImageS3(coverImage, `images/courses`);
-      if (!uploadImg || uploadImg.length <= 0) {
+      if (!uploadImg) {
         throw customError.badRequest('Invalid cover image');
       }
       course.coverImage = uploadImg;
@@ -173,14 +142,16 @@ export class CourseService {
     if (course.isSubmitted) course.isSubmitted = false;
     if (course.submittedAt) course.submittedAt = undefined;
     course.status = CourseStatus.PENDING;
-    await this.courseRepo.save(course);
-    const instructor = course.instructor;
-    // // Send updating email
+
+    await course.save();
+
+    const instructor = await this.userModel.findById(course.instructorId);
     await this.emailService.courseUpdating(
       instructor.email,
       instructor.firstName,
       course.title,
     );
+
     return {
       accessToken: req.token,
       course,
@@ -188,130 +159,99 @@ export class CourseService {
     };
   }
 
-  /**
-   * Get all courses  by an instructor
-   */
-  async viewCourses(query: QueryString) {
-    const baseQuery = this.courseRepo
-      .createQueryBuilder('course')
-      .leftJoinAndSelect('course.category', 'category')
-      .leftJoinAndSelect('course.lessons', 'lessons')
-      .leftJoinAndSelect('lessons.assignments', 'assignments');
-    const dbQuery = new DBQuery(baseQuery, 'course', query);
+  async viewCourses(query: any) {
+    const {
+      categoryId,
+      category,
+      price,
+      minPrice,
+      maxPrice,
+      status,
+      page = 1,
+      limit = 10,
+    } = query;
 
-    dbQuery.filter().sort().limitFields().paginate();
-    // ✅ Category by ID (uuid check)
-    if (query.categoryId && isUUID(query.categoryId)) {
-      dbQuery.query.andWhere('course.category_id = :categoryId', {
-        categoryId: query.categoryId,
-      });
-    }
+    const filter: any = {};
 
-    // ✅ Category by name (text search)
-    if (query.category && !isUUID(query.category)) {
-      dbQuery.query.andWhere('category.name ILIKE :categoryName', {
-        categoryName: `%${query.category}%`,
-      });
-    }
-    // Price filtering (exact or range)
-    if (query.price) {
-      dbQuery.query.andWhere('course.price = :price', {
-        price: query.price,
-      });
-    }
-    if (query.minPrice) {
-      dbQuery.query.andWhere('course.price >= :minPrice', {
-        minPrice: query.minPrice,
-      });
-    }
-    if (query.maxPrice) {
-      dbQuery.query.andWhere('course.price <= :maxPrice', {
-        maxPrice: query.maxPrice,
-      });
+    if (categoryId) filter.categoryId = categoryId;
+    if (status) filter.status = status;
+    if (price) filter.price = price;
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
 
-    if (query.status) {
-      dbQuery.query.andWhere('course.status = :status', {
-        status: query.status,
-      });
+    if (category) {
+      filter.categoryName = { $regex: category, $options: 'i' };
     }
 
-    const [courses, total] = await Promise.all([
-      dbQuery.getMany(),
-      dbQuery.count(),
-    ]);
+    const courses = await this.courseModel
+      .find(filter)
+      .populate('category')
+      .populate('lessons')
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    const total = await this.courseModel.countDocuments(filter);
 
     return {
-      page: dbQuery.page,
+      page: Number(page),
       results: total,
-      courses: courses,
+      courses,
       message: 'Courses fetched successfully',
     };
   }
 
-  /**
-   * Delete a course  by an instructor
-   */
   async deleteCourse(courseId: string, req: CustomRequest) {
-    const course = await this.courseRepo.findOne({
-      where: { id: courseId, deleted: false },
-      relations: ['instructor'],
-    });
-
+    const course = await this.courseModel.findById(courseId);
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    if (course.instructor.id !== req.userId) {
+
+    if (course.instructorId !== req.userId) {
       throw customError.forbidden('You can only delete your courses');
     }
 
     course.deleted = true;
-    await this.courseRepo.save(course);
+    await course.save();
 
-    await this.courseRepo.save(course);
-    const instructor = course.instructor;
-    // // Send submission email
+    const instructor = await this.userModel.findById(course.instructorId);
     await this.emailService.courseDeletion(
       instructor.email,
       instructor.firstName,
       course.title,
     );
+
     return {
       message: 'Course deleted successfully',
     };
   }
 
-  /**
-   * Submit a course for approval  by an instructor
-   */
   async submitCourse(courseId: string, req: CustomRequest) {
-    const course = await this.courseRepo.findOne({
-      where: { id: courseId },
-      relations: ['instructor'],
-    });
-
+    const course = await this.courseModel.findById(courseId);
     if (!course) {
       throw customError.notFound('Course not found');
     }
+
     if (course.deleted) throw customError.notFound('Course has been deleted');
-
-    if (course.instructor.id !== req.userId) {
-      throw customError.forbidden('You can only delete your courses');
+    if (course.instructorId !== req.userId) {
+      throw customError.forbidden('You can only submit your courses');
     }
-
     if (course.isSubmitted) {
       throw customError.forbidden('This course has already been submitted');
     }
     if (course.status !== CourseStatus.PENDING) {
-      throw customError.forbidden('This course can not be submitted');
+      throw customError.forbidden('This course cannot be submitted');
     }
+
     try {
       course.isSubmitted = true;
       course.submittedAt = new Date();
+      await course.save();
 
-      await this.courseRepo.save(course);
-      const instructor = course.instructor;
-      // // Send submission email
+      const instructor = await this.userModel.findById(course.instructorId);
       await this.emailService.courseSubmission(
         instructor.email,
         instructor.firstName,
@@ -329,34 +269,26 @@ export class CourseService {
     }
   }
 
-  /**
-   * Submit a course for approval  by an instructor
-   */
   async publishCourse(courseId: string, req: CustomRequest) {
-    const course = await this.courseRepo.findOne({
-      where: { id: courseId },
-      relations: ['instructor'],
-    });
-
+    const course = await this.courseModel.findById(courseId);
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    if (course.deleted) throw customError.notFound('Course has been deleted');
 
-    if (course.instructor.id !== req.userId) {
+    if (course.deleted) throw customError.notFound('Course has been deleted');
+    if (course.instructorId !== req.userId) {
       throw customError.forbidden('You can only publish your courses');
     }
-
     if (course.status !== CourseStatus.APPROVED) {
       throw customError.forbidden('This course has to be approved first');
     }
+
     try {
       course.isPublished = true;
       course.publishedAt = new Date();
+      await course.save();
 
-      await this.courseRepo.save(course);
-      const instructor = course.instructor;
-      // // Send pbulishing email
+      const instructor = await this.userModel.findById(course.instructorId);
       await this.emailService.coursePublish(
         instructor.email,
         instructor.firstName,
@@ -364,7 +296,7 @@ export class CourseService {
       );
 
       return {
-        message: 'Course submitted successfully',
+        message: 'Course published successfully',
         accessToken: req.token,
         course,
       };

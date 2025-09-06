@@ -1,10 +1,11 @@
-import { Repository } from 'typeorm';
 import { Request } from 'express';
+import { Model } from 'mongoose';
 
 import { customError } from 'src/libs/custom-handlers';
 
-import { UserAdmin } from 'src/app/admin/admin.entity';
+import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
 import { AdminProfileInterface } from 'src/app/admin/admin.interface';
+
 export interface CustomRequest extends Request {
   verifyAccessToken?: 'nil' | 'failed' | 'success';
   verifyAccessTokenMessage?: string | undefined;
@@ -17,12 +18,12 @@ export interface CustomRequest extends Request {
  * Handles failed authentication attempts for an admin.
  * Locks account temporarily after 5 or more failed attempts.
  *
- * @param admin - The Admin entity
- * @param AdminRepo - TypeORM repository for saving updates
+ * @param admin - The Admin document
+ * @param adminModel - The Mongoose model for UserAdmin
  */
 export async function handleFailedAuthAttempt(
-  admin: UserAdmin,
-  adminRepo: Repository<UserAdmin>,
+  admin: UserAdminDocument,
+  adminModel: Model<UserAdminDocument>,
 ): Promise<never> {
   if (admin.failedAuthAttempts >= 5) {
     admin.nextAuthDate = new Date(
@@ -32,14 +33,22 @@ export async function handleFailedAuthAttempt(
 
   admin.failedAuthAttempts += 1;
 
-  await adminRepo.save(admin);
+  await adminModel.findByIdAndUpdate(admin._id, {
+    failedAuthAttempts: admin.failedAuthAttempts,
+    nextAuthDate: admin.nextAuthDate,
+  });
 
   throw customError.unauthorized('Invalid credentials', 401);
 }
 
-export const GET_ADMIN_PROFILE = (admin: UserAdmin): AdminProfileInterface => {
+/**
+ * Maps an admin document to the profile interface.
+ */
+export const GET_ADMIN_PROFILE = (
+  admin: UserAdminDocument,
+): AdminProfileInterface => {
   return {
-    userId: admin.id,
+    userId: admin.id.toString(),
     firstName: admin.firstName,
     lastName: admin.lastName,
     email: admin.email,

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 @Schema({ timestamps: true, collection: 'enrollments' })
 export class Enrollment extends Document {
@@ -21,5 +21,7 @@ export class Enrollment extends Document {
   @Prop()
   createdAt: Date;
 }
+
+export type EnrollmentDocument = HydratedDocument<Enrollment>;
 
 export const EnrollmentSchema = SchemaFactory.createForClass(Enrollment);

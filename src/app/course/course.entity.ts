@@ -10,7 +10,7 @@ import {
   BaseEntity,
 } from 'typeorm';
 import { User } from '../user/user.entity';
-import { Category } from '../database/main.entity';
+import { Category } from '../models/main.schema';
 import { Lesson } from '../lesson/lesson.entity';
 import { UserAdmin } from '../admin/admin.entity';
 import { Enrollment } from '../enrollment/enrollment.entity';

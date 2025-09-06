@@ -1,4 +1,4 @@
-import { Repository, SelectQueryBuilder, ObjectLiteral } from 'typeorm';
+import { Model, Document } from 'mongoose';
 
 const excludedFields = ['page', 'sort', 'limit', 'fields', 'password'];
 
@@ -10,27 +10,13 @@ export interface QueryString {
   [key: string]: any;
 }
 
-function isQueryBuilder<T extends ObjectLiteral>(
-  source: Repository<T> | SelectQueryBuilder<T>,
-): source is SelectQueryBuilder<T> {
-  return (source as SelectQueryBuilder<T>).getQuery !== undefined;
-}
-
-export class BaseDBQuery<T extends ObjectLiteral> {
-  public query: SelectQueryBuilder<T>;
+export class MongooseQuery<T extends Document> {
+  public query: any;
   public queryString: QueryString;
   public page?: number;
 
-  constructor(
-    source: Repository<T> | SelectQueryBuilder<T>,
-    alias: string,
-    queryString: QueryString,
-  ) {
-    if (isQueryBuilder(source)) {
-      this.query = source;
-    } else {
-      this.query = source.createQueryBuilder(alias);
-    }
+  constructor(model: Model<T>, queryString: QueryString) {
+    this.query = model.find();
     this.queryString = queryString;
   }
 
@@ -38,74 +24,66 @@ export class BaseDBQuery<T extends ObjectLiteral> {
     const filteredQueryObj = { ...this.queryString };
     excludedFields.forEach((el) => delete filteredQueryObj[el]);
 
+    const mongoQuery: any = {};
+
     Object.entries(filteredQueryObj).forEach(([key, value]) => {
       if (typeof value === 'object' && value !== null) {
         // Handle operators like gte, lte, gt, lt
         Object.entries(value).forEach(([op, val]) => {
           switch (op) {
             case 'gte':
-              this.query.andWhere(`${this.query.alias}.${key} >= :${key}_gte`, {
-                [`${key}_gte`]: val,
-              });
+              mongoQuery[key] = { ...mongoQuery[key], $gte: val };
               break;
             case 'gt':
-              this.query.andWhere(`${this.query.alias}.${key} > :${key}_gt`, {
-                [`${key}_gt`]: val,
-              });
+              mongoQuery[key] = { ...mongoQuery[key], $gt: val };
               break;
             case 'lte':
-              this.query.andWhere(`${this.query.alias}.${key} <= :${key}_lte`, {
-                [`${key}_lte`]: val,
-              });
+              mongoQuery[key] = { ...mongoQuery[key], $lte: val };
               break;
             case 'lt':
-              this.query.andWhere(`${this.query.alias}.${key} < :${key}_lt`, {
-                [`${key}_lt`]: val,
-              });
+              mongoQuery[key] = { ...mongoQuery[key], $lt: val };
+              break;
+            case 'ne':
+              mongoQuery[key] = { ...mongoQuery[key], $ne: val };
               break;
           }
         });
       } else if (typeof value === 'string' && value.includes(',')) {
         // Handle IN queries e.g. category=math,science
-        this.query.andWhere(`${this.query.alias}.${key} IN (:...${key})`, {
-          [key]: value.split(','),
-        });
+        mongoQuery[key] = { $in: value.split(',') };
       } else if (typeof value === 'string') {
         // Default partial search for strings
-        this.query.andWhere(`${this.query.alias}.${key} ILIKE :${key}`, {
-          [key]: `%${value}%`,
-        });
+        mongoQuery[key] = { $regex: value, $options: 'i' };
       } else {
         // Equality check for numbers / booleans
-        this.query.andWhere(`${this.query.alias}.${key} = :${key}`, {
-          [key]: value,
-        });
+        mongoQuery[key] = value;
       }
     });
 
+    this.query = this.query.find(mongoQuery);
     return this;
   }
 
   sort(): this {
     if (this.queryString.sort) {
-      const sortBy = this.queryString.sort.split(',').map((s) => s.trim());
-      sortBy.forEach((s) => {
-        const order: 'ASC' | 'DESC' = s.startsWith('-') ? 'DESC' : 'ASC';
-        const field = s.replace(/^-/, '');
-        this.query.addOrderBy(`${this.query.alias}.${field}`, order);
+      const sortBy: any = {};
+      this.queryString.sort.split(',').forEach((s) => {
+        const trimmed = s.trim();
+        const order = trimmed.startsWith('-') ? -1 : 1;
+        const field = trimmed.replace(/^-/, '');
+        sortBy[field] = order;
       });
+      this.query = this.query.sort(sortBy);
     } else {
-      this.query.addOrderBy(`${this.query.alias}.createdAt`, 'DESC');
+      this.query = this.query.sort({ createdAt: -1 });
     }
     return this;
   }
 
   limitFields(): this {
     if (this.queryString.fields) {
-      const fields = this.queryString.fields
-        .split(',')
-        .map((f) => `${this.query.alias}.${f}`);
-      this.query.select(fields);
+      const fields = this.queryString.fields.split(',').join(' ');
+      this.query = this.query.select(fields);
     }
     return this;
   }
@@ -117,26 +95,28 @@ export class BaseDBQuery<T extends ObjectLiteral> {
 
     const skip = (page - 1) * limit;
 
-    this.query.skip(skip).take(limit);
+    this.query = this.query.skip(skip).limit(limit);
     this.page = page;
     return this;
   }
 
-  async getMany(): Promise<T[]> {
-    return await this.query.getMany();
+  populate(path: string, select?: string): this {
+    this.query = this.query.populate(path, select);
+    return this;
+  }
+
+  async exec(): Promise<T[]> {
+    return await this.query.exec();
   }
 
   async count(): Promise<number> {
-    return await this.query.getCount();
+    const countQuery = this.query.model.find(this.query.getFilter());
+    return await countQuery.countDocuments();
   }
 }
 
-export class DBQuery<T extends ObjectLiteral> extends BaseDBQuery<T> {
-  constructor(
-    source: Repository<T> | SelectQueryBuilder<T>,
-    alias: string,
-    queryString: QueryString,
-  ) {
-    super(source, alias, queryString);
+export class DBQuery<T extends Document> extends MongooseQuery<T> {
+  constructor(model: Model<T>, queryString: QueryString) {
+    super(model, queryString);
   }
 }

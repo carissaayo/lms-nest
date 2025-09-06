@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
-@Schema({ timestamps: true, collection: 'payments' })
+@Schema({ timestamps: true })
 export class Payment extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   student: string;
@@ -25,4 +25,5 @@ export class Payment extends Document {
   createdAt: Date;
 }
 
+export type PaymentDocument = HydratedDocument<Payment>;
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

@@ -3,9 +3,9 @@ import { Request } from 'express';
 import { generateAccessToken, generateRefreshToken } from './jwt-utils';
 import config from 'src/app/config/config';
 import { customError } from 'src/libs/custom-handlers';
-import { User } from 'src/app/user/user.entity';
+import { User } from 'src/app/models/user.schema';
 import { ProfileInterface } from 'src/app/auth/auth.interface';
-import { UserAdmin } from 'src/app/admin/admin.entity';
+import { UserAdmin } from 'src/app/models/admin.schema';
 
 export interface CustomRequest extends Request {
   verifyAccessToken?: 'nil' | 'failed' | 'success';

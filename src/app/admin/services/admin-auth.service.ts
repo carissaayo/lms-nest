@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import {
   ChangePasswordDTO,
   LoginDto,
@@ -7,15 +9,11 @@ import {
   ResetPasswordDTO,
   VerifyEmailDTO,
 } from '../../auth/auth.dto';
-
-import { MoreThan, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
 import { customError } from 'src/libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
 import { EmailService } from '../../email/email.service';
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
-
-import { UserAdmin } from '../admin.entity';
+import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
 import {
   GET_ADMIN_PROFILE,
   handleFailedAuthAttempt,
@@ -25,7 +23,7 @@ import { AdminProfileInterface } from '../admin.interface';
 @Injectable()
 export class AdminAuthService {
   constructor(
-    @InjectRepository(UserAdmin) private usersRepo: Repository<UserAdmin>,
+    @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     private emailService: EmailService,
   ) {}
 
@@ -39,38 +37,37 @@ export class AdminAuthService {
       lastName,
     } = body;
 
-    // Check password match
     if (password !== confirmPassword) {
-      throw customError.conflict('Passwords do not match ', 409);
+      throw customError.conflict('Passwords do not match', 409);
     }
+
     const formattedPhone = formatPhoneNumber(phoneNumber, '234');
     if (formattedPhone?.toString()?.length !== 13) {
       throw customError.badRequest(
         'The phone number you entered is not correct. Please follow this format: 09012345678',
       );
     }
-    // Check if user already exists
-    const existingUser = await this.usersRepo.findOne({ where: { email } });
+
+    const existingUser = await this.adminModel.findOne({ email });
     if (!existingUser) {
       throw customError.forbidden('You have to be added up first');
     }
 
-    if (existingUser.isActive)
+    if (existingUser.isActive) {
       throw customError.conflict('You have already signed up');
+    }
+
     try {
       const emailCode = generateOtp('numeric', 8);
 
       await existingUser.hasNewPassword(password);
       existingUser.phoneNumber = phoneNumber;
       existingUser.firstName = firstName;
-      existingUser.firstName = firstName;
+      existingUser.lastName = lastName;
+      existingUser.emailCode = emailCode;
 
-      // Save to DB
-      const savedUser = await this.usersRepo.save(existingUser);
+      await existingUser.save();
 
-      const { emailVerified, id, role } = savedUser;
-
-      // // Send verification email
       await this.emailService.sendVerificationEmail(email, emailCode);
 
       return {
@@ -81,9 +78,9 @@ export class AdminAuthService {
           phoneNumber,
           firstName,
           lastName,
-          emailVerified,
-          role,
-          id,
+          emailVerified: existingUser.emailVerified,
+          role: existingUser.role,
+          id: existingUser.id,
         },
       };
     } catch (error) {
@@ -94,29 +91,27 @@ export class AdminAuthService {
   async login(loginDto: LoginDto, req: CustomRequest) {
     const { email, password } = loginDto;
 
-    // Find user by email in Postgres (TypeORM)
-    const user = await this.usersRepo.findOne({ where: { email } });
+    const user = await this.adminModel.findOne({ email });
     if (!user) {
       throw customError.unauthorized('User not found');
     }
-    try {
-      // validate password using entity method
-      const isPasswordValid = await user.validatePassword(password);
-      console.log('isPass', isPasswordValid);
 
+    try {
+      const isPasswordValid = await user.validatePassword(password);
       if (!isPasswordValid) {
-        await handleFailedAuthAttempt(user, this.usersRepo);
+        await handleFailedAuthAttempt(user, this.adminModel);
       }
 
       user.failedAuthAttempts = 0;
-      await this.usersRepo.save(user);
+      await user.save();
 
       const { token, refreshToken, session } = await generateToken(user, req);
 
       user.sessions = [session];
       user.failedSignInAttempts = 0;
       user.nextSignInAttempt = new Date();
-      await this.usersRepo.save(user);
+      await user.save();
+
       const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
 
       return {
@@ -139,9 +134,7 @@ export class AdminAuthService {
       throw customError.unauthorized('Please enter the verification code');
     }
 
-    const user = await this.usersRepo.findOne({
-      where: { id: req.userId },
-    });
+    const user = await this.adminModel.findById(req.userId);
     if (!user) {
       throw customError.badRequest('Access Denied');
     }
@@ -153,10 +146,10 @@ export class AdminAuthService {
     if (user.emailCode !== trimmedEmailCode) {
       throw customError.badRequest('Invalid verification code');
     }
+
     user.emailVerified = true;
     user.emailCode = null;
-
-    await this.usersRepo.save(user);
+    await user.save();
 
     const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
 
@@ -168,12 +161,9 @@ export class AdminAuthService {
   }
 
   async requestResetPassword(resetPasswordDto: RequestResetPasswordDTO) {
-    console.log('requestResetPassword');
-
     const { email } = resetPasswordDto;
 
-    const user = await this.usersRepo.findOne({ where: { email } });
-
+    const user = await this.adminModel.findOne({ email });
     if (!user) {
       throw customError.badRequest('User not found');
     }
@@ -183,14 +173,14 @@ export class AdminAuthService {
         'Your account has been suspended. Please contact the administrator',
       );
     }
+
     try {
       const resetCode = generateOtp('numeric', 8);
       user.passwordResetCode = resetCode;
-      user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+      user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
 
-      await this.usersRepo.save(user);
+      await user.save();
 
-      // Send password reset email
       await this.emailService.sendPasswordResetEmail(email, resetCode);
 
       return {
@@ -201,18 +191,14 @@ export class AdminAuthService {
       throw customError.internalServerError('Internal Server Error', 500);
     }
   }
-  async resetPassword(resetPasswordDto: ResetPasswordDTO) {
-    console.log('resetPassword');
 
+  async resetPassword(resetPasswordDto: ResetPasswordDTO) {
     const { email, passwordResetCode, newPassword } = resetPasswordDto;
 
-    // Find user with matching code and unexpired reset time
-    const user = await this.usersRepo.findOne({
-      where: {
-        email,
-        passwordResetCode,
-        resetPasswordExpires: MoreThan(new Date()),
-      },
+    const user = await this.adminModel.findOne({
+      email,
+      passwordResetCode,
+      resetPasswordExpires: { $gt: new Date() },
     });
 
     if (!user) {
@@ -227,11 +213,9 @@ export class AdminAuthService {
 
     try {
       await user.hasNewPassword(newPassword);
-
       user.passwordResetCode = null;
       user.resetPasswordExpires = null;
-
-      await this.usersRepo.save(user);
+      await user.save();
 
       return {
         message: 'Password reset successfully',
@@ -241,23 +225,20 @@ export class AdminAuthService {
       throw customError.internalServerError('Internal Server Error', 500);
     }
   }
+
   async changePassword(
     changePasswordDto: ChangePasswordDTO,
     req: CustomRequest,
   ) {
-    console.log('changePassword');
-
     const { password, newPassword, confirmNewPassword } = changePasswordDto;
 
-    const user = await this.usersRepo.findOne({ where: { id: req.userId } });
-
+    const user = await this.adminModel.findById(req.userId);
     if (!user) {
       throw customError.forbidden('Access Denied');
     }
 
     try {
       const isPasswordValid = await user.validatePassword(password);
-
       if (!isPasswordValid) {
         throw customError.badRequest('Current password is incorrect');
       }
@@ -267,8 +248,7 @@ export class AdminAuthService {
       }
 
       await user.hasNewPassword(newPassword);
-
-      await this.usersRepo.save(user);
+      await user.save();
 
       return {
         message: 'Password changed successfully',

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { UserRole } from '../user/user.interface';
 
 export enum UserStatus {
@@ -115,6 +115,7 @@ export class User extends Document {
   @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Bank' }])
   banks: string[];
 }
+export type UserDocument = HydratedDocument<User>;
 
 export const UserSchema = SchemaFactory.createForClass(User);
 

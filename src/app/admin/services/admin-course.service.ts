@@ -1,93 +1,53 @@
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { EmailService } from '../../email/email.service';
-
-import { UserAdmin } from '../admin.entity';
-import { Course, CourseStatus } from 'src/app/course/course.entity';
-
+import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import {
+  Course,
+  CourseDocument,
+  CourseStatus,
+} from 'src/app/models/course.schema';
 import { UserRole } from 'src/app/user/user.interface';
-
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
-
-import { DBQuery, QueryString } from 'src/app/database/dbquery';
 import { AdminCourseActionDTO } from 'src/app/course/course.dto';
-import { isUUID } from 'class-validator';
+import { DBQuery, QueryString } from 'src/app/database/dbquery';
 
 @Injectable()
 export class AdminCoursesService {
   constructor(
-    @InjectRepository(UserAdmin) private adminRepo: Repository<UserAdmin>,
+    @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
+    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     private emailService: EmailService,
-    @InjectRepository(Course)
-    private readonly courseRepo: Repository<Course>,
   ) {}
 
+  // In admin-courses.service.ts
   async viewCourses(query: QueryString) {
-    const baseQuery = this.courseRepo
-      .createQueryBuilder('course')
-      .leftJoinAndSelect('course.category', 'category')
-      .leftJoinAndSelect('course.lessons', 'lessons')
-      .leftJoinAndSelect('lessons.assignments', 'assignments');
+    const dbQuery = new DBQuery(this.courseModel, query);
 
-    const dbQuery = new DBQuery(baseQuery, 'course', query);
-
-    dbQuery.filter().sort().limitFields().paginate();
-    // ✅ Category by ID (uuid check)
-    if (query.categoryId && isUUID(query.categoryId)) {
-      dbQuery.query.andWhere('course.category_id = :categoryId', {
-        categoryId: query.categoryId,
-      });
-    }
-
-    // ✅ Category by name (text search)
-    if (query.category && !isUUID(query.category)) {
-      dbQuery.query.andWhere('category.name ILIKE :categoryName', {
-        categoryName: `%${query.category}%`,
-      });
-    }
-    // Price filtering (exact or range)
-    if (query.price) {
-      dbQuery.query.andWhere('course.price = :price', {
-        price: query.price,
-      });
-    }
-    if (query.minPrice) {
-      dbQuery.query.andWhere('course.price >= :minPrice', {
-        minPrice: query.minPrice,
-      });
-    }
-    if (query.maxPrice) {
-      dbQuery.query.andWhere('course.price <= :maxPrice', {
-        maxPrice: query.maxPrice,
-      });
-    }
-
-    if (query.status) {
-      dbQuery.query.andWhere('course.status = :status', {
-        status: query.status,
-      });
-    }
+    dbQuery
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate()
+      .populate('category')
+      .populate('lessons')
+      .populate('assignments');
 
     const [courses, total] = await Promise.all([
-      dbQuery.getMany(),
+      dbQuery.exec(),
       dbQuery.count(),
     ]);
 
     return {
       page: dbQuery.page,
       results: total,
-      courses: courses,
+      courses,
       message: 'Courses fetched successfully',
     };
   }
 
-  /**
-   * Approve/reject/suspend a course
-   */
   async approveCourse(
     courseId: string,
     dto: AdminCourseActionDTO,
@@ -96,22 +56,22 @@ export class AdminCoursesService {
     if (!courseId) throw customError.notFound('courseId is required');
 
     const { action, rejectReason } = dto;
-    const course = await this.courseRepo.findOne({
-      where: { id: courseId },
-      relations: ['instructor'],
-    });
-
+    const course = await this.courseModel
+      .findById(courseId)
+      .populate('instructorId');
     if (!course) throw customError.conflict('Course not found');
     if (course.deleted) throw customError.gone('Course has been deleted');
 
-    const instructor = course.instructor;
-    if (!instructor.isActive)
+    const instructor = course.instructor as UserAdmin;
+    if (!instructor.isActive) {
       throw customError.forbidden('Instructor has been suspended');
+    }
 
-    if (instructor.role !== UserRole.INSTRUCTOR)
+    if (instructor.role !== UserRole.INSTRUCTOR) {
       throw customError.forbidden('Invalid instructor');
+    }
 
-    const admin = await this.adminRepo.findOne({ where: { id: req.userId } });
+    const admin = await this.adminModel.findById(req.userId);
     if (!admin) throw customError.notFound('Admin not found');
 
     if (course.status === action) {
@@ -119,21 +79,14 @@ export class AdminCoursesService {
     }
 
     try {
-      switch (action) {
+      switch (course.status) {
         case CourseStatus.APPROVED: {
           course.isApproved = true;
           course.status = CourseStatus.APPROVED;
           course.approvalDate = new Date();
-          course.approvedBy = admin;
+          course.approvedBy = admin._id as any; // Explicitly cast to ObjectId
           course.approvedByName =
-            `${admin.firstName ?? ''} ${admin.lastName ?? ''}`.trim();
-
-          course.rejectionDate = undefined;
-          course.rejectedBy = undefined;
-          course.rejectedByName = undefined;
-          course.suspensionDate = undefined;
-          course.suspendedBy = undefined;
-          course.suspendedByName = undefined;
+            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
           break;
         }
 
@@ -141,16 +94,10 @@ export class AdminCoursesService {
           course.isApproved = false;
           course.status = CourseStatus.REJECTED;
           course.rejectionDate = new Date();
-          course.rejectedBy = admin;
+          course.rejectedBy = admin._id as any; // Explicitly cast to ObjectId
           course.rejectedByName =
-            `${admin.firstName ?? ''} ${admin.lastName ?? ''}`.trim();
-
-          course.approvalDate = undefined;
-          course.approvedBy = undefined;
-          course.approvedByName = undefined;
-          course.suspensionDate = undefined;
-          course.suspendedBy = undefined;
-          course.suspendedByName = undefined;
+            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+          course.rejectReason = rejectReason ?? '';
           break;
         }
 
@@ -158,28 +105,16 @@ export class AdminCoursesService {
           course.isApproved = false;
           course.status = CourseStatus.SUSPENDED;
           course.suspensionDate = new Date();
-          course.suspendedBy = admin;
+          course.suspendedBy = admin._id as any; // Explicitly cast to ObjectId
           course.suspendedByName =
-            `${admin.firstName ?? ''} ${admin.lastName ?? ''}`.trim();
-
-          course.rejectedBy = undefined;
-          course.rejectedByName = undefined;
+            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+          course.suspendReason = rejectReason ?? '';
           break;
         }
 
         case CourseStatus.PENDING: {
           course.isApproved = false;
           course.status = CourseStatus.PENDING;
-
-          course.approvalDate = undefined;
-          course.approvedBy = undefined;
-          course.approvedByName = undefined;
-          course.rejectionDate = undefined;
-          course.rejectedBy = undefined;
-          course.rejectedByName = undefined;
-          course.suspensionDate = undefined;
-          course.suspendedBy = undefined;
-          course.suspendedByName = undefined;
           break;
         }
 
@@ -192,10 +127,10 @@ export class AdminCoursesService {
         ...(rejectReason ? { reason: rejectReason } : {}),
         date: new Date(),
       };
-      admin.actions = [...(admin.actions ?? []), newAdminAction];
 
-      await this.courseRepo.save(course);
-      await this.adminRepo.save(admin);
+      admin.actions = [...(admin.actions || []), newAdminAction];
+      await admin.save();
+      await course.save();
 
       await this.emailService.courseStatusEmail(
         instructor.email,
@@ -220,10 +155,7 @@ export class AdminCoursesService {
   }
 
   async findAdminById(id: string) {
-    const admin = await this.adminRepo.findOne({ where: { id } });
-
-    return {
-      admin,
-    };
+    const admin = await this.adminModel.findById(id);
+    return { admin };
   }
 }
