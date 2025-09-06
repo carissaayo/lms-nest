@@ -30,13 +30,13 @@ export class User extends Document {
   @Prop({ default: false })
   emailVerified: boolean;
 
-  @Prop()
+  @Prop({ type: String })
   emailCode: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   passwordResetCode: string | null;
 
-  @Prop()
+  @Prop({ type: Date })
   resetPasswordExpires: Date | null;
 
   @Prop({ default: true })
@@ -72,28 +72,28 @@ export class User extends Document {
   @Prop({ default: 0 })
   walletBalance: number;
 
-  @Prop()
+  @Prop({ type: Date })
   createdAt: Date;
 
-  @Prop()
+  @Prop({ type: Date })
   lastSeen: Date;
 
-  @Prop()
+  @Prop({ type: Date })
   updatedAt: Date;
 
-  @Prop()
+  @Prop({ type: Date })
   nextAuthDate: Date;
 
   @Prop({ default: 0 })
   failedAuthAttempts: number;
 
-  @Prop()
+  @Prop({ type: Date })
   nextPasswordResetDate: Date;
 
   @Prop({ default: 0 })
   failedPasswordResetAttempts: number;
 
-  @Prop()
+  @Prop({ type: Date })
   nextEmailVerifyDate: Date;
 
   @Prop({ default: 0 })

@@ -51,13 +51,13 @@ export class UserAdmin extends Document {
   @Prop({ default: false })
   emailVerified: boolean;
 
-  @Prop()
+  @Prop({ type: String })
   emailCode: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   passwordResetCode: string | null;
 
-  @Prop()
+  @Prop({ type: Date })
   resetPasswordExpires: Date | null;
 
   @Prop({ default: true })
@@ -117,7 +117,7 @@ export class UserAdmin extends Document {
   @Prop({ default: false })
   isSignedUp: boolean;
 
-  @Prop()
+  @Prop({ type: Date })
   passwordResetExpires: Date | null;
 
   @Prop({ type: [Object], default: [] })
