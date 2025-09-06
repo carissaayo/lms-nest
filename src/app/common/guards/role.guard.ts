@@ -20,6 +20,8 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Access token is missing');
+
       throw customError.unauthorized('Access token is missing');
     }
 
