@@ -1,4 +1,3 @@
-import { envSchema } from './../config/config.validation';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { User } from './user.schema';

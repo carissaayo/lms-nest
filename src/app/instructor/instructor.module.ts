@@ -1,38 +1,36 @@
 import { Module } from '@nestjs/common';
-
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Course } from '../course/course.entity';
-import { User } from '../user/user.entity';
-
-import { EmailService } from '../email/email.service';
+import { MongooseModule } from '@nestjs/mongoose';
 
 import { StudentModule } from '../student/student.module';
-import { EnrollmentService } from '../enrollment/services/enrollment.service';
-import { Enrollment } from '../enrollment/enrollment.entity';
-import { UserAdmin } from '../admin/admin.entity';
-
-import { Earning } from '../instructor/entities/earning.entity';
-import { Payment } from '../payment/payment.entity';
-import { InstructorService } from './services/instructor.service';
-import { InstructorController } from './controllers/instructor.controller';
-import { WithdrawalService } from './services/withdrawal.service';
-import { WithdrawalController } from './controllers/withdrawal.controller';
-import { Bank } from './entities/bank.entity';
 import { PaymentModule } from '../payment/payment.module';
-import { Otp } from './entities/otp.entity';
-import { Withdrawal } from './entities/withdrawal.entity';
+
+import { EmailService } from '../email/email.service';
+import { InstructorService } from './services/instructor.service';
+import { WithdrawalService } from './services/withdrawal.service';
+
+import { InstructorController } from './controllers/instructor.controller';
+import { WithdrawalController } from './controllers/withdrawal.controller';
+
+import { User, UserSchema } from '../models/user.schema';
+import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
+import { Payment, PaymentSchema } from '../models/payment.schema';
+import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
+import { Earning, EarningSchema } from '../models/earning.schema';
+import { Bank, BankSchema } from '../models/bank.schema';
+import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
+import { Otp, OtpSchema } from '../models/otp.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      User,
-      Enrollment,
-      UserAdmin,
-      Payment,
-      Earning,
-      Bank,
-      Otp,
-      Withdrawal,
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: UserAdmin.name, schema: UserAdminSchema },
+      { name: Payment.name, schema: PaymentSchema },
+      { name: Enrollment.name, schema: EnrollmentSchema },
+      { name: Earning.name, schema: EarningSchema },
+      { name: Bank.name, schema: BankSchema },
+      { name: Withdrawal.name, schema: WithdrawalSchema },
+      { name: Otp.name, schema: OtpSchema },
     ]),
     StudentModule,
     PaymentModule,

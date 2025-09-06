@@ -1,18 +1,26 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Course } from '../course/course.entity';
-import { User } from '../user/user.entity';
-import { Category } from '../models/main.schema';
 import { LessonService } from './services/lesson.service';
-import { Lesson } from './lesson.entity';
 import { EmailService } from '../email/email.service';
+
 import { LessonController } from './controllers/lesson.controller';
 
+import { Category, CategorySchema } from '../models/main.schema';
+import { User, UserSchema } from '../models/user.schema';
+import { Course, CourseSchema } from '../models/course.schema';
+import { Lesson, LessonSchema } from '../models/lesson.schema';
 @Module({
-  imports: [TypeOrmModule.forFeature([Course, Category, User, Lesson])],
+  imports: [
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: Course.name, schema: CourseSchema },
+      { name: Category.name, schema: CategorySchema },
+      { name: Lesson.name, schema: LessonSchema },
+    ]),
+  ],
   providers: [LessonService, EmailService],
   controllers: [LessonController],
-  exports: [LessonService, TypeOrmModule],
+  exports: [LessonService],
 })
 export class LessonModule {}

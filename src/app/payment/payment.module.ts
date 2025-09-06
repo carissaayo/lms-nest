@@ -1,9 +1,5 @@
 import { Module } from '@nestjs/common';
 
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Course } from '../course/course.entity';
-import { User } from '../user/user.entity';
-
 import { EmailService } from '../email/email.service';
 
 import { PaymentService } from './services/payment.service.';
@@ -11,14 +7,22 @@ import { PaymentController } from './controllers/payment.controller';
 
 import { StudentModule } from '../student/student.module';
 import { EnrollmentService } from '../enrollment/services/enrollment.service';
-import { Enrollment } from '../enrollment/enrollment.entity';
-import { UserAdmin } from '../admin/admin.entity';
-import { Payment } from './payment.entity';
-import { Earning } from '../instructor/entities/earning.entity';
+import { MongooseModule } from '@nestjs/mongoose';
+import { User, UserSchema } from '../models/user.schema';
+import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
+import { Payment, PaymentSchema } from '../models/payment.schema';
+import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
+import { Earning, EarningSchema } from '../models/earning.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Enrollment, UserAdmin, Payment, Earning]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: UserAdmin.name, schema: UserAdminSchema },
+      { name: Payment.name, schema: PaymentSchema },
+      { name: Enrollment.name, schema: EnrollmentSchema },
+      { name: Earning.name, schema: EarningSchema },
+    ]),
     StudentModule,
   ],
   providers: [PaymentService, EnrollmentService, EmailService],

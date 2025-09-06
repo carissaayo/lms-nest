@@ -1,29 +1,29 @@
 import { Module } from '@nestjs/common';
 
-import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { EmailService } from '../email/email.service';
 
-import { Course } from '../course/course.entity';
-import { User } from '../user/user.entity';
 import { EnrollmentService } from './services/enrollment.service';
 import { PaymentService } from '../payment/services/payment.service.';
-import { Enrollment } from './enrollment.entity';
-import { UserAdmin } from '../admin/admin.entity';
-import { Lesson } from '../lesson/lesson.entity';
-import { Payment } from '../payment/payment.entity';
-import { Earning } from '../instructor/entities/earning.entity';
+
+import { MongooseModule } from '@nestjs/mongoose';
+import { User, UserSchema } from '../models/user.schema';
+import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
+import { Payment, PaymentSchema } from '../models/payment.schema';
+import { Course, CourseSchema } from '../models/course.schema';
+import { Lesson, LessonSchema } from '../models/lesson.schema';
+import { Earning, EarningSchema } from '../models/earning.schema';
+import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Course,
-      User,
-      Enrollment,
-      UserAdmin,
-      Lesson,
-      Payment,
-      Earning,
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: UserAdmin.name, schema: UserAdminSchema },
+      { name: Payment.name, schema: PaymentSchema },
+      { name: Course.name, schema: CourseSchema },
+      { name: Lesson.name, schema: LessonSchema },
+      { name: Earning.name, schema: EarningSchema },
+      { name: Enrollment.name, schema: EnrollmentSchema },
     ]),
   ],
   providers: [EnrollmentService, EmailService, PaymentService],

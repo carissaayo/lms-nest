@@ -15,15 +15,20 @@ import { AdminUserController } from './controllers/admin-user.controller';
 import { AdminCoursesController } from './controllers/admin-courses.controller';
 import { AdminAuthController } from './controllers/admin-auth.controller';
 import { AdminPaymentsController } from './controllers/admin-payment.controller';
-
-import { UserAdmin } from './admin.entity';
-import { User } from '../user/user.entity';
-import { Payment } from '../payment/payment.entity';
-import { Withdrawal } from '../instructor/entities/withdrawal.entity';
+import { MongooseModule } from '@nestjs/mongoose';
+import { User, UserSchema } from '../models/user.schema';
+import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
+import { Payment, PaymentSchema } from '../models/payment.schema';
+import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserAdmin, User, Payment, Withdrawal]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: UserAdmin.name, schema: UserAdminSchema },
+      { name: Payment.name, schema: PaymentSchema },
+      { name: Withdrawal.name, schema: WithdrawalSchema },
+    ]),
     EmailModule,
     CourseModule,
   ],
