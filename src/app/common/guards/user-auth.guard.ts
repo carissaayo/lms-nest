@@ -25,6 +25,8 @@ export class AuthenticateTokenUserGuard implements CanActivate {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
+    console.log('token====', token);
+
     if (!token || token === 'null') {
       throw new UnauthorizedException(
         'Access denied. Please include an access token',
@@ -43,11 +45,14 @@ export class AuthenticateTokenUserGuard implements CanActivate {
       return true;
     } catch (err: any) {
       if (err.message === 'jwt expired') {
+        console.log('jwt expired');
+
         const decoded = jwt.decode(token) as { id: string } | null;
         req.userId = decoded?.id;
         req.token = token;
         throw new UnauthorizedException('Token expired');
       }
+      console.log('jwt denied');
 
       throw new UnauthorizedException(
         'Access denied. Please re-authorize token',
