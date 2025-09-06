@@ -25,8 +25,7 @@ import {
   handleFailedAuthAttempt,
 } from 'src/utils/auth-utils';
 
-import * as bcrypt from 'bcryptjs';
-
+import bcrypt from 'bcryptjs';
 @Injectable()
 export class AuthService {
   constructor(
