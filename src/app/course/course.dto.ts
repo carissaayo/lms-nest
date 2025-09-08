@@ -18,7 +18,7 @@ export class CreateCourseDTO {
   title!: string;
 
   @IsString()
-  @MinLength(30, { message: 'Title must be at least 30 characters long' })
+  @MinLength(30, { message: 'Description must be at least 10 characters long' })
   @IsNotEmpty({ message: 'Description is required' })
   description!: string;
 
