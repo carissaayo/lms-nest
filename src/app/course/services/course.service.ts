@@ -177,7 +177,7 @@ export class CourseService {
 
     const filter: any = {};
 
-    if (categoryId) filter.categoryId = categoryId;
+    if (category) filter.categoryId = { $regex: category, $options: 'i' };
     if (status) filter.status = status;
     if (price) filter.price = price;
     if (minPrice || maxPrice) {
@@ -186,14 +186,8 @@ export class CourseService {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
 
-    if (category) {
-      filter.categoryName = { $regex: category, $options: 'i' };
-    }
-
     const courses = await this.courseModel
       .find(filter)
-      .populate('category')
-      .populate('lessons')
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();
