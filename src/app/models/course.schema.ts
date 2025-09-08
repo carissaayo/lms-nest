@@ -23,7 +23,7 @@ export class Course extends Document {
   @Prop({ required: true })
   instructorName: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Category' })
+  @Prop({ required: true })
   category: string;
 
   @Prop()
