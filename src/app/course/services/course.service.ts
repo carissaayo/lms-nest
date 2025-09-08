@@ -19,6 +19,7 @@ import {
   saveImageS3,
 } from 'src/app/fileUpload/image-upload.service';
 import { customError } from 'src/libs/custom-handlers';
+import { CourseCategory } from '../course.interface';
 
 @Injectable()
 export class CourseService {
@@ -43,18 +44,15 @@ export class CourseService {
     if (!coverImage) {
       throw customError.badRequest('coverImage is required');
     }
-
+    if (!category) {
+      throw customError.badRequest('category is required');
+    }
+    if (!Object.values(CourseCategory).includes(category as CourseCategory)) {
+      throw customError.badRequest('Category is not valid');
+    }
     const instructor = await this.userModel.findById(req.userId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
-    }
-
-    let categoryEntity: CategoryDocument | null = null;
-    if (category) {
-      categoryEntity = await this.categoryModel.findById(category);
-      if (!categoryEntity) {
-        throw new NotFoundException('Category not found');
-      }
     }
 
     singleImageValidation(coverImage, 'a cover image for the course');
@@ -67,13 +65,12 @@ export class CourseService {
     const course = new this.courseModel({
       title,
       description,
-      category: categoryEntity?._id,
+      category: category,
       price,
       instructor: instructor._id,
       coverImage: uploadImg,
       instructorId: instructor.id,
       categoryId: category,
-      categoryName: categoryEntity?.name,
       instructorName: `${instructor.firstName} ${instructor.lastName}`,
     });
 

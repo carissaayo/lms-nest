@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   IsString,
   IsOptional,
-  IsUUID,
   IsNumber,
   IsPositive,
   MinLength,
@@ -10,23 +9,7 @@ import {
   IsEnum,
   ValidateIf,
 } from 'class-validator';
-import { CourseStatus } from './course.entity';
-
-export enum CourseCategory {
-  DEVELOPMENT = 'Development',
-  BUSINESS = 'Business',
-  FINANCE_ACCOUNTING = 'Finance & Accounting',
-  IT_SOFTWARE = 'IT & Software',
-  OFFICE_PRODUCTIVITY = 'Office Productivity',
-  PERSONAL_DEVELOPMENT = 'Personal Development',
-  DESIGN = 'Design',
-  MARKETING = 'Marketing',
-  LIFESTYLE = 'Lifestyle',
-  PHOTOGRAPHY_VIDEO = 'Photography & Video',
-  HEALTH_FITNESS = 'Health & Fitness',
-  MUSIC = 'Music',
-  TEACHING_ACADEMICS = 'Teaching & Academics',
-}
+import { CourseStatus } from '../models/course.schema';
 
 export class CreateCourseDTO {
   @IsString()
@@ -39,7 +22,7 @@ export class CreateCourseDTO {
   @IsNotEmpty({ message: 'Description is required' })
   description!: string;
 
-  @IsUUID()
+  @IsString()
   @IsNotEmpty({ message: 'category is required' })
   category!: string;
 
@@ -61,7 +44,7 @@ export class UpdateCourseDTO {
   @MinLength(30, { message: 'Description must be at least 30 characters long' })
   description?: string;
 
-  @IsUUID()
+  @IsString()
   @IsOptional()
   category?: string;
 

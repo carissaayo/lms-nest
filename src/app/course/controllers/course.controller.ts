@@ -47,7 +47,7 @@ export class CourseController {
   @Patch(':courseId')
   @UseInterceptors(FileInterceptor('coverImage'))
   async updateCourse(
-    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Param('courseId') courseId: string,
     @Body() updateCourseDto: UpdateCourseDTO,
     @UploadedFile() coverImage: Express.Multer.File,
     @Req() req: CustomRequest,

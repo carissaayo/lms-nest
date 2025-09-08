@@ -3,8 +3,6 @@ import { AppModule } from './app.module';
 import { setupSecurity } from './app/security/setup-security.middleware';
 import { ValidationPipe } from '@nestjs/common';
 import bodyParser from 'body-parser';
-import { DataSource } from 'typeorm';
-import { createDataSource } from './app/config/database.config';
 import { AllExceptionsFilter } from './libs/all-exception.filter';
 
 async function bootstrap() {
