@@ -29,11 +29,11 @@ export class Course extends Document {
   @Prop()
   categoryName: string;
 
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Lesson' }])
-  lessons: string[];
+  @Prop({ type: Number, default: 0 })
+  lessons: number;
 
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Enrollment' }])
-  enrollments: string[];
+  @Prop({ type: Number, default: 0 })
+  enrollments: number;
 
   @Prop({ required: true })
   coverImage: string;
