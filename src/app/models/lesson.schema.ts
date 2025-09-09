@@ -3,7 +3,7 @@ import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { Course } from './course.schema';
 import { Assignment } from './assignment.schema';
 
-@Schema({ timestamps: true, collection: 'lessons' })
+@Schema({ timestamps: true })
 export class Lesson extends Document {
   @Prop({ required: true })
   title: string;
@@ -37,6 +37,9 @@ export class Lesson extends Document {
 
   @Prop()
   updatedAt: Date;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  instructor: MongooseSchema.Types.ObjectId;
 }
 
 export type LessonDocument = HydratedDocument<Lesson>;

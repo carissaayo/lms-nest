@@ -12,7 +12,6 @@ export class CreateLessonDTO {
   @IsString()
   title: string;
 
-  @IsUUID()
   @IsNotEmpty({ message: 'courseId is required' })
   courseId: string;
 
