@@ -30,6 +30,58 @@ export class LessonService {
     private readonly emailService: EmailService,
   ) {}
 
+  async getAllLessons(query: any, req: CustomRequest) {
+    const instructor = await this.userModel.findById(req.userId);
+    if (!instructor) {
+      throw customError.notFound('Instructor not found');
+    }
+
+    if (!instructor.isActive) {
+      throw customError.notFound('Your account has been suspended');
+    }
+
+    const { page = 1, limit = 10, search = '' } = query;
+
+    // Find all courses by this instructor
+    const instructorCourses = await this.courseModel
+      .find({
+        instructor: req.userId,
+      })
+      .select('_id');
+
+    const courseIds = instructorCourses.map((course) => course._id);
+
+    // Build search query
+    const searchQuery = {
+      course: { $in: courseIds },
+      ...(search && {
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      }),
+    };
+
+    const lessons = await this.lessonModel
+      .find(searchQuery)
+      .populate('course')
+      .populate('assignments')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    const total = await this.lessonModel.countDocuments(searchQuery);
+
+    return {
+      accessToken: req.token,
+      page: Number(page),
+      results: total,
+      lessons,
+      message: 'Lessons fetched successfully',
+    };
+  }
+
   async createLesson(
     dto: CreateLessonDTO,
     files: { video?: Express.Multer.File[]; note?: Express.Multer.File[] },
@@ -80,6 +132,7 @@ export class LessonService {
         videoUrl,
         noteUrl,
         course: courseId,
+        instructor: req.userId, // Add instructorId to lesson
         position: nextPosition,
       });
 
@@ -108,7 +161,6 @@ export class LessonService {
       );
     }
   }
-
   async updateLesson(
     dto: UpdateLessonDTO,
     files: { video?: Express.Multer.File[]; note?: Express.Multer.File[] },

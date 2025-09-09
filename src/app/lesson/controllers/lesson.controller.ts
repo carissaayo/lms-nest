@@ -81,7 +81,10 @@ export class LessonController {
   ) {
     return this.lessonService.getLessons(courseId, query, req);
   }
-
+  @Get('/')
+  async getAllLessons(@Query() query: QueryString, @Req() req: CustomRequest) {
+    return this.lessonService.getAllLessons(query, req);
+  }
   //   // ✅ New bulk reorder endpoint
   //   @Patch('course/:courseId/reorder')
   //   async reorderLessons(
