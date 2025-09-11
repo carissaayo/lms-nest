@@ -71,15 +71,12 @@ export class CourseController {
   }
 
   @Patch(':id/submit')
-  async submitCourse(
-    @IdParam('id') courseId: string,
-    @Req() req: CustomRequest,
-  ) {
+  async submitCourse(@Param('id') courseId: string, @Req() req: CustomRequest) {
     return this.courseService.submitCourse(courseId, req);
   }
   @Patch(':id/publish')
   async publishCourse(
-    @IdParam('id') courseId: string,
+    @Param('id') courseId: string,
     @Req() req: CustomRequest,
   ) {
     return this.courseService.publishCourse(courseId, req);
