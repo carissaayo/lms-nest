@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Query,
+  Param,
 } from '@nestjs/common';
 import { Roles } from 'src/app/common/decorators/roles.decorator';
 import { RolesGuard } from 'src/app/common/guards/role.guard';
@@ -23,7 +24,7 @@ import { CustomRequest } from 'src/utils/auth-utils';
 import { LessonService } from '../services/lesson.service';
 import { CreateLessonDTO, UpdateLessonDTO } from '../lesson.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { IdParam } from 'src/app/common/decorators/idParam.decorator';
+
 import { QueryString } from 'src/app/database/dbquery';
 
 @Controller('lessons')
@@ -56,7 +57,7 @@ export class LessonController {
     ]),
   )
   async updateLesson(
-    @IdParam('id') lessonId: string,
+    @Param('id') lessonId: string,
     @Body() dto: UpdateLessonDTO,
     @UploadedFiles()
     files: { video?: Express.Multer.File[]; note?: Express.Multer.File[] },
@@ -66,16 +67,13 @@ export class LessonController {
   }
 
   @Delete(':id/delete')
-  async deleteLesson(
-    @IdParam('id') lessonId: string,
-    @Req() req: CustomRequest,
-  ) {
+  async deleteLesson(@Param('id') lessonId: string, @Req() req: CustomRequest) {
     return this.lessonService.deleteLesson(lessonId, req);
   }
 
   @Get('/:courseId')
   async getLessons(
-    @IdParam('courseId') courseId: string,
+    @Param('courseId') courseId: string,
     @Query() query: QueryString,
     @Req() req: CustomRequest,
   ) {
