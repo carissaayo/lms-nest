@@ -71,7 +71,7 @@ export class LessonController {
     return this.lessonService.deleteLesson(lessonId, req);
   }
 
-  @Get('/:courseId')
+  @Get('/course/:courseId')
   async getLessons(
     @Param('courseId') courseId: string,
     @Query() query: QueryString,
