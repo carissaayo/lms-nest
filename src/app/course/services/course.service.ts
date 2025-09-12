@@ -207,8 +207,10 @@ export class CourseService {
       default:
         sortOption = { createdAt: -1 };
     }
+
     const courses = await this.courseModel
       .find(filter)
+      .sort(sortOption) // ✅ apply sort option here
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();
