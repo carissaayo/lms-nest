@@ -170,7 +170,7 @@ export class CourseService {
       minPrice,
       maxPrice,
       status,
-      name,
+      title,
       page = 1,
       limit = 10,
     } = query;
