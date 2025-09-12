@@ -81,4 +81,21 @@ export class CourseController {
   ) {
     return this.courseService.publishCourse(courseId, req);
   }
+  @Get(':id')
+  @UseGuards() // removes guards
+  async getSingleCourse(@Param('id') courseId: string) {
+    return this.courseService.getSingleCourse(courseId);
+  }
+
+  @Get(':id/view')
+  async viewCourse(@Param('id') courseId: string, @Req() req: CustomRequest) {
+    return this.courseService.viewCourseForInstructor(courseId, req);
+  }
+  @Get('instructor')
+  async getInstructorCourses(
+    @Req() req: CustomRequest,
+    @Query() query: QueryString,
+  ) {
+    return this.courseService.viewInstructorCourses(req, query);
+  }
 }

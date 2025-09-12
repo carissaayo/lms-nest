@@ -334,4 +334,74 @@ export class CourseService {
       throw new Error(error.message || 'Internal Server Error');
     }
   }
+
+  async getSingleCourse(courseId: string) {
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw customError.notFound('Course not found');
+    if (course.deleted) throw customError.notFound('Course has been deleted');
+
+    return {
+      course,
+      message: 'Course fetched successfully',
+    };
+  }
+
+  async viewCourseForInstructor(courseId: string, req: CustomRequest) {
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw customError.notFound('Course not found');
+    if (course.deleted) throw customError.notFound('Course has been deleted');
+
+    if (String(course.instructor) !== req.userId) {
+      throw customError.forbidden('You can only view your own courses');
+    }
+
+    return {
+      accessToken: req.token,
+      course,
+      message: 'Course fetched successfully',
+    };
+  }
+
+  async viewInstructorCourses(req: CustomRequest, query: any) {
+    const { status, title, sort, page = 1, limit = 10 } = query;
+
+    const filter: any = {
+      instructor: req.userId,
+      deleted: { $ne: true },
+    };
+
+    if (status) filter.status = status;
+    if (title) filter.title = { $regex: title, $options: 'i' };
+
+    let sortOption: any = {};
+    switch (sort) {
+      case 'recent':
+        sortOption = { createdAt: -1 };
+        break;
+      case 'priceLowHigh':
+        sortOption = { price: 1 };
+        break;
+      case 'priceHighLow':
+        sortOption = { price: -1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    const courses = await this.courseModel
+      .find(filter)
+      .sort(sortOption)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    const total = await this.courseModel.countDocuments(filter);
+
+    return {
+      page: Number(page),
+      results: total,
+      courses,
+      message: 'Instructor courses fetched successfully',
+    };
+  }
 }
