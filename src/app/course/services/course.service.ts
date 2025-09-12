@@ -178,8 +178,8 @@ export class CourseService {
 
     const filter: any = {};
 
+    filter.status = 'aprroved';
     if (category) filter.category = { $regex: category, $options: 'i' };
-    if (status) filter.status = status;
     if (price) filter.price = Number(price);
     if (minPrice || maxPrice) {
       filter.price = {};
@@ -338,6 +338,8 @@ export class CourseService {
   async getSingleCourse(courseId: string) {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw customError.notFound('Course not found');
+    if (course.status !== CourseStatus.APPROVED)
+      throw customError.notFound('Course is not available at the moment');
     if (course.deleted) throw customError.notFound('Course has been deleted');
 
     return {
