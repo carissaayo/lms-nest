@@ -82,7 +82,6 @@ export class CourseController {
     return this.courseService.publishCourse(courseId, req);
   }
   @Get(':id')
-  @UseGuards() // removes guards
   async getSingleCourse(@Param('id') courseId: string) {
     return this.courseService.getSingleCourse(courseId);
   }

@@ -169,7 +169,6 @@ export class CourseService {
       price,
       minPrice,
       maxPrice,
-      status,
       title,
       sort,
       page = 1,
@@ -210,7 +209,7 @@ export class CourseService {
 
     const courses = await this.courseModel
       .find(filter)
-      .sort(sortOption) // ✅ apply sort option here
+      .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();
