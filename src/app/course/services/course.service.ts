@@ -171,6 +171,7 @@ export class CourseService {
       maxPrice,
       status,
       title,
+      sort,
       page = 1,
       limit = 10,
     } = query;
@@ -187,6 +188,24 @@ export class CourseService {
     }
     if (title) {
       filter.title = { $regex: title, $options: 'i' };
+    }
+
+    let sortOption: any = {};
+    switch (sort) {
+      case 'popular':
+        sortOption = { enrollments: -1 };
+        break;
+      case 'recent':
+        sortOption = { createdAt: -1 };
+        break;
+      case 'priceLowHigh':
+        sortOption = { price: 1 };
+        break;
+      case 'priceHighLow':
+        sortOption = { price: -1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
     }
     const courses = await this.courseModel
       .find(filter)
