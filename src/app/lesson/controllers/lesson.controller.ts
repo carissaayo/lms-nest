@@ -79,18 +79,16 @@ export class LessonController {
   ) {
     return this.lessonService.getLessons(courseId, query, req);
   }
+
+  @Get('/course/:courseId/all')
+  async getLessonsStudent(
+    @Param('courseId') courseId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.lessonService.getLessonsStudent(courseId, req);
+  }
   @Get('/')
   async getAllLessons(@Query() query: QueryString, @Req() req: CustomRequest) {
     return this.lessonService.getAllLessons(query, req);
   }
-  //   // ✅ New bulk reorder endpoint
-  //   @Patch('course/:courseId/reorder')
-  //   async reorderLessons(
-  //     @Param('courseId') courseId: string,
-  //     @Body()
-  //     body: { lessons: { lessonId: number; position: number }[] },
-  //     @Req() req: CustomRequest,
-  //   ) {
-  //     return this.lessonService.reorderLessons(courseId, body.lessons, req);
-  //   }
 }

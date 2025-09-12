@@ -341,4 +341,25 @@ export class LessonService {
       message: 'Lessons fetched successfully',
     };
   }
+
+  async getLessonsStudent(courseId: string, req: CustomRequest) {
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw customError.notFound('Course not found');
+
+    const lessons = await this.lessonModel
+      .find({ course: courseId })
+      .populate('assignments')
+      .sort({ position: 1 })
+
+      .exec();
+
+    const total = await this.lessonModel.countDocuments({ course: courseId });
+
+    return {
+      accessToken: req.token,
+      results: total,
+      lessons,
+      message: 'Lessons fetched successfully',
+    };
+  }
 }
