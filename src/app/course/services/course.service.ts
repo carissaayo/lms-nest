@@ -165,12 +165,12 @@ export class CourseService {
 
   async viewCourses(query: any) {
     const {
-      categoryId,
       category,
       price,
       minPrice,
       maxPrice,
       status,
+      name,
       page = 1,
       limit = 10,
     } = query;
@@ -185,7 +185,9 @@ export class CourseService {
       if (minPrice) filter.price.$gte = Number(minPrice);
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
-
+    if (title) {
+      filter.title = { $regex: title, $options: 'i' };
+    }
     const courses = await this.courseModel
       .find(filter)
       .skip((page - 1) * limit)
