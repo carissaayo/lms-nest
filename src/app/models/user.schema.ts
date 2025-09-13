@@ -38,6 +38,8 @@ export class User extends Document {
   @Prop({ type: String })
   country: string | null;
   @Prop({ type: String })
+  street: string | null;
+  @Prop({ type: String })
   picture: string | null;
 
   @Prop({ type: String })

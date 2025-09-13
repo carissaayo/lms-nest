@@ -35,4 +35,8 @@ export class UpdateUserDTO {
   @IsOptional()
   @IsString()
   phoneNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  street?: string;
 }
