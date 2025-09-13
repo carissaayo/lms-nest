@@ -177,7 +177,7 @@ export class CourseService {
 
     const filter: any = {};
 
-    filter.status = 'aprroved';
+    filter.status = CourseStatus.APPROVED;
     if (category) filter.category = { $regex: category, $options: 'i' };
     if (price) filter.price = Number(price);
     if (minPrice || maxPrice) {
