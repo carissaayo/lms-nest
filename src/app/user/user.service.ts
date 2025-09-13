@@ -38,7 +38,7 @@ export class UsersService {
       if (!allowedFields.includes(key)) delete updateProfile[key];
     }
 
-    const user = await this.userModel.findById(req.userId);
+    const user = await this.userModel.findOne({ _id: req.userId });
     if (!user) {
       throw customError.notFound('User not found');
     }
