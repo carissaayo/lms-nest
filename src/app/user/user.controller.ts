@@ -1,21 +1,22 @@
 import {
   Controller,
   Get,
-  Param,
-  Body,
-  Patch,
   UseGuards,
   Req,
+  UseInterceptors,
+  Patch,
+  UploadedFile,
+  Body,
 } from '@nestjs/common';
-import { User } from './user.entity';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+
 import { CustomRequest } from 'src/utils/auth-utils';
 import { UsersService } from './user.service';
 import {
   AuthenticateTokenUserGuard,
   ReIssueTokenUserGuard,
 } from '../common/guards/user-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdateUserDTO } from './user.dto';
 
 @Controller('users')
 @UseGuards()
@@ -26,6 +27,16 @@ export class UsersController {
   @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async getUserProfile(@Req() req: CustomRequest) {
     return this.usersService.viewProfile(req);
+  }
+
+  @Patch('profile')
+  @UseInterceptors(FileInterceptor('picture'))
+  async updateCourse(
+    @Body() updateProfile: UpdateUserDTO,
+    @UploadedFile() picture: Express.Multer.File,
+    @Req() req: CustomRequest,
+  ) {
+    return this.usersService.updateUser(updateProfile, picture, req);
   }
 
   //   @Get(':id')

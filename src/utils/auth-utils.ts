@@ -90,6 +90,9 @@ export const GET_PROFILE = (user: any): ProfileInterface => {
     walletBalance: user.walletBalance,
     phoneNumber: user.phoneNumber,
     role: user.role,
-    courses: user.courses,
+    state: user.state,
+    city: user.city,
+    country: user.country,
+    picture: user.picture,
   };
 };

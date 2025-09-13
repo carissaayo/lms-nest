@@ -32,6 +32,15 @@ export class User extends Document {
   emailCode: string | null;
 
   @Prop({ type: String })
+  state: string | null;
+  @Prop({ type: String })
+  city: string | null;
+  @Prop({ type: String })
+  country: string | null;
+  @Prop({ type: String })
+  picture: string | null;
+
+  @Prop({ type: String })
   passwordResetCode: string | null;
 
   @Prop({ type: Date })
