@@ -4,7 +4,8 @@ import { setupSecurity } from './app/security/setup-security.middleware';
 import { ValidationPipe } from '@nestjs/common';
 import bodyParser from 'body-parser';
 import { AllExceptionsFilter } from './libs/all-exception.filter';
-
+import config from './app/config/config';
+const appConfig = config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -29,7 +30,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'https://your-frontend-domain.com'],
+    origin: ['http://localhost:5173', appConfig.frontend_url],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'RefreshToken'],

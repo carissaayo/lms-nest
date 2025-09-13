@@ -15,19 +15,13 @@ const config = () => {
     port: env.PORT,
     jwtSecret: env.JWT_SECRET_KEY,
     mongoUri: env.MONGO_URI,
-    // redis: {
-    //   host: env.REDIS_HOST,
-    //   port: env.REDIS_PORT,
-    // },
-    // paystack: {
-    //   baseUrl: env.PAYSTACK_BASE_URL,
-    //   secret: env.PAYSTACK_SECRET,
-    // },
+
     email: {
       username: env.EMAIL_USERNAME,
       password: env.EMAIL_PASSWORD,
     },
-    // app_url: env.APP_URL,
+    app_url: env.APP_URL,
+    frontend_url: env.FRONTEND_URL,
     salt_rounds: env.SALTROUNDS,
     admin: {
       email: env.ADMIN_EMAIL,

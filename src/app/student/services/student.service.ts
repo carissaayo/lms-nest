@@ -31,7 +31,9 @@ import {
   LessonStatus,
 } from 'src/app/models/lesson-progress.schema';
 import { UpdateLessonProgressDTO } from '../student.dto';
+import config from 'src/app/config/config';
 
+const appConfig = config();
 @Injectable()
 export class StudentService {
   constructor(
@@ -66,10 +68,11 @@ export class StudentService {
     }
 
     try {
+      const url = appConfig.frontend_url;
       const payment = await this.paymentService.initPaystackPayment(
         student.email,
         course.price,
-        'http://localhost:5000',
+        url,
         course.id,
         student.id,
       );
