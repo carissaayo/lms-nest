@@ -19,19 +19,18 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateUserDTO } from './user.dto';
 
 @Controller('users')
-@UseGuards()
+@UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get('profile')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async getUserProfile(@Req() req: CustomRequest) {
     return this.usersService.viewProfile(req);
   }
 
   @Patch('profile')
   @UseInterceptors(FileInterceptor('picture'))
-  async updateCourse(
+  async updateUser(
     @Body() updateProfile: UpdateUserDTO,
     @UploadedFile() picture: Express.Multer.File,
     @Req() req: CustomRequest,
