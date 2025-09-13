@@ -2,7 +2,6 @@ import { Course } from '../course/course.entity';
 
 export interface ProfileInterface {
   userId: any;
-
   firstName: string | null | undefined;
   lastName: string | null | undefined;
   email: string | null | undefined;
@@ -14,4 +13,5 @@ export interface ProfileInterface {
   city: string | null | undefined;
   country: string | null | undefined;
   picture: string | null | undefined;
+  street: string | null | undefined;
 }
