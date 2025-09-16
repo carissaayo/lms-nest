@@ -24,9 +24,6 @@ export class AuthenticateTokenUserGuard implements CanActivate {
     const JWT_ACCESS_TOKEN_SECRET = appConfig.jwt.access_token;
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    console.log('headers====', req.headers);
-
-    console.log('token====', token);
 
     if (!token || token === 'null') {
       throw new UnauthorizedException(
