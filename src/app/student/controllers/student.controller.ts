@@ -23,7 +23,7 @@ import { RolesGuard } from 'src/app/common/guards/role.guard';
 import { Roles } from 'src/app/common/decorators/roles.decorator';
 import { UserRole } from 'src/app/user/user.interface';
 import { QueryString } from 'src/app/database/dbquery';
-import { IdParam } from 'src/app/common/decorators/idParam.decorator';
+
 import { UpdateLessonProgressDTO } from '../student.dto';
 
 @Controller('students')
@@ -36,16 +36,13 @@ export class StudentController {
    * Enroll in a course
    */
   @Post('enroll/:courseId')
-  async enroll(
-    @IdParam('courseId') courseId: string,
-    @Req() req: CustomRequest,
-  ) {
+  async enroll(@Param('courseId') courseId: string, @Req() req: CustomRequest) {
     return this.studentService.enroll(courseId, req);
   }
 
   @Get('courses/:courseId')
   async getLessons(
-    @IdParam('courseId') courseId: string,
+    @Param('courseId') courseId: string,
     @Query() query: QueryString,
     @Req() req: CustomRequest,
   ) {
@@ -62,7 +59,7 @@ export class StudentController {
 
   @Post('lessons/:lessonId')
   async startLesson(
-    @IdParam('lessonId') lessonId: string,
+    @Param('lessonId') lessonId: string,
     @Req() req: CustomRequest,
   ) {
     return this.studentService.startLesson(lessonId, req);
@@ -70,7 +67,7 @@ export class StudentController {
 
   @Patch('lessons/:lessonId')
   async updateProgress(
-    @IdParam('lessonId') lessonId: string,
+    @Param('lessonId') lessonId: string,
     @Body() dto: UpdateLessonProgressDTO,
     @Req() req: CustomRequest,
   ) {
@@ -79,7 +76,7 @@ export class StudentController {
 
   @Post('lessons/:courseId/completed')
   async completeLesson(
-    @IdParam('lessonId') lessonId: string,
+    @Param('lessonId') lessonId: string,
     @Req() req: CustomRequest,
   ) {
     return this.studentService.completeLesson(lessonId, req);
