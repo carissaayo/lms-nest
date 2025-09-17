@@ -309,10 +309,10 @@ export class StudentService {
       .populate({
         path: 'course',
         match: courseFilter,
-        populate: [
-          { path: 'category' },
-          { path: 'lessons', populate: { path: 'assignments' } },
-        ],
+        // populate: [
+
+        //   { path: 'lessons', populate: { path: 'assignments' } },
+        // ],
       })
       .skip((page - 1) * limit)
       .limit(limit)
