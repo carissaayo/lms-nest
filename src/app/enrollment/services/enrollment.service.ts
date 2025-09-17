@@ -100,6 +100,9 @@ export class EnrollmentService {
     });
     await earning.save();
 
+    // increment the course enrollments
+    course.enrollments += 1;
+    await course.save();
     // --- 8. Notify Student ---
     await this.emailService.courseEnrollmentConfirmation(
       student.email,
@@ -132,17 +135,9 @@ export class EnrollmentService {
       course.title,
     );
 
-    // --- 11. Reload earning with populated refs ---
-    const savedEarning = await this.earningModel
-      .findById(earning._id)
-      .populate('instructor')
-      .populate('course')
-      .populate('payment');
-
     return {
       enrollment,
       payment,
-      earning: savedEarning,
       message: 'Student successfully enrolled and payment recorded',
       accessToken: req.token,
     };
