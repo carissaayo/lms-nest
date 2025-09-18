@@ -40,7 +40,7 @@ export class StudentController {
     return this.studentService.enroll(courseId, req);
   }
 
-  @Get('courses/:courseId')
+  @Get('courses/:courseId/lessons')
   async getLessons(
     @Param('courseId') courseId: string,
     @Query() query: QueryString,
@@ -49,6 +49,18 @@ export class StudentController {
     return this.studentService.getLessonsForStudent(courseId, query, req);
   }
 
+  @Get('courses/:courseId')
+  async getCourse(
+    @Param('courseId') courseId: string,
+    @Query() query: QueryString,
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.getSingleEnrollmentForStudent(
+      courseId,
+      query,
+      req,
+    );
+  }
   @Get('courses')
   async getEnrolledCourses(
     @Query() query: QueryString,

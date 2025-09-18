@@ -157,6 +157,48 @@ export class StudentService {
     };
   }
 
+  async getSingleEnrollmentForStudent(
+    courseId: string,
+    query: any,
+    req: CustomRequest,
+  ) {
+    const enrollment = await this.enrollmentModel.findOne({
+      course: courseId,
+      user: req.userId,
+      status: 'active',
+    });
+
+    if (!enrollment) {
+      throw customError.forbidden(
+        'You must be enrolled in this course to view it',
+      );
+    }
+
+    const course = await this.lessonModel.findOne({ _id: courseId });
+    if (!enrollment) {
+      throw customError.forbidden('Course not found');
+    }
+
+    const { page = 1, limit = 10 } = query;
+    const lessons = await this.lessonModel
+      .find({ course: courseId })
+      .sort({ position: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    const total = await this.lessonModel.countDocuments({ course: courseId });
+
+    return {
+      accessToken: req.token,
+      page: Number(page),
+      results: total,
+      lessons,
+      course,
+      message: 'Course fetched successfully',
+    };
+  }
+
   async startLesson(lessonId: string, req: CustomRequest) {
     const user = await this.userModel.findById(req.userId);
     if (!user) throw customError.notFound('User not found');
