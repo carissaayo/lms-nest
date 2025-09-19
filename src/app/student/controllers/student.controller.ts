@@ -49,6 +49,13 @@ export class StudentController {
     return this.studentService.getLessonsForStudent(courseId, query, req);
   }
 
+  @Get('lessons/:lessonId')
+  async getALesson(
+    @Param('lessonId') lessonId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.getALesson(lessonId, req);
+  }
   @Get('courses/:courseId')
   async getCourse(
     @Param('courseId') courseId: string,
