@@ -69,7 +69,7 @@ export class StudentController {
     return this.studentService.viewEnrolledCourses(query, req);
   }
 
-  @Post('lessons/:lessonId')
+  @Post('lessons/:lessonId/start')
   async startLesson(
     @Param('lessonId') lessonId: string,
     @Req() req: CustomRequest,
