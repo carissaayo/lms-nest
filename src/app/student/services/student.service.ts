@@ -237,7 +237,31 @@ export class StudentService {
       progress,
     };
   }
+  async getALesson(lessonId: string, req: CustomRequest) {
+    const student = await this.userModel.findById(req.userId);
+    if (!student) {
+      throw customError.notFound('Student not found');
+    }
 
+    const lesson = await this.lessonModel.findOne({ _id: lessonId });
+    if (!lesson) throw customError.notFound('Lesson not found');
+    const course = await this.courseModel.findOne({ _id: lesson.course });
+    if (!course) throw customError.notFound('Course not found');
+
+    const enrollment = await this.enrollmentModel.findOne({
+      user: student._id,
+      course: course._id,
+    });
+
+    if (!enrollment)
+      throw customError.forbidden('You have not enrolled for the course yet');
+
+    return {
+      accessToken: req.token,
+      lesson,
+      message: 'Lesson fetched successfully',
+    };
+  }
   async updateProgress(
     lessonId: string,
     dto: UpdateLessonProgressDTO,

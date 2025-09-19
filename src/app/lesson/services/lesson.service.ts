@@ -27,6 +27,7 @@ export class LessonService {
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+
     private readonly emailService: EmailService,
   ) {}
 
