@@ -174,8 +174,8 @@ export class StudentService {
       );
     }
 
-    const course = await this.lessonModel.findOne({ _id: courseId });
-    if (!enrollment) {
+    const course = await this.courseModel.findOne({ _id: courseId });
+    if (!course) {
       throw customError.forbidden('Course not found');
     }
 
