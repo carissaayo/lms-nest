@@ -263,10 +263,18 @@ export class StudentService {
       })
       .sort({ position: 1 });
 
+    const previousLesson = await this.lessonModel
+      .findOne({
+        course: course._id,
+        position: { $lt: lesson.position },
+      })
+      .sort({ position: -1 });
+
     return {
       accessToken: req.token,
       lesson,
       nextLesson: nextLesson || null,
+      previousLesson: previousLesson || null,
       message: 'Lesson fetched successfully',
     };
   }
