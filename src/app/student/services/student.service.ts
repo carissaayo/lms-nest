@@ -256,9 +256,17 @@ export class StudentService {
     if (!enrollment)
       throw customError.forbidden('You have not enrolled for the course yet');
 
+    const nextLesson = await this.lessonModel
+      .findOne({
+        course: course._id,
+        position: { $gt: lesson.position },
+      })
+      .sort({ position: 1 });
+
     return {
       accessToken: req.token,
       lesson,
+      nextLesson: nextLesson || null,
       message: 'Lesson fetched successfully',
     };
   }
