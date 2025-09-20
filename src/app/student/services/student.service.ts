@@ -377,8 +377,7 @@ export class StudentService {
     const courseFilter: any = {};
 
     if (categoryId) courseFilter.categoryId = categoryId;
-    if (category)
-      courseFilter.categoryName = { $regex: category, $options: 'i' };
+    if (category) courseFilter.category = { $regex: category, $options: 'i' };
     if (price) courseFilter.price = price;
     if (minPrice || maxPrice) {
       courseFilter.price = {};

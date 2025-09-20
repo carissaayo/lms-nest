@@ -1,6 +1,9 @@
+import { Type } from 'class-transformer';
 import {
   IsNotEmpty,
+  IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
   IsUUID,
   MinLength,
@@ -19,6 +22,12 @@ export class CreateLessonDTO {
   @IsNotEmpty({ message: 'Description is required' })
   @IsString()
   description: string;
+
+  @IsNumber()
+  @IsPositive()
+  @IsNotEmpty({ message: 'duration is required' })
+  @Type(() => Number)
+  duration!: number;
 }
 
 export class UpdateLessonDTO {
@@ -29,4 +38,10 @@ export class UpdateLessonDTO {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsNumber()
+  @IsPositive()
+  @IsNotEmpty({ message: 'duration is required' })
+  @Type(() => Number)
+  duration?: number;
 }

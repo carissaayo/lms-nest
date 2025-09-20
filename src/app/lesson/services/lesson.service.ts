@@ -133,7 +133,7 @@ export class LessonService {
         videoUrl,
         noteUrl,
         course: courseId,
-        instructor: req.userId, // Add instructorId to lesson
+        instructor: req.userId,
         position: nextPosition,
       });
 
@@ -226,6 +226,7 @@ export class LessonService {
 
       if (dto.title) lesson.title = dto.title;
       if (dto.description) lesson.description = dto.description;
+      if (dto.duration) lesson.duration = dto.duration;
 
       course.status = CourseStatus.PENDING;
       await course.save();
