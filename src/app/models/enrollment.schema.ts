@@ -28,6 +28,9 @@ export class Enrollment extends Document {
 
   @Prop()
   createdAt: Date;
+
+  @Prop()
+  updatedAt: Date;
 }
 
 export type EnrollmentDocument = HydratedDocument<Enrollment>;

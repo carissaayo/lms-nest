@@ -76,6 +76,10 @@ export class StudentController {
     return this.studentService.viewEnrolledCourses(query, req);
   }
 
+  @Get('analytics')
+  async getDetailedAnalytics(@Req() req: CustomRequest) {
+    return this.studentService.getDetailedAnalytics(req);
+  }
   @Post('lessons/:lessonId/start')
   async startLesson(
     @Param('lessonId') lessonId: string,
