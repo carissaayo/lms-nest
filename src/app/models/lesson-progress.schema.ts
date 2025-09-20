@@ -10,10 +10,10 @@ export enum LessonStatus {
 @Schema({ timestamps: true, collection: 'lesson_progress' })
 export class LessonProgress extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  user: string;
+  user: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Lesson', required: true })
-  lesson: string;
+  lesson: MongooseSchema.Types.ObjectId;
 
   @Prop({ enum: LessonStatus, default: LessonStatus.NOT_STARTED })
   status: LessonStatus;
