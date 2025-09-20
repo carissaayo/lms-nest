@@ -658,6 +658,100 @@ export class StudentService {
         ? (totalCompletionTime / completedCoursesWithTime) * 100
         : 0;
 
+    // Calculate learning by category
+    const categoryStats = new Map<
+      string,
+      { count: number; learningHours: number }
+    >();
+
+    for (const enrollment of enrollments) {
+      if (enrollment.course) {
+        const course = enrollment.course as any;
+        const category = course.category || 'Other';
+
+        // Get lessons for this course to calculate duration
+        const lessons = await this.lessonModel.find({ course: course._id });
+        const totalCourseDuration = lessons.reduce(
+          (acc, lesson) => acc + (lesson.duration || 0),
+          0,
+        );
+
+        // Calculate watched hours based on progress percentage
+        const progressPercentage = enrollment.progress || 0;
+        const watchedDuration =
+          (totalCourseDuration * progressPercentage) / 100;
+        const watchedHours = watchedDuration / 60; // Convert to hours
+
+        // Update category statistics
+        if (categoryStats.has(category)) {
+          const existing = categoryStats.get(category)!;
+          categoryStats.set(category, {
+            count: existing.count + 1,
+            learningHours: existing.learningHours + watchedHours,
+          });
+        } else {
+          categoryStats.set(category, {
+            count: 1,
+            learningHours: watchedHours,
+          });
+        }
+      }
+    }
+
+    // Convert to array format for frontend pie chart
+    const learningByCategory = Array.from(categoryStats.entries()).map(
+      ([category, stats]) => ({
+        name: category,
+        value: Math.round(stats.learningHours * 100) / 100, // Learning hours rounded to 2 decimal places
+        count: stats.count, // Number of courses in this category
+        percentage:
+          totalLearningHours > 0
+            ? Math.round(
+                (stats.learningHours / totalLearningHours) * 100 * 100,
+              ) / 100
+            : 0, // Percentage of total learning time
+      }),
+    );
+
+    // Get latest 5 enrollments with course progress
+    const recentEnrollments = await this.enrollmentModel
+      .find({ user: req.userId })
+      .populate('course')
+      .sort({ createdAt: -1 }) // Sort by latest first
+      .limit(5)
+      .exec();
+
+    const recentCourseProgress: any = [];
+    for (const enrollment of recentEnrollments) {
+      if (enrollment.course) {
+        const course = enrollment.course as any;
+
+        // Get total course duration from lessons
+        const lessons = await this.lessonModel.find({ course: course._id });
+        const totalDurationMinutes = lessons.reduce(
+          (acc, lesson) => acc + (lesson.duration || 0),
+          0,
+        );
+        const totalDurationHours =
+          Math.round((totalDurationMinutes / 60) * 100) / 100; // Convert to hours
+
+        // Get enrollment progress percentage
+        const progressPercentage = enrollment.progress || 0;
+
+        recentCourseProgress.push({
+          courseId: course._id,
+          courseName: course.title,
+          instructor: course.instructor || 'Unknown', // Adjust field name based on your schema
+          category: course.category,
+          totalDurationHours,
+          progress: Math.round(progressPercentage * 100) / 100, // Round to 2 decimal places
+          status: enrollment.status,
+          enrolledAt: enrollment.createdAt,
+          lastUpdated: enrollment.updatedAt,
+        });
+      }
+    }
+
     return {
       accessToken: req.token,
       message: 'Detailed analytics fetched successfully',
@@ -666,6 +760,8 @@ export class StudentService {
         completedCourses,
         totalCourses,
         courseCompletionRate: Math.round(averageCompletionRate * 100) / 100, // Round to 2 decimal places
+        learningByCategory, // Category breakdown for pie chart
+        recentCourseProgress, // Latest 5 enrollments with progress
       },
     };
   }
