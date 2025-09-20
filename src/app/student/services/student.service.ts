@@ -23,6 +23,7 @@ import { EmailService } from 'src/app/email/email.service';
 import {
   Enrollment,
   EnrollmentDocument,
+  EnrollmentStatus,
 } from 'src/app/models/enrollment.schema';
 import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
 import {
@@ -218,6 +219,15 @@ export class StudentService {
       lesson: lessonId,
     });
 
+    const enrollment = await this.enrollmentModel.findOne({
+      user: req.userId,
+      course: course._id,
+    });
+
+    if (!enrollment) throw customError.notFound('Enrollment not found');
+
+    enrollment.status = EnrollmentStatus.ACTIVE;
+
     if (!progress) {
       progress = new this.lessonProgressModel({
         user: user._id,
@@ -230,11 +240,37 @@ export class StudentService {
     }
 
     await progress.save();
-
+    await enrollment.save();
     return {
       accessToken: req.token,
       message: 'Lesson has started successfully',
       progress,
+    };
+  }
+
+  async startCourse(courseId: string, req: CustomRequest) {
+    const user = await this.userModel.findById(req.userId);
+    if (!user) throw customError.notFound('User not found');
+
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw customError.notFound('Course not found');
+
+    if (course.status !== CourseStatus.APPROVED) {
+      throw customError.forbidden('Course is not available');
+    }
+
+    const enrollment = await this.enrollmentModel.findOne({
+      user: req.userId,
+      course: course._id,
+    });
+
+    if (!enrollment) throw customError.notFound('Enrollment not found');
+
+    enrollment.status = EnrollmentStatus.ACTIVE;
+    await enrollment.save();
+    return {
+      accessToken: req.token,
+      message: 'Course has started successfully',
     };
   }
   async getALesson(lessonId: string, req: CustomRequest) {
@@ -310,7 +346,7 @@ export class StudentService {
     progress.watchedDuration = watchedDuration;
 
     const percentWatched = (watchedDuration / videoDuration) * 100;
-    if (percentWatched >= 70) {
+    if (percentWatched >= 90) {
       progress.status = LessonStatus.COMPLETED;
       progress.completed = true;
     } else {
@@ -340,6 +376,14 @@ export class StudentService {
     if (course.status !== CourseStatus.APPROVED) {
       throw customError.forbidden('Course is not available');
     }
+    const enrollment = await this.enrollmentModel.findOne({
+      user: req.userId,
+      course: course._id,
+    });
+
+    if (!enrollment) throw customError.notFound('Enrollment not found');
+
+    enrollment.status = EnrollmentStatus.COMPLETED;
 
     const progress = await this.lessonProgressModel.findOne({
       user: user._id,
@@ -351,11 +395,38 @@ export class StudentService {
     progress.status = LessonStatus.COMPLETED;
     progress.completed = true;
     await progress.save();
+    await enrollment.save();
 
     return {
       accessToken: req.token,
       message: 'Lesson has been completed successfully',
       progress,
+    };
+  }
+
+  async completeCourse(courseId: string, req: CustomRequest) {
+    const user = await this.userModel.findById(req.userId);
+    if (!user) throw customError.notFound('User not found');
+
+    const course = await this.courseModel.findById(courseId);
+    if (!course) throw customError.notFound('Course not found');
+
+    if (course.status !== CourseStatus.APPROVED) {
+      throw customError.forbidden('Course is not available');
+    }
+    const enrollment = await this.enrollmentModel.findOne({
+      user: req.userId,
+      course: course._id,
+    });
+
+    if (!enrollment) throw customError.notFound('Enrollment not found');
+
+    enrollment.status = EnrollmentStatus.COMPLETED;
+    await enrollment.save();
+
+    return {
+      accessToken: req.token,
+      message: 'Course has been completed successfully',
     };
   }
 
@@ -409,6 +480,37 @@ export class StudentService {
       results: total,
       courses,
       message: 'Enrolled courses fetched successfully',
+    };
+  }
+
+  async analytic(req: CustomRequest) {
+    const user = await this.userModel.findById(req.userId);
+    if (!user) throw customError.notFound('User not found');
+
+    const enrollments = await this.enrollmentModel.find({ user: req.userId });
+
+    const totalEnrollments = await this.enrollmentModel.countDocuments({
+      user: req.userId,
+    });
+    const activeEnrollments = await this.enrollmentModel.countDocuments({
+      user: req.userId,
+      status: EnrollmentStatus.ACTIVE,
+    });
+    const completedEnrollments = await this.enrollmentModel.countDocuments({
+      user: req.userId,
+      status: EnrollmentStatus.COMPLETED,
+    });
+    const pendingEnrollments = await this.enrollmentModel.countDocuments({
+      user: req.userId,
+      status: EnrollmentStatus.PENDING,
+    });
+
+    return {
+      message: 'Student analytics fetched successfully',
+      completedEnrollments: completedEnrollments || 0,
+      activeEnrollments: activeEnrollments || 0,
+      pendingEnrollments: pendingEnrollments || 0,
+      totalEnrollments: totalEnrollments || 0,
     };
   }
 }

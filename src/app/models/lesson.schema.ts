@@ -32,8 +32,8 @@ export class Lesson extends Document {
   @Prop()
   noteUrl: string;
 
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'LessonProgress' }])
-  progress: MongooseSchema.Types.ObjectId[];
+  @Prop({ type: Number, default: 0 })
+  progress: number;
 
   @Prop()
   createdAt: Date;
