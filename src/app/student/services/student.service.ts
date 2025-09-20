@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -353,7 +354,7 @@ export class StudentService {
       progress.status = LessonStatus.IN_PROGRESS;
       progress.completed = false;
     }
-
+    await this.calculateCourseProgress(lesson.courseId, String(user._id));
     await progress.save();
 
     return {
@@ -427,6 +428,62 @@ export class StudentService {
     return {
       accessToken: req.token,
       message: 'Course has been completed successfully',
+    };
+  }
+
+  async calculateCourseProgress(courseId: string, userId: string) {
+    const lessons = await this.lessonModel.find({ course: courseId });
+    if (!lessons || lessons.length === 0) {
+      throw customError.notFound('Course has no lessons');
+    }
+    const enrollment = await this.enrollmentModel.findOne({
+      user: userId,
+      course: courseId,
+    });
+    if (!enrollment) {
+      throw customError.notFound('Enrollment not found');
+    }
+    const lessonIds = lessons.map((lesson) => lesson._id);
+
+    // Get progress for all lessons for this user
+    const userProgress = await this.lessonProgressModel.find({
+      lesson: { $in: lessonIds },
+      user: userId,
+    });
+
+    // Total duration of all lessons
+    const totalDuration = lessons.reduce(
+      (acc, lesson) => acc + (lesson.duration || 0),
+      0,
+    );
+
+    // Completed duration (watchedDuration or full lesson duration if marked completed)
+    const completedDuration = userProgress.reduce((acc, progress) => {
+      const lesson = lessons.find(
+        (l) => String(l._id) === progress.lesson.toString(),
+      );
+      if (!lesson) return acc;
+
+      if (progress.completed) {
+        return acc + (lesson.duration || 0);
+      }
+
+      return (
+        acc + Math.min(progress.watchedDuration || 0, lesson.duration || 0)
+      );
+    }, 0);
+
+    // Calculate percentage
+    const percentage =
+      totalDuration > 0 ? (completedDuration / totalDuration) * 100 : 0;
+
+    enrollment.progress = percentage;
+    await enrollment.save();
+
+    return {
+      totalDuration,
+      completedDuration,
+      percentage: Math.round(percentage),
     };
   }
 

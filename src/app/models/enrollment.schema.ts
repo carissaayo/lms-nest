@@ -17,6 +17,9 @@ export class Enrollment extends Document {
   @Prop({ enum: EnrollmentStatus, default: EnrollmentStatus.PENDING })
   status: EnrollmentStatus;
 
+  @Prop({ type: Number, default: 0 })
+  progress: number;
+
   @Prop({ required: true })
   paymentReference: string;
 
