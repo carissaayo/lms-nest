@@ -23,6 +23,9 @@ export class Lesson extends Document {
   @Prop({ required: true })
   courseId: string;
 
+  @Prop({ type: Number, default: 0 })
+  duration: number;
+
   @Prop({ required: true })
   videoUrl: string;
 

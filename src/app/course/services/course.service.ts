@@ -20,13 +20,15 @@ import {
 } from 'src/app/fileUpload/image-upload.service';
 import { customError } from 'src/libs/custom-handlers';
 import { CourseCategory } from '../course.interface';
+import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
 
 @Injectable()
 export class CourseService {
   constructor(
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
+    @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
+
     private readonly emailService: EmailService,
   ) {}
 
@@ -115,12 +117,10 @@ export class CourseService {
     const { title, description, category, price } = updateCourseDto || {};
 
     if (category) {
-      const foundCategory = await this.categoryModel.findById(category);
-      if (!foundCategory) {
-        throw customError.notFound('Category not found');
+      if (!Object.values(CourseCategory).includes(category as CourseCategory)) {
+        throw customError.badRequest('Category is not valid');
       }
-      course.category = foundCategory.id;
-      course.categoryName = foundCategory.name;
+      course.category = category;
     }
 
     if (coverImage) {
@@ -270,10 +270,22 @@ export class CourseService {
     if (course.status !== CourseStatus.PENDING) {
       throw customError.forbidden('This course cannot be submitted');
     }
+    const lessons = await this.lessonModel.find({ course: courseId });
+
+    if (!lessons || lessons.length === 0) {
+      throw customError.notFound('Course needs to have at least one lesson');
+    }
+
+    const totalDuration = lessons.reduce(
+      (acc, lesson) => acc + (lesson.duration || 0),
+      0,
+    );
 
     try {
       course.isSubmitted = true;
       course.submittedAt = new Date();
+      course.duration = totalDuration;
+      course.lessons = lessons.length;
       await course.save();
 
       await this.emailService.courseSubmission(

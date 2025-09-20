@@ -35,6 +35,9 @@ export class Course extends Document {
   @Prop({ type: Number, default: 0 })
   enrollments: number;
 
+  @Prop({ type: Number, default: 0 })
+  duration: number;
+
   @Prop({ required: true })
   coverImage: string;
 

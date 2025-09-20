@@ -9,6 +9,7 @@ import { EmailService } from '../email/email.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../models/user.schema';
 import { Course, CourseSchema } from '../models/course.schema';
+import { Lesson, LessonSchema } from '../models/lesson.schema';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Course, CourseSchema } from '../models/course.schema';
       { name: User.name, schema: UserSchema },
       { name: Category.name, schema: CategorySchema },
       { name: Course.name, schema: CourseSchema },
+      { name: Lesson.name, schema: LessonSchema },
     ]),
   ],
   providers: [CourseService, EmailService],
