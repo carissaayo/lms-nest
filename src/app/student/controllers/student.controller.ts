@@ -93,12 +93,28 @@ export class StudentController {
     return this.studentService.updateProgress(lessonId, dto, req);
   }
 
-  @Post('lessons/:courseId/completed')
+  @Post('lessons/:lessonId/completed')
   async completeLesson(
     @Param('lessonId') lessonId: string,
     @Req() req: CustomRequest,
   ) {
     return this.studentService.completeLesson(lessonId, req);
+  }
+
+  @Post('lessons/:courseId/start')
+  async startCourse(
+    @Param('courseId') courseId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.startCourse(courseId, req);
+  }
+
+  @Post('lessons/:courseId/completed')
+  async completeCourse(
+    @Param('courseId') courseId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.completeCourse(courseId, req);
   }
   /**
    * Get assignments for a course
