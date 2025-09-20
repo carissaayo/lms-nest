@@ -77,8 +77,11 @@ export class StudentController {
   }
 
   @Get('analytics')
-  async getDetailedAnalytics(@Req() req: CustomRequest) {
-    return this.studentService.getDetailedAnalytics(req);
+  async getDetailedAnalytics(
+    @Query() query: any,
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.getDetailedAnalytics(query,req);
   }
   @Post('lessons/:lessonId/start')
   async startLesson(
