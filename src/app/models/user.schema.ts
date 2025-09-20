@@ -54,18 +54,6 @@ export class User extends Document {
   @Prop({ enum: UserRole, default: UserRole.STUDENT })
   role: UserRole;
 
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Course' }])
-  courses: string[];
-
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Enrollment' }])
-  enrollments: string[];
-
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Transaction' }])
-  transactions: string[];
-
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Assignment' }])
-  assignments: string[];
-
   @Prop({ enum: UserStatus, default: UserStatus.PENDING })
   status: UserStatus;
 
@@ -113,18 +101,6 @@ export class User extends Document {
 
   @Prop({ type: [Object], default: [] })
   actions: any[];
-
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'LessonProgress' }])
-  lessonProgress: string[];
-
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Payment' }])
-  payments: string[];
-
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Earning' }])
-  earnings: string[];
-
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Bank' }])
-  banks: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

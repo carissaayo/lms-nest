@@ -34,6 +34,7 @@ export class UsersService {
       'city',
       'country',
       'street',
+      '',
     ];
     for (const key of Object.keys(updateProfile)) {
       if (!allowedFields.includes(key)) delete updateProfile[key];
