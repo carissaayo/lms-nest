@@ -788,7 +788,92 @@ export class StudentService {
           lastUpdated: enrollment.updatedAt,
         });
       }
-    }
+    } // Calculate learning progress over time (monthly breakdown)
+    const getLearningProgressData = async () => {
+      const progressData: any = [];
+      const now = new Date();
+      const monthsToShow = 12; // Show last 12 months
+
+      for (let i = monthsToShow - 1; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const nextMonthDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - i + 1,
+          1,
+        );
+
+        // Get enrollments for this specific month
+        const monthEnrollments = await this.enrollmentModel
+          .find({
+            user: req.userId,
+            createdAt: {
+              $gte: monthDate,
+              $lt: nextMonthDate,
+            },
+          })
+          .populate('course')
+          .exec();
+
+        // Calculate hours for this month
+        let monthHours = 0;
+        for (const enrollment of monthEnrollments) {
+          if (enrollment.course) {
+            const course = enrollment.course as any;
+            const lessons = await this.lessonModel.find({ course: course._id });
+            const totalCourseDuration = lessons.reduce(
+              (acc, lesson) => acc + (lesson.duration || 0),
+              0,
+            );
+            const progressPercentage = enrollment.progress || 0;
+            const watchedDuration =
+              (totalCourseDuration * progressPercentage) / 100;
+            monthHours += watchedDuration / 60;
+          }
+        }
+
+        // Get completed courses count for this month
+        const monthCompletedCourses = await this.enrollmentModel.countDocuments(
+          {
+            user: req.userId,
+            status: EnrollmentStatus.COMPLETED,
+            updatedAt: {
+              // Use updatedAt for completion date
+              $gte: monthDate,
+              $lt: nextMonthDate,
+            },
+          },
+        );
+
+        // Get total enrollments up to this month for cumulative courses count
+        const cumulativeCourses = await this.enrollmentModel.countDocuments({
+          user: req.userId,
+          createdAt: { $lte: nextMonthDate },
+        });
+
+        // Calculate completion rate for this month
+        const monthTotalEnrollments = monthEnrollments.length;
+        const monthCompletionRate =
+          monthTotalEnrollments > 0
+            ? (monthCompletedCourses / monthTotalEnrollments) * 100
+            : 0;
+
+        // Get month name
+        const monthName = monthDate.toLocaleDateString('en-US', {
+          month: 'short',
+        });
+
+        progressData.push({
+          month: monthName,
+          hours: Math.round(monthHours * 100) / 100,
+          courses: cumulativeCourses, // Cumulative courses
+          completionRate: Math.round(monthCompletionRate * 100) / 100,
+        });
+      }
+
+      return progressData;
+    };
+
+    const learningProgressData = await getLearningProgressData();
 
     return {
       accessToken: req.token,
@@ -800,7 +885,8 @@ export class StudentService {
         courseCompletionRate: Math.round(averageCompletionRate * 100) / 100,
         learningByCategory,
         recentCourseProgress,
-        timeRange, // Return the applied filter
+        timeRange,
+        learningProgressData,
       },
     };
   }
