@@ -571,13 +571,66 @@ export class StudentService {
     };
   }
 
-  async getDetailedAnalytics(req: CustomRequest) {
+  async getDetailedAnalytics(query: any, req: CustomRequest) {
     const user = await this.userModel.findById(req.userId);
     if (!user) throw customError.notFound('User not found');
 
-    // Get all enrollments for the user with populated course data
+    const { timeRange } = query;
+    let dateFilter: any = {};
+
+    // Apply time range filter if provided
+    if (timeRange) {
+      const now = new Date();
+      let startDate: Date | null;
+      switch (timeRange) {
+        case '7days':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+          break;
+        case '1month':
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth() - 1,
+            now.getDate(),
+          );
+          break;
+        case '3months':
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth() - 3,
+            now.getDate(),
+          );
+          break;
+        case '6months':
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth() - 6,
+            now.getDate(),
+          );
+          break;
+        case '1year':
+          startDate = new Date(
+            now.getFullYear() - 1,
+            now.getMonth(),
+            now.getDate(),
+          );
+          break;
+        default:
+          startDate = null;
+      }
+
+      if (startDate) {
+        dateFilter = {
+          createdAt: { $gte: startDate },
+        };
+      }
+    }
+
+    // Get enrollments with date filter
     const enrollments = await this.enrollmentModel
-      .find({ user: req.userId })
+      .find({
+        user: req.userId,
+        ...dateFilter,
+      })
       .populate('course')
       .exec();
 
@@ -586,33 +639,29 @@ export class StudentService {
     for (const enrollment of enrollments) {
       if (enrollment.course) {
         const course = enrollment.course as any;
-
-        // Get all lessons for this course to calculate total course duration
         const lessons = await this.lessonModel.find({ course: course._id });
         const totalCourseDuration = lessons.reduce(
           (acc, lesson) => acc + (lesson.duration || 0),
           0,
         );
-
-        // Calculate watched hours based on progress percentage
         const progressPercentage = enrollment.progress || 0;
         const watchedDuration =
           (totalCourseDuration * progressPercentage) / 100;
-
-        // Convert from minutes/seconds to hours (assuming duration is in minutes)
         totalLearningHours += watchedDuration / 60;
       }
     }
 
-    // Get completed courses count
+    // Get completed courses count with filter
     const completedCourses = await this.enrollmentModel.countDocuments({
       user: req.userId,
       status: EnrollmentStatus.COMPLETED,
+      ...dateFilter,
     });
 
-    // Get total courses (total enrollments)
+    // Get total courses with filter
     const totalCourses = await this.enrollmentModel.countDocuments({
       user: req.userId,
+      ...dateFilter,
     });
 
     // Calculate course completion rate
@@ -623,6 +672,7 @@ export class StudentService {
       .find({
         user: req.userId,
         status: EnrollmentStatus.COMPLETED,
+        ...dateFilter,
       })
       .populate('course')
       .exec();
@@ -630,21 +680,16 @@ export class StudentService {
     for (const enrollment of completedEnrollments) {
       if (enrollment.course && enrollment.updatedAt && enrollment.createdAt) {
         const course = enrollment.course as any;
-
-        // Get course duration in hours
         const lessons = await this.lessonModel.find({ course: course._id });
         const courseDurationMinutes = lessons.reduce(
           (acc, lesson) => acc + (lesson.duration || 0),
           0,
         );
         const courseDurationHours = courseDurationMinutes / 60;
-
-        // Calculate time taken to complete (in hours)
         const completionTimeMs =
           enrollment.updatedAt.getTime() - enrollment.createdAt.getTime();
         const completionTimeHours = completionTimeMs / (1000 * 60 * 60);
 
-        // Calculate completion rate (course duration / time taken to complete)
         if (completionTimeHours > 0 && courseDurationHours > 0) {
           const rate = courseDurationHours / completionTimeHours;
           totalCompletionTime += rate;
@@ -668,21 +713,16 @@ export class StudentService {
       if (enrollment.course) {
         const course = enrollment.course as any;
         const category = course.category || 'Other';
-
-        // Get lessons for this course to calculate duration
         const lessons = await this.lessonModel.find({ course: course._id });
         const totalCourseDuration = lessons.reduce(
           (acc, lesson) => acc + (lesson.duration || 0),
           0,
         );
-
-        // Calculate watched hours based on progress percentage
         const progressPercentage = enrollment.progress || 0;
         const watchedDuration =
           (totalCourseDuration * progressPercentage) / 100;
-        const watchedHours = watchedDuration / 60; // Convert to hours
+        const watchedHours = watchedDuration / 60;
 
-        // Update category statistics
         if (categoryStats.has(category)) {
           const existing = categoryStats.get(category)!;
           categoryStats.set(category, {
@@ -698,26 +738,28 @@ export class StudentService {
       }
     }
 
-    // Convert to array format for frontend pie chart
     const learningByCategory = Array.from(categoryStats.entries()).map(
       ([category, stats]) => ({
         name: category,
-        value: Math.round(stats.learningHours * 100) / 100, // Learning hours rounded to 2 decimal places
-        count: stats.count, // Number of courses in this category
+        value: Math.round(stats.learningHours * 100) / 100,
+        count: stats.count,
         percentage:
           totalLearningHours > 0
             ? Math.round(
                 (stats.learningHours / totalLearningHours) * 100 * 100,
               ) / 100
-            : 0, // Percentage of total learning time
+            : 0,
       }),
     );
 
-    // Get latest 5 enrollments with course progress
+    // Get latest 5 enrollments with course progress (within date filter)
     const recentEnrollments = await this.enrollmentModel
-      .find({ user: req.userId })
+      .find({
+        user: req.userId,
+        ...dateFilter,
+      })
       .populate('course')
-      .sort({ createdAt: -1 }) // Sort by latest first
+      .sort({ createdAt: -1 })
       .limit(5)
       .exec();
 
@@ -725,26 +767,22 @@ export class StudentService {
     for (const enrollment of recentEnrollments) {
       if (enrollment.course) {
         const course = enrollment.course as any;
-
-        // Get total course duration from lessons
         const lessons = await this.lessonModel.find({ course: course._id });
         const totalDurationMinutes = lessons.reduce(
           (acc, lesson) => acc + (lesson.duration || 0),
           0,
         );
         const totalDurationHours =
-          Math.round((totalDurationMinutes / 60) * 100) / 100; // Convert to hours
-
-        // Get enrollment progress percentage
+          Math.round((totalDurationMinutes / 60) * 100) / 100;
         const progressPercentage = enrollment.progress || 0;
 
         recentCourseProgress.push({
           courseId: course._id,
           courseName: course.title,
-          instructor: course.instructor || 'Unknown', // Adjust field name based on your schema
+          instructor: course.instructor || 'Unknown',
           category: course.category,
           totalDurationHours,
-          progress: Math.round(progressPercentage * 100) / 100, // Round to 2 decimal places
+          progress: Math.round(progressPercentage * 100) / 100,
           status: enrollment.status,
           enrolledAt: enrollment.createdAt,
           lastUpdated: enrollment.updatedAt,
@@ -756,12 +794,13 @@ export class StudentService {
       accessToken: req.token,
       message: 'Detailed analytics fetched successfully',
       analytics: {
-        totalLearningHours: Math.round(totalLearningHours * 100) / 100, // Round to 2 decimal places
+        totalLearningHours: Math.round(totalLearningHours * 100) / 100,
         completedCourses,
         totalCourses,
-        courseCompletionRate: Math.round(averageCompletionRate * 100) / 100, // Round to 2 decimal places
-        learningByCategory, // Category breakdown for pie chart
-        recentCourseProgress, // Latest 5 enrollments with progress
+        courseCompletionRate: Math.round(averageCompletionRate * 100) / 100,
+        learningByCategory,
+        recentCourseProgress,
+        timeRange, // Return the applied filter
       },
     };
   }
