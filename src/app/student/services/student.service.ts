@@ -570,4 +570,103 @@ export class StudentService {
       totalEnrollments: totalEnrollments || 0,
     };
   }
+
+  async getDetailedAnalytics(req: CustomRequest) {
+    const user = await this.userModel.findById(req.userId);
+    if (!user) throw customError.notFound('User not found');
+
+    // Get all enrollments for the user with populated course data
+    const enrollments = await this.enrollmentModel
+      .find({ user: req.userId })
+      .populate('course')
+      .exec();
+
+    // Calculate total learning hours
+    let totalLearningHours = 0;
+    for (const enrollment of enrollments) {
+      if (enrollment.course) {
+        const course = enrollment.course as any;
+
+        // Get all lessons for this course to calculate total course duration
+        const lessons = await this.lessonModel.find({ course: course._id });
+        const totalCourseDuration = lessons.reduce(
+          (acc, lesson) => acc + (lesson.duration || 0),
+          0,
+        );
+
+        // Calculate watched hours based on progress percentage
+        const progressPercentage = enrollment.progress || 0;
+        const watchedDuration =
+          (totalCourseDuration * progressPercentage) / 100;
+
+        // Convert from minutes/seconds to hours (assuming duration is in minutes)
+        totalLearningHours += watchedDuration / 60;
+      }
+    }
+
+    // Get completed courses count
+    const completedCourses = await this.enrollmentModel.countDocuments({
+      user: req.userId,
+      status: EnrollmentStatus.COMPLETED,
+    });
+
+    // Get total courses (total enrollments)
+    const totalCourses = await this.enrollmentModel.countDocuments({
+      user: req.userId,
+    });
+
+    // Calculate course completion rate
+    let totalCompletionTime = 0;
+    let completedCoursesWithTime = 0;
+
+    const completedEnrollments = await this.enrollmentModel
+      .find({
+        user: req.userId,
+        status: EnrollmentStatus.COMPLETED,
+      })
+      .populate('course')
+      .exec();
+
+    for (const enrollment of completedEnrollments) {
+      if (enrollment.course && enrollment.updatedAt && enrollment.createdAt) {
+        const course = enrollment.course as any;
+
+        // Get course duration in hours
+        const lessons = await this.lessonModel.find({ course: course._id });
+        const courseDurationMinutes = lessons.reduce(
+          (acc, lesson) => acc + (lesson.duration || 0),
+          0,
+        );
+        const courseDurationHours = courseDurationMinutes / 60;
+
+        // Calculate time taken to complete (in hours)
+        const completionTimeMs =
+          enrollment.updatedAt.getTime() - enrollment.createdAt.getTime();
+        const completionTimeHours = completionTimeMs / (1000 * 60 * 60);
+
+        // Calculate completion rate (course duration / time taken to complete)
+        if (completionTimeHours > 0 && courseDurationHours > 0) {
+          const rate = courseDurationHours / completionTimeHours;
+          totalCompletionTime += rate;
+          completedCoursesWithTime++;
+        }
+      }
+    }
+
+    const averageCompletionRate =
+      completedCoursesWithTime > 0
+        ? (totalCompletionTime / completedCoursesWithTime) * 100
+        : 0;
+
+    return {
+      accessToken: req.token,
+      message: 'Detailed analytics fetched successfully',
+      analytics: {
+        totalLearningHours: Math.round(totalLearningHours * 100) / 100, // Round to 2 decimal places
+        completedCourses,
+        totalCourses,
+        courseCompletionRate: Math.round(averageCompletionRate * 100) / 100, // Round to 2 decimal places
+      },
+    };
+  }
 }
