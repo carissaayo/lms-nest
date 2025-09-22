@@ -779,7 +779,7 @@ export class StudentService {
         recentCourseProgress.push({
           courseId: course._id,
           courseName: course.title,
-          instructor: course.instructor || 'Unknown',
+          instructor: course.instructorName,
           category: course.category,
           totalDurationHours,
           progress: Math.round(progressPercentage * 100) / 100,
