@@ -19,6 +19,8 @@ import { Earning, EarningSchema } from '../models/earning.schema';
 import { Bank, BankSchema } from '../models/bank.schema';
 import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
 import { Otp, OtpSchema } from '../models/otp.schema';
+import { Course, CourseSchema } from '../models/course.schema';
+import { Lesson, LessonSchema } from '../models/lesson.schema';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { Otp, OtpSchema } from '../models/otp.schema';
       { name: Bank.name, schema: BankSchema },
       { name: Withdrawal.name, schema: WithdrawalSchema },
       { name: Otp.name, schema: OtpSchema },
+      { name: Course.name, schema: CourseSchema },
+      { name: Lesson.name, schema: LessonSchema },
     ]),
     StudentModule,
     PaymentModule,
