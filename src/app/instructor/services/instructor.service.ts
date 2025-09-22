@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { User, UserDocument } from 'src/app/models/user.schema';
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -12,6 +12,17 @@ import {
   WithdrawalDocument,
   WithdrawalStatus,
 } from 'src/app/models/withdrawal.schema';
+import {
+  Course,
+  CourseDocument,
+  CourseStatus,
+} from 'src/app/models/course.schema';
+import {
+  Enrollment,
+  EnrollmentDocument,
+  EnrollmentStatus,
+} from 'src/app/models/enrollment.schema';
+import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
 
 @Injectable()
 export class InstructorService {
@@ -20,6 +31,11 @@ export class InstructorService {
     @InjectModel(Withdrawal.name)
     private withdrawalModel: Model<WithdrawalDocument>,
     @InjectModel(Earning.name) private earningModel: Model<EarningDocument>,
+    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+    @InjectModel(Enrollment.name)
+    private enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(Lesson.name)
+    private lessonModel: Model<LessonDocument>,
     private readonly emailService: EmailService,
   ) {}
 
@@ -66,6 +82,333 @@ export class InstructorService {
         totalWithdrawals,
       },
       accessToken: req.token,
+    };
+  }
+  async getInstructorAnalytics(query: any, req: CustomRequest) {
+    const instructor = await this.userModel.findById(req.userId);
+    if (!instructor) throw customError.notFound('Instructor not found');
+
+    const { timeRange } = query;
+    let dateFilter: any = {};
+
+    // Apply time range filter
+    if (timeRange) {
+      const now = new Date();
+      let startDate: Date | null;
+
+      switch (timeRange) {
+        case '7days':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '1month':
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth() - 1,
+            now.getDate(),
+          );
+          break;
+        case '3months':
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth() - 3,
+            now.getDate(),
+          );
+          break;
+        case '6months':
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth() - 6,
+            now.getDate(),
+          );
+          break;
+        case '1year':
+          startDate = new Date(
+            now.getFullYear() - 1,
+            now.getMonth(),
+            now.getDate(),
+          );
+          break;
+        default:
+          startDate = null;
+      }
+
+      if (startDate) {
+        dateFilter = {
+          createdAt: { $gte: startDate },
+        };
+      }
+    }
+
+    // Get all instructor courses
+    const allCourses = await this.courseModel.find({
+      instructor: instructor._id,
+      ...dateFilter,
+    });
+
+    // Course status breakdown
+    const draftedCourses = allCourses.filter(
+      (c) => c.status === CourseStatus.PENDING,
+    ).length;
+    const submittedCourses = allCourses.filter(
+      (c) => c.status === CourseStatus.PENDING,
+    ).length; // Assuming submitted = pending
+    const publishedCourses = allCourses.filter(
+      (c) => c.status === CourseStatus.APPROVED,
+    ).length;
+    const rejectedCourses = allCourses.filter(
+      (c) => c.status === CourseStatus.REJECTED,
+    ).length;
+    const suspendedCourses = allCourses.filter(
+      (c) => c.status === CourseStatus.SUSPENDED,
+    ).length;
+
+    // Get all enrollments for instructor's courses
+    const courseIds = allCourses.map((course) => course._id);
+    type PopulatedEnrollment = Omit<Enrollment, 'course' | 'user'> & {
+      course: Omit<Course, '_id'> & { _id: Types.ObjectId };
+      user: Omit<User, '_id'> & { _id: Types.ObjectId };
+    };
+    const allEnrollments = (await this.enrollmentModel
+      .find({ course: { $in: courseIds } })
+      .populate<{ course: Course }>('course')
+      .populate<{ user: User }>('user')) as unknown as PopulatedEnrollment[];
+
+    // Student metrics
+    const totalStudents = new Set(
+      allEnrollments.map((e) => e.user._id.toString()),
+    ).size;
+    const activeStudents = new Set(
+      allEnrollments
+        .filter((e) => e.status === EnrollmentStatus.ACTIVE)
+        .map((e) => e.user._id.toString()),
+    ).size;
+
+    // Revenue calculations (assuming you have payment records)
+    const totalRevenue = allEnrollments.reduce((sum, enrollment) => {
+      return sum + (enrollment.course.price || 0);
+    }, 0);
+
+    // Top 5 selling courses
+    type CourseSalesEntry = {
+      courseId: string;
+      courseName: string;
+      enrollments: number;
+      revenue: number;
+      price: number;
+    };
+    const courseSales = new Map<string, CourseSalesEntry>();
+    allEnrollments.forEach((enrollment) => {
+      const courseId = enrollment.course._id.toString();
+      const courseName = enrollment.course.title;
+      const coursePrice = enrollment.course.price || 0;
+
+      if (courseSales.has(courseId)) {
+        const existing = courseSales.get(courseId)!;
+        courseSales.set(courseId, {
+          ...existing,
+          enrollments: existing.enrollments + 1,
+          revenue: existing.revenue + coursePrice,
+        });
+      } else {
+        courseSales.set(courseId, {
+          courseId,
+          courseName,
+          enrollments: 1,
+          revenue: coursePrice,
+          price: coursePrice,
+        });
+      }
+    });
+
+    const topSellingCourses = Array.from(courseSales.values())
+      .sort((a, b) => b.enrollments - a.enrollments)
+      .slice(0, 5);
+
+    // Recent 5 courses
+    const recentCourses = await this.courseModel
+      .find({ instructor: instructor._id })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .exec();
+
+    const recentCoursesData = await Promise.all(
+      recentCourses.map(async (course) => {
+        const enrollmentCount = await this.enrollmentModel.countDocuments({
+          course: course._id,
+        });
+        const revenue = enrollmentCount * (course.price || 0);
+
+        return {
+          courseId: course._id,
+          title: course.title,
+          status: course.status,
+          price: course.price,
+          enrollments: enrollmentCount,
+          revenue,
+          createdAt: course.createdAt,
+          category: course.category,
+        };
+      }),
+    );
+
+    // Monthly revenue data for chart
+    const getMonthlyRevenue = async () => {
+      const revenueData: any = [];
+      const now = new Date();
+
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const nextMonthDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - i + 1,
+          1,
+        );
+
+        type PopulatedEnrollment = Omit<Enrollment, 'course' | 'user'> & {
+          course: Course & { _id: Types.ObjectId };
+          user: User & { _id: Types.ObjectId };
+        };
+        const monthEnrollments = (await this.enrollmentModel
+          .find({
+            course: { $in: courseIds },
+            createdAt: { $gte: monthDate, $lt: nextMonthDate },
+          })
+          .populate<{ course: Course }>('course')
+          .populate<{ user: User }>(
+            'user',
+          )) as unknown as PopulatedEnrollment[];
+
+        const monthRevenue = monthEnrollments.reduce((sum, enrollment) => {
+          return sum + (enrollment.course.price || 0);
+        }, 0);
+
+        const monthName = monthDate.toLocaleDateString('en-US', {
+          month: 'short',
+        });
+
+        revenueData.push({
+          month: monthName,
+          revenue: monthRevenue,
+          enrollments: monthEnrollments.length,
+        });
+      }
+
+      return revenueData;
+    };
+
+    const monthlyRevenue = await getMonthlyRevenue();
+
+    // Course performance data
+    const coursePerformance = await Promise.all(
+      allCourses.slice(0, 10).map(async (course) => {
+        const enrollments = await this.enrollmentModel.find({
+          course: course._id,
+        });
+        const completedEnrollments = enrollments.filter(
+          (e) => e.status === EnrollmentStatus.COMPLETED,
+        );
+        const averageProgress =
+          enrollments.length > 0
+            ? enrollments.reduce((sum, e) => sum + (e.progress || 0), 0) /
+              enrollments.length
+            : 0;
+
+        return {
+          courseName: course.title,
+          enrollments: enrollments.length,
+          completionRate:
+            enrollments.length > 0
+              ? (completedEnrollments.length / enrollments.length) * 100
+              : 0,
+          averageProgress: Math.round(averageProgress),
+          revenue: enrollments.length * (course.price || 0),
+        };
+      }),
+    );
+
+    // Student engagement metrics
+    const engagementData = await Promise.all(
+      courseIds.slice(0, 5).map(async (courseId) => {
+        const course = await this.courseModel.findById(courseId);
+        if (!course) {
+          return {
+            courseName: 'Unknown',
+            students: 0,
+            averageWatchTime: 0,
+            engagementScore: 0,
+          };
+        }
+        const enrollments = await this.enrollmentModel.find({
+          course: courseId,
+        });
+        const lessons = await this.lessonModel.find({ course: courseId });
+
+        // Calculate average watch time per student
+        let totalWatchTime = 0;
+        for (const enrollment of enrollments) {
+          const totalCourseDuration = lessons.reduce(
+            (acc, lesson) => acc + (lesson.duration || 0),
+            0,
+          );
+          const watchedDuration =
+            (totalCourseDuration * (enrollment.progress || 0)) / 100;
+          totalWatchTime += watchedDuration;
+        }
+
+        const averageWatchTime =
+          enrollments.length > 0 ? totalWatchTime / enrollments.length : 0;
+
+        return {
+          courseName: course.title,
+          students: enrollments.length,
+          averageWatchTime: Math.round(averageWatchTime), // in minutes
+          engagementScore: Math.min(
+            100,
+            Math.round(
+              (averageWatchTime /
+                (lessons.reduce(
+                  (acc, lesson) => acc + (lesson.duration || 0),
+                  0,
+                ) || 1)) *
+                100,
+            ),
+          ),
+        };
+      }),
+    );
+
+    return {
+      accessToken: req.token,
+      message: 'Instructor analytics fetched successfully',
+      analytics: {
+        courseStats: {
+          drafted: draftedCourses,
+          submitted: submittedCourses,
+          published: publishedCourses,
+          rejected: rejectedCourses,
+          suspended: suspendedCourses,
+          total: allCourses.length,
+        },
+        studentStats: {
+          totalStudents,
+          activeStudents,
+          retentionRate:
+            totalStudents > 0
+              ? Math.round((activeStudents / totalStudents) * 100)
+              : 0,
+        },
+        revenueStats: {
+          totalRevenue,
+          averageRevenuePerStudent:
+            totalStudents > 0 ? Math.round(totalRevenue / totalStudents) : 0,
+          monthlyRevenue,
+        },
+        topSellingCourses,
+        recentCourses: recentCoursesData,
+        coursePerformance,
+        engagementData,
+        timeRange,
+      },
     };
   }
 }

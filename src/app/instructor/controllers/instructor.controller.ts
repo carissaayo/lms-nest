@@ -39,4 +39,9 @@ export class InstructorController {
   async getInstructorEarnings(@Req() req: CustomRequest) {
     return this.instructorService.getInstructorBalance(req);
   }
+
+  @Get('analytics')
+  async getInstructorAnalytics(@Query() query: any, @Req() req: CustomRequest) {
+    return this.instructorService.getInstructorAnalytics(query, req);
+  }
 }
