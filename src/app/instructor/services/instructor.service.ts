@@ -439,7 +439,7 @@ export class InstructorService {
           id: userId,
           name: `${user.firstName} ${user.lastName}`,
           email: user.email,
-          avatar: user.picture || null,
+          picture: user.picture || null,
           totalCourses: 1,
           totalProgress: enrollment.progress || 0,
         });
