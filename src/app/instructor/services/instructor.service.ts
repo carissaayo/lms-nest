@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -418,66 +417,64 @@ export class InstructorService {
 
     const { search, page = 1, limit = 10 } = query;
 
-    // Get all instructor course IDs
-    const courseIds = (
-      await this.courseModel.find({ instructor: instructor._id }).select('_id')
-    ).map((c) => c._id);
+    // Get all instructor's courses
+    const courses = await this.courseModel.find({ instructor: instructor._id });
+    const courseIds = courses.map((course) => course._id);
 
-    if (courseIds.length === 0) {
-      return {
-        page: Number(page),
-        results: 0,
-        students: [],
-        message: 'No courses found for this instructor',
-      };
-    }
-
-    // Build base enrollment filter
-    const enrollmentFilter: any = {
-      course: { $in: courseIds },
-    };
-
-    // Fetch all enrollments with user info populated
+    // Find all enrollments linked to the instructor’s courses
     const enrollments = await this.enrollmentModel
-      .find(enrollmentFilter)
-      .populate<{ user: User }>('user', 'firstName lastName email avatar')
+      .find({ course: { $in: courseIds } })
+      .populate('user', 'firstName lastName email avatar')
       .lean();
 
-    // Deduplicate students by user._id
-    const uniqueUsersMap = new Map<string, User>();
+    // Build a map of unique students
+    const studentMap = new Map<string, any>();
+
     for (const enrollment of enrollments) {
-      const user = enrollment.user as unknown as User;
-      if (user && user._id && !uniqueUsersMap.has(String(user._id))) {
-        uniqueUsersMap.set(String(user._id), user);
+      const user = enrollment.user as User & { _id: Types.ObjectId };
+      const userId = user._id.toString();
+
+      if (!studentMap.has(userId)) {
+        studentMap.set(userId, {
+          id: userId,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          avatar: user.picture || null,
+          totalCourses: 1,
+          totalProgress: enrollment.progress || 0,
+        });
+      } else {
+        const student = studentMap.get(userId);
+        student.totalCourses += 1;
+        student.totalProgress += enrollment.progress || 0;
       }
     }
 
-    let students = Array.from(uniqueUsersMap.values());
+    // Convert to array
+    let students = Array.from(studentMap.values()).map((s) => ({
+      ...s,
+      avgProgress:
+        s.totalCourses > 0 ? Math.round(s.totalProgress / s.totalCourses) : 0,
+    }));
 
-    // Optional search filter
+    // Search filter (by name or email)
     if (search) {
-      const searchRegex = new RegExp(search, 'i');
+      const regex = new RegExp(search, 'i');
       students = students.filter(
-        (student) =>
-          searchRegex.test(student.firstName) ||
-          searchRegex.test(student.lastName) ||
-          searchRegex.test(student.email),
+        (s) => regex.test(s.name) || regex.test(s.email),
       );
     }
 
     // Pagination
-    const total = students.length;
-    const startIndex = (Number(page) - 1) * Number(limit);
-    const paginatedStudents = students.slice(
-      startIndex,
-      startIndex + Number(limit),
-    );
+    const startIndex = (page - 1) * limit;
+    const paginatedStudents = students.slice(startIndex, startIndex + limit);
 
     return {
-      page: Number(page),
-      results: total,
-      students: paginatedStudents,
       message: 'Students fetched successfully',
+      page: Number(page),
+      totalResults: students.length,
+      students: paginatedStudents,
+      accessToken: req.token,
     };
   }
 }
