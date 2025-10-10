@@ -44,4 +44,8 @@ export class InstructorController {
   async getInstructorAnalytics(@Query() query: any, @Req() req: CustomRequest) {
     return this.instructorService.getInstructorAnalytics(query, req);
   }
+  @Get('students')
+  async getInstructorStudents(@Query() query: any, @Req() req: CustomRequest) {
+    return this.instructorService.getInstructorStudents(query, req);
+  }
 }
