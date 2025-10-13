@@ -37,7 +37,7 @@ export class InstructorController {
    */
   @Get('earnings')
   async getInstructorEarnings(@Req() req: CustomRequest) {
-    return this.instructorService.getInstructorBalance(req);
+    return this.instructorService.getInstructorEarnings(req);
   }
 
   @Get('analytics')

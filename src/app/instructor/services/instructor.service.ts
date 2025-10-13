@@ -477,4 +477,109 @@ export class InstructorService {
       accessToken: req.token,
     };
   }
+
+  async getInstructorEarnings(req: CustomRequest) {
+    const instructorId = req.userId;
+
+    // 1️⃣ Get instructor earnings + withdrawals
+    const [earnings, withdrawals] = await Promise.all([
+      this.earningModel.find({ instructor: instructorId }).populate('course'),
+      this.withdrawalModel.find({ user: instructorId }).sort({ createdAt: -1 }),
+    ]);
+
+    if (!earnings.length) {
+      return {
+        summary: {
+          totalEarnings: 0,
+          totalWithdrawals: 0,
+          availableBalance: 0,
+        },
+        withdrawal: { availableBalance: 0 },
+        chartData: [],
+        topCourses: [],
+        payouts: [],
+      };
+    }
+
+    // 2️⃣ Totals and available balance
+    const totalEarnings = earnings.reduce((sum, e) => sum + e.amount, 0);
+    const totalWithdrawals = withdrawals
+      .filter((w) => w.status === WithdrawalStatus.SUCCESSFUL)
+      .reduce((sum, w) => sum + w.amount, 0);
+    const availableBalance = totalEarnings - totalWithdrawals;
+
+    // 3️⃣ Chart data (earnings grouped by month)
+    const chartMap = new Map<string, number>();
+    for (const e of earnings) {
+      const month = e.createdAt.toLocaleString('default', { month: 'short' });
+      chartMap.set(month, (chartMap.get(month) || 0) + e.amount);
+    }
+    const chartData = Array.from(chartMap, ([month, earnings]) => ({
+      month,
+      earnings,
+    }));
+
+    // 4️⃣ Top courses (by total earnings)
+    const courseMap = new Map<
+      string,
+      { title: string; earnings: number; enrolled: number }
+    >();
+    for (const e of earnings) {
+      const c = e.course as any;
+      if (!c) continue;
+      const existing = courseMap.get(String(c._id)) || {
+        title: c.title,
+        earnings: 0,
+        enrolled: 0,
+      };
+      existing.earnings += e.amount;
+      courseMap.set(String(c._id), existing);
+    }
+
+    // Enrolled count (optional — fetch real numbers)
+    const enrollments = await this.enrollmentModel
+      .find({ status: EnrollmentStatus.COMPLETED })
+      .populate('course');
+    for (const enr of enrollments) {
+      const c = enr.course as any;
+      if (courseMap.has(String(c._id))) {
+        const course = courseMap.get(String(c._id))!;
+        course.enrolled++;
+      }
+    }
+
+    // Growth is mock-based for now; you can later compute real growth by comparing previous months
+    const topCourses = Array.from(courseMap.values())
+      .sort((a, b) => b.earnings - a.earnings)
+      .slice(0, 5)
+      .map((c) => ({
+        title: c.title,
+        enrolled: c.enrolled,
+        earnings: c.earnings,
+        growth: Math.floor(Math.random() * 20) + 5, // placeholder growth
+      }));
+
+    // 5️⃣ Payout history (latest withdrawals)
+    const payouts = withdrawals.map((w) => ({
+      id: String(w._id),
+      date: w.createdAt,
+      amount: w.amount,
+      method: 'Bank Transfer',
+      status:
+        w.status === WithdrawalStatus.SUCCESSFUL ? 'Completed' : 'Pending',
+    }));
+
+    // 6️⃣ Return combined payload
+    return {
+      summary: {
+        totalEarnings,
+        totalWithdrawals,
+        availableBalance,
+      },
+      withdrawal: { availableBalance },
+      chartData,
+      topCourses,
+      payouts,
+    };
+  }
 }
