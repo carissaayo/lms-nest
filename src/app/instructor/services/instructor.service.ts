@@ -481,7 +481,6 @@ export class InstructorService {
   async getInstructorEarnings(req: CustomRequest) {
     const instructorId = req.userId;
 
-    // 1️⃣ Get instructor earnings + withdrawals
     const [earnings, withdrawals] = await Promise.all([
       this.earningModel.find({ instructor: instructorId }).populate('course'),
       this.withdrawalModel.find({ user: instructorId }).sort({ createdAt: -1 }),
@@ -493,37 +492,43 @@ export class InstructorService {
           totalEarnings: 0,
           totalWithdrawals: 0,
           availableBalance: 0,
+          coursesSold: 0,
         },
         withdrawal: { availableBalance: 0 },
-        chartData: [],
+        chartData: Array.from({ length: 12 }, (_, i) => ({
+          month: new Date(0, i).toLocaleString('default', { month: 'short' }),
+          earnings: 0,
+        })),
         topCourses: [],
         payouts: [],
       };
     }
 
-    // 2️⃣ Totals and available balance
     const totalEarnings = earnings.reduce((sum, e) => sum + e.amount, 0);
     const totalWithdrawals = withdrawals
       .filter((w) => w.status === WithdrawalStatus.SUCCESSFUL)
       .reduce((sum, w) => sum + w.amount, 0);
     const availableBalance = totalEarnings - totalWithdrawals;
 
-    // 3️⃣ Chart data (earnings grouped by month)
     const chartMap = new Map<string, number>();
     for (const e of earnings) {
       const month = e.createdAt.toLocaleString('default', { month: 'short' });
       chartMap.set(month, (chartMap.get(month) || 0) + e.amount);
     }
-    const chartData = Array.from(chartMap, ([month, earnings]) => ({
+
+    const allMonths = Array.from({ length: 12 }, (_, i) =>
+      new Date(0, i).toLocaleString('default', { month: 'short' }),
+    );
+    const chartData = allMonths.map((month) => ({
       month,
-      earnings,
+      earnings: chartMap.get(month) || 0,
     }));
 
-    // 4️⃣ Top courses (by total earnings)
     const courseMap = new Map<
       string,
       { title: string; earnings: number; enrolled: number }
     >();
+
     for (const e of earnings) {
       const c = e.course as any;
       if (!c) continue;
@@ -536,10 +541,12 @@ export class InstructorService {
       courseMap.set(String(c._id), existing);
     }
 
-    // Enrolled count (optional — fetch real numbers)
     const enrollments = await this.enrollmentModel
-      .find({ status: EnrollmentStatus.COMPLETED })
+      .find({
+        status: { $in: [EnrollmentStatus.COMPLETED, EnrollmentStatus.ACTIVE] },
+      })
       .populate('course');
+
     for (const enr of enrollments) {
       const c = enr.course as any;
       if (courseMap.has(String(c._id))) {
@@ -548,7 +555,6 @@ export class InstructorService {
       }
     }
 
-    // Growth is mock-based for now; you can later compute real growth by comparing previous months
     const topCourses = Array.from(courseMap.values())
       .sort((a, b) => b.earnings - a.earnings)
       .slice(0, 5)
@@ -556,10 +562,9 @@ export class InstructorService {
         title: c.title,
         enrolled: c.enrolled,
         earnings: c.earnings,
-        growth: Math.floor(Math.random() * 20) + 5, // placeholder growth
+        growth: Math.floor(Math.random() * 20) + 5,
       }));
 
-    // 5️⃣ Payout history (latest withdrawals)
     const payouts = withdrawals.map((w) => ({
       id: String(w._id),
       date: w.createdAt,
@@ -569,12 +574,14 @@ export class InstructorService {
         w.status === WithdrawalStatus.SUCCESSFUL ? 'Completed' : 'Pending',
     }));
 
-    // 6️⃣ Return combined payload
+    const coursesSold = courseMap.size;
+
     return {
       summary: {
         totalEarnings,
         totalWithdrawals,
         availableBalance,
+        coursesSold,
       },
       withdrawal: { availableBalance },
       chartData,
