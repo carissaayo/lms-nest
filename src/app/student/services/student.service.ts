@@ -900,7 +900,7 @@ export class StudentService {
     // Fetch all payments and enrollments for this student
     const [payments, enrollments] = await Promise.all([
       this.paymentModel.find({ student: studentId }).populate('course').sort({ createdAt: -1 }),
-      this.enrollmentModel.find({ user: studentId, status: { $in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED] } }),
+      this.enrollmentModel.find({ user: studentId, status: { $nin: [EnrollmentStatus.PENDING] } }),
     ]);
 
     if (!payments.length) {
