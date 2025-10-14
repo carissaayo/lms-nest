@@ -19,6 +19,7 @@ import {
   LessonProgressSchema,
 } from '../models/lesson-progress.schema';
 import { Course, CourseSchema } from '../models/course.schema';
+import { Payment, PaymentSchema } from '../models/payment.schema';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { Course, CourseSchema } from '../models/course.schema';
       { name: Submission.name, schema: SubmissionSchema },
       { name: LessonProgress.name, schema: LessonProgressSchema },
       { name: Course.name, schema: CourseSchema },
+      { name: Payment.name, schema: PaymentSchema },
     ]),
     EnrollmentModule,
   ],
