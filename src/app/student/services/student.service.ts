@@ -890,4 +890,46 @@ export class StudentService {
       },
     };
   }
+
+  async getStudentPayments(req: CustomRequest) {
+    const studentId = req.userId;
+
+    // Fetch all payments and enrollments for this student
+    const [payments, enrollments] = await Promise.all([
+      this.paymentModel.find({ student: studentId }).populate('course').sort({ createdAt: -1 }),
+      this.enrollmentModel.find({ user: studentId, status: { $in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED] } }),
+    ]);
+
+    if (!payments.length) {
+      return {
+        summary: {
+          totalSpent: 0,
+          totalCourses: 0,
+        },
+        paymentHistory: [],
+      };
+    }
+
+    // Calculate totals
+    const totalSpent = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalCourses = enrollments.length;
+
+    // Map payment data
+    const paymentHistory = payments.map((p) => ({
+      id: String(p._id),
+      course: (p.course as any)?.title || 'Unknown Course',
+      amount: p.amount,
+      provider: p.provider,
+      status: p.status,
+      date: p.createdAt,
+    }));
+
+    return {
+      summary: {
+        totalSpent,
+        totalCourses,
+      },
+      paymentHistory,
+    };
+  }
 }

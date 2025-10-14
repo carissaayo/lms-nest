@@ -76,6 +76,13 @@ export class StudentController {
     return this.studentService.viewEnrolledCourses(query, req);
   }
 
+  @Get('payments')
+  async getStudentPayments(
+    @Req() req: CustomRequest,
+  ) {
+    return this.studentService.getStudentPayments(req);
+  }
+
   @Get('analytics')
   async getDetailedAnalytics(
     @Query() query: any,
