@@ -27,6 +27,7 @@ import {
   EnrollmentStatus,
 } from 'src/app/models/enrollment.schema';
 import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
 import {
   LessonProgress,
   LessonProgressDocument,
@@ -44,6 +45,8 @@ export class StudentService {
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     @InjectModel(Enrollment.name)
     private enrollmentModel: Model<EnrollmentDocument>,
+        @InjectModel(Payment.name)
+    private paymentModel: Model<PaymentDocument>,
     @InjectModel(Assignment.name)
     private assignmentModel: Model<AssignmentDocument>,
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
