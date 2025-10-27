@@ -217,7 +217,7 @@ export class AdminAuthService {
     }
 
     try {
-      await user.hasNewPassword(newPassword);
+      user.password = await this.hashPassword(newPassword);
       user.passwordResetCode = null;
       user.resetPasswordExpires = null;
       await user.save();
@@ -243,7 +243,10 @@ export class AdminAuthService {
     }
 
     try {
-      const isPasswordValid = await user.validatePassword(password);
+      const isPasswordValid = await this.validatePassword(
+        password,
+        user.password,
+      );
       if (!isPasswordValid) {
         throw customError.badRequest('Current password is incorrect');
       }
@@ -251,8 +254,7 @@ export class AdminAuthService {
       if (newPassword !== confirmNewPassword) {
         throw customError.badRequest('New passwords do not match');
       }
-
-      await user.hasNewPassword(newPassword);
+      user.password = await this.hashPassword(newPassword);
       await user.save();
 
       return {
