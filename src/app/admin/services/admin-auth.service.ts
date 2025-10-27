@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import bcrypt from 'bcryptjs';
+
 import {
   ChangePasswordDTO,
   LoginDto,
@@ -60,12 +62,12 @@ export class AdminAuthService {
     try {
       const emailCode = generateOtp('numeric', 8);
 
-      await existingUser.hasNewPassword(password);
+      const hashedPassword = await this.hashPassword(password);
       existingUser.phoneNumber = phoneNumber;
       existingUser.firstName = firstName;
       existingUser.lastName = lastName;
       existingUser.emailCode = emailCode;
-
+      existingUser.password = hashedPassword;
       await existingUser.save();
 
       await this.emailService.sendVerificationEmail(email, emailCode);
@@ -260,6 +262,11 @@ export class AdminAuthService {
       console.log(error);
       throw customError.internalServerError('Internal Server Error', 500);
     }
+  }
+
+  /** ----------------- PASSWORD HELPERS ----------------- */
+  private async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
   }
 
   private async validatePassword(

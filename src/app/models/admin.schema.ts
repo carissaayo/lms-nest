@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import {
   Document,
@@ -128,34 +127,5 @@ export class UserAdmin extends Document {
 }
 
 export const UserAdminSchema = SchemaFactory.createForClass(UserAdmin);
-export interface UserAdminMethods {
-  hasNewPassword(newPassword: string): Promise<void>;
-  validatePassword(password: string): Promise<boolean>;
-}
 
-// Now merge methods into document
-export type UserAdminDocument = HydratedDocument<UserAdmin> & UserAdminMethods;
-
-// Also define model type if you want static methods later
-export type UserAdminModel = Model<UserAdmin, {}, UserAdminMethods>;
-// Add password hashing middleware
-UserAdminSchema.pre('save', async function (next) {
-  if (this.isModified('password') && this.password) {
-    const bcrypt = await import('bcryptjs');
-    this.password = await bcrypt.hash(this.password, 10);
-  }
-  next();
-});
-
-// Add instance methods
-UserAdminSchema.methods.hasNewPassword = async function (newPassword: string) {
-  const bcrypt = await import('bcryptjs');
-  this.password = await bcrypt.hash(newPassword, 10);
-};
-
-UserAdminSchema.methods.validatePassword = async function (
-  password: string,
-): Promise<boolean> {
-  const bcrypt = await import('bcryptjs');
-  return bcrypt.compare(password, this.password);
-};
+export type UserAdminDocument = HydratedDocument<UserAdmin>;
