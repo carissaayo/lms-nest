@@ -97,7 +97,10 @@ export class AdminAuthService {
     }
 
     try {
-      const isPasswordValid = await user.validatePassword(password);
+      const isPasswordValid = await this.validatePassword(
+        password,
+        user.password,
+      );
       if (!isPasswordValid) {
         await handleFailedAuthAttempt(user, this.adminModel);
       }
@@ -257,5 +260,12 @@ export class AdminAuthService {
       console.log(error);
       throw customError.internalServerError('Internal Server Error', 500);
     }
+  }
+
+  private async validatePassword(
+    password: string,
+    hashed: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashed);
   }
 }
