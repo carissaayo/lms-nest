@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { LoginDto, VerifyEmailDTO } from '../../auth/auth.dto';
+
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import {
@@ -193,84 +193,6 @@ export class AdminAdminsService {
         accessToken: token,
         refreshToken: refreshToken,
         message: 'Admin permissions have been updated',
-      };
-    } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
-  }
-
-  async login(loginDto: LoginDto, req: CustomRequest) {
-    const { email, password } = loginDto;
-
-    const admin = await this.adminModel.findOne({ email });
-    if (!admin) {
-      throw customError.unauthorized('Admin not found');
-    }
-
-    try {
-      const isPasswordValid = await admin.validatePassword(password);
-
-      if (!isPasswordValid) {
-        await handleFailedAuthAttempt(admin, this.adminModel);
-      }
-
-      admin.failedAuthAttempts = 0;
-      await admin.save();
-
-      const { token, refreshToken, session } = await generateToken(admin, req);
-
-      admin.sessions = [session];
-      admin.failedSignInAttempts = 0;
-      admin.nextSignInAttempt = new Date();
-      await admin.save();
-
-      const profile: AdminProfileInterface = GET_ADMIN_PROFILE(admin);
-
-      return {
-        accessToken: token,
-        refreshToken: refreshToken,
-        profile: profile,
-        message: 'Signed In successfully',
-      };
-    } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
-  }
-
-  async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
-    const { emailCode } = verifyEmailDto;
-    const trimmedEmailCode = emailCode?.trim();
-
-    if (!trimmedEmailCode) {
-      throw customError.unauthorized('Please enter the verification code');
-    }
-
-    const admin = await this.adminModel.findById(req.userId);
-    if (!admin) {
-      throw customError.badRequest('Access Denied');
-    }
-
-    if (admin.emailVerified) {
-      throw customError.badRequest('Email verified already');
-    }
-
-    if (admin.emailCode !== trimmedEmailCode) {
-      throw customError.badRequest('Invalid verification code');
-    }
-
-    try {
-      admin.emailVerified = true;
-      admin.emailCode = null;
-      await admin.save();
-
-      const profile: AdminProfileInterface = GET_ADMIN_PROFILE(admin);
-
-      return {
-        accessToken: req.token,
-        profile,
-        message: 'Email Verified Successfully',
       };
     } catch (error) {
       console.log(error);
