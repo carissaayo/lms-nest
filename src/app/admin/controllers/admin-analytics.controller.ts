@@ -22,7 +22,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.gurad';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 
 import { PermissionsEnum } from '../admin.interface';
-import { AdminPaymentsService } from '../services/admin-payments.service';
+
 import { QueryString } from 'src/app/database/dbquery';
 import { AdminAnalyticsService } from '../services/admin-analytics.service';
 
@@ -40,7 +40,7 @@ import { AdminAnalyticsService } from '../services/admin-analytics.service';
 )
 @Roles(UserRole.ADMIN)
 @Permissions(PermissionsEnum.ADMIN_USERS)
-export class AdminPaymentsController {
+export class AdminAnalyticsController {
   constructor(private adminAnalyticsService: AdminAnalyticsService) {}
 
   @Get('')

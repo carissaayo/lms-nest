@@ -23,6 +23,8 @@ import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
 import { Course, CourseSchema } from '../models/course.schema';
 import { Earning, EarningSchema } from '../models/earning.schema';
 import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
+import { AdminAnalyticsService } from './services/admin-analytics.service';
+import { AdminAnalyticsController } from './controllers/admin-analytics.controller';
 
 @Module({
   imports: [
@@ -44,6 +46,7 @@ import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
     AdminCoursesService,
     AdminAuthService,
     AdminPaymentsService,
+    AdminAnalyticsService,
   ],
   controllers: [
     AdminUserController,
@@ -51,6 +54,7 @@ import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
     AdminCoursesController,
     AdminAuthController,
     AdminPaymentsController,
+    AdminAnalyticsController,
   ],
   exports: [],
 })
