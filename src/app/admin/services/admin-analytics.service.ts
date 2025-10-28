@@ -10,16 +10,11 @@ import {
   Withdrawal,
   WithdrawalDocument,
 } from 'src/app/models/withdrawal.schema';
-import {
-  Course,
-  CourseDocument,
-  CourseStatus,
-} from 'src/app/models/course.schema';
+import { Course, CourseDocument } from 'src/app/models/course.schema';
 import { User, UserDocument } from 'src/app/models/user.schema';
 import {
   Enrollment,
   EnrollmentDocument,
-  EnrollmentStatus,
 } from 'src/app/models/enrollment.schema';
 import { Earning, EarningDocument } from 'src/app/models/earning.schema';
 
@@ -36,60 +31,57 @@ export class AdminPaymentsService {
     private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Earning.name)
     private earningModel: Model<EarningDocument>,
-
     private emailService: EmailService,
   ) {}
 
-  async getAdminAnalytics(query: any) {
+  async getAdminAnalytics(query: any, req: CustomRequest) {
+    const user = await this.userModel.findById(req.userId);
+    if (!user) throw customError.notFound('Instructor not found');
+
     const { timeRange } = query;
-    let dateFilter: any = {};
+    const now = new Date();
+    let startDate: Date | null = null;
 
-    if (timeRange) {
-      const now = new Date();
-      let startDate: Date | null;
-
-      switch (timeRange) {
-        case '7days':
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case '1month':
-          startDate = new Date(
-            now.getFullYear(),
-            now.getMonth() - 1,
-            now.getDate(),
-          );
-          break;
-        case '3months':
-          startDate = new Date(
-            now.getFullYear(),
-            now.getMonth() - 3,
-            now.getDate(),
-          );
-          break;
-        case '6months':
-          startDate = new Date(
-            now.getFullYear(),
-            now.getMonth() - 6,
-            now.getDate(),
-          );
-          break;
-        case '1year':
-          startDate = new Date(
-            now.getFullYear() - 1,
-            now.getMonth(),
-            now.getDate(),
-          );
-          break;
-        default:
-          startDate = null;
-      }
-
-      if (startDate) {
-        dateFilter = { createdAt: { $gte: startDate } };
-      }
+    // Handle time range filter
+    switch (timeRange) {
+      case '7days':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '1month':
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          now.getDate(),
+        );
+        break;
+      case '3months':
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - 3,
+          now.getDate(),
+        );
+        break;
+      case '6months':
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - 6,
+          now.getDate(),
+        );
+        break;
+      case '1year':
+        startDate = new Date(
+          now.getFullYear() - 1,
+          now.getMonth(),
+          now.getDate(),
+        );
+        break;
+      default:
+        startDate = null;
     }
 
-    // --- Overview Metrics ---
+    const dateFilter = startDate ? { createdAt: { $gte: startDate } } : {};
+
+    // --- Overview Metrics (Filtered by date) ---
     const [
       totalCourses,
       totalStudents,
@@ -100,16 +92,20 @@ export class AdminPaymentsService {
       activeStudents,
       activeCourses,
     ] = await Promise.all([
-      this.courseModel.countDocuments(),
-      this.userModel.countDocuments({ role: 'student' }),
-      this.userModel.countDocuments({ role: 'instructor' }),
-      this.enrollmentModel.countDocuments(),
-      this.withdrawalModel.countDocuments({ status: 'successful' }),
+      this.courseModel.countDocuments(dateFilter),
+      this.userModel.countDocuments({ role: 'student', ...dateFilter }),
+      this.userModel.countDocuments({ role: 'instructor', ...dateFilter }),
+      this.enrollmentModel.countDocuments(dateFilter),
+      this.withdrawalModel.countDocuments({
+        status: 'successful',
+        ...dateFilter,
+      }),
       this.earningModel.aggregate([
+        { $match: { ...dateFilter } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      this.enrollmentModel.countDocuments({ status: 'active' }),
-      this.courseModel.countDocuments({ status: 'approved' }),
+      this.enrollmentModel.countDocuments({ status: 'active', ...dateFilter }),
+      this.courseModel.countDocuments({ status: 'approved', ...dateFilter }),
     ]);
 
     const overview = {
@@ -123,14 +119,10 @@ export class AdminPaymentsService {
       activeCourses,
     };
 
-    // --- Course Status Breakdown ---
+    // --- Course Status Breakdown (Filtered by date) ---
     const courseStatsAgg = await this.courseModel.aggregate([
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-        },
-      },
+      { $match: { ...dateFilter } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
 
     const courseStats = {
@@ -140,26 +132,21 @@ export class AdminPaymentsService {
       pending: courseStatsAgg.find((s) => s._id === 'suspended')?.count || 0,
     };
 
-    // --- Growth Data (last 6 months) ---
-    const growthData = await this._getGrowthData();
+    // --- Growth & Revenue Data (Dynamic by range) ---
+    const growthData = await this._getGrowthData(timeRange);
+    const revenueData = await this._getRevenueData(timeRange);
 
-    // --- Revenue Data (last 6 months) ---
-    const revenueData = await this._getRevenueData();
-
-    // --- Category Distribution ---
+    // --- Category Distribution (Filtered by date) ---
     const categoryDistribution = await this.courseModel.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          value: { $sum: 1 },
-        },
-      },
+      { $match: { ...dateFilter } },
+      { $group: { _id: '$category', value: { $sum: 1 } } },
       { $sort: { value: -1 } },
       { $limit: 5 },
     ]);
 
     // --- Top Instructors ---
     const topInstructors = await this.earningModel.aggregate([
+      { $match: { ...dateFilter } },
       {
         $lookup: {
           from: 'users',
@@ -187,6 +174,7 @@ export class AdminPaymentsService {
 
     // --- Top Courses ---
     const topCourses = await this.enrollmentModel.aggregate([
+      { $match: { ...dateFilter } },
       {
         $lookup: {
           from: 'courses',
@@ -208,16 +196,19 @@ export class AdminPaymentsService {
       { $limit: 5 },
     ]);
 
-    // --- Engagement Metrics (mocked/averaged) ---
+    // --- Engagement Metrics ---
     const engagementMetrics = {
       avgSessionDuration: 42,
       avgCompletionRate: 68,
       avgCourseRating: 4.5,
-      studentRetentionRate: Math.round((activeStudents / totalStudents) * 100),
+      studentRetentionRate: totalStudents
+        ? Math.round((activeStudents / totalStudents) * 100)
+        : 0,
     };
 
     // --- Withdrawal Summary ---
     const withdrawals = await this.withdrawalModel.aggregate([
+      { $match: { ...dateFilter } },
       {
         $group: {
           _id: '$status',
@@ -251,10 +242,34 @@ export class AdminPaymentsService {
 
   // ---------- Helper Methods ----------
 
-  private async _getGrowthData() {
+  private async _getGrowthData(timeRange?: string) {
     const now = new Date();
+
+    // Dynamic range resolution
+    let steps = 6;
+    let isDaily = false;
+
+    switch (timeRange) {
+      case '7days':
+        steps = 7;
+        isDaily = true;
+        break;
+      case '1month':
+        steps = 1;
+        break;
+      case '3months':
+        steps = 3;
+        break;
+      case '6months':
+        steps = 6;
+        break;
+      case '1year':
+        steps = 12;
+        break;
+    }
+
     type GrowthData = {
-      month: string;
+      label: string;
       students: number;
       instructors: number;
       courses: number;
@@ -263,29 +278,35 @@ export class AdminPaymentsService {
 
     const data: GrowthData[] = [];
 
-    for (let i = 5; i >= 0; i--) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    for (let i = steps - 1; i >= 0; i--) {
+      const start = isDaily
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+        : new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = isDaily
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1)
+        : new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
 
       const [students, instructors, courses, enrollments] = await Promise.all([
         this.userModel.countDocuments({
           role: 'student',
-          createdAt: { $gte: monthDate, $lt: nextMonth },
+          createdAt: { $gte: start, $lt: end },
         }),
         this.userModel.countDocuments({
           role: 'instructor',
-          createdAt: { $gte: monthDate, $lt: nextMonth },
+          createdAt: { $gte: start, $lt: end },
         }),
         this.courseModel.countDocuments({
-          createdAt: { $gte: monthDate, $lt: nextMonth },
+          createdAt: { $gte: start, $lt: end },
         }),
         this.enrollmentModel.countDocuments({
-          createdAt: { $gte: monthDate, $lt: nextMonth },
+          createdAt: { $gte: start, $lt: end },
         }),
       ]);
 
       data.push({
-        month: monthDate.toLocaleString('default', { month: 'short' }),
+        label: isDaily
+          ? start.toLocaleDateString('en-US', { weekday: 'short' })
+          : start.toLocaleString('default', { month: 'short' }),
         students,
         instructors,
         courses,
@@ -296,26 +317,49 @@ export class AdminPaymentsService {
     return data;
   }
 
-  private async _getRevenueData() {
+  private async _getRevenueData(timeRange?: string) {
     const now = new Date();
-    type GrowthData = {
-      month: string;
+
+    let steps = 6;
+    let isDaily = false;
+
+    switch (timeRange) {
+      case '7days':
+        steps = 7;
+        isDaily = true;
+        break;
+      case '1month':
+        steps = 1;
+        break;
+      case '3months':
+        steps = 3;
+        break;
+      case '6months':
+        steps = 6;
+        break;
+      case '1year':
+        steps = 12;
+        break;
+    }
+
+    type RevenueData = {
+      label: string;
       revenue: number;
       enrollments: number;
     };
 
-    const data: GrowthData[] = [];
+    const data: RevenueData[] = [];
 
-    for (let i = 5; i >= 0; i--) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    for (let i = steps - 1; i >= 0; i--) {
+      const start = isDaily
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+        : new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = isDaily
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1)
+        : new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
 
-      const monthEarnings = await this.earningModel.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: monthDate, $lt: nextMonth },
-          },
-        },
+      const result = await this.earningModel.aggregate([
+        { $match: { createdAt: { $gte: start, $lt: end } } },
         {
           $group: {
             _id: null,
@@ -326,9 +370,11 @@ export class AdminPaymentsService {
       ]);
 
       data.push({
-        month: monthDate.toLocaleString('default', { month: 'short' }),
-        revenue: monthEarnings[0]?.revenue || 0,
-        enrollments: monthEarnings[0]?.enrollments || 0,
+        label: isDaily
+          ? start.toLocaleDateString('en-US', { weekday: 'short' })
+          : start.toLocaleString('default', { month: 'short' }),
+        revenue: result[0]?.revenue || 0,
+        enrollments: result[0]?.enrollments || 0,
       });
     }
 
