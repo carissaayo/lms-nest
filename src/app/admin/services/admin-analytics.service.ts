@@ -19,7 +19,7 @@ import {
 import { Earning, EarningDocument } from 'src/app/models/earning.schema';
 
 @Injectable()
-export class AdminPaymentsService {
+export class AdminAnalyticsService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
