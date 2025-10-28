@@ -21,6 +21,8 @@ import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
 import { Payment, PaymentSchema } from '../models/payment.schema';
 import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
 import { Course, CourseSchema } from '../models/course.schema';
+import { Earning, EarningSchema } from '../models/earning.schema';
+import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { Course, CourseSchema } from '../models/course.schema';
       { name: Payment.name, schema: PaymentSchema },
       { name: Withdrawal.name, schema: WithdrawalSchema },
       { name: Course.name, schema: CourseSchema },
+      { name: Earning.name, schema: EarningSchema },
+      { name: Enrollment.name, schema: EnrollmentSchema },
     ]),
     EmailModule,
     CourseModule,
