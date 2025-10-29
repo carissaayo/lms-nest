@@ -39,7 +39,6 @@ import { AdminAnalyticsService } from '../services/admin-analytics.service';
   PermissionsGuard,
 )
 @Roles(UserRole.ADMIN)
-@Permissions(PermissionsEnum.ADMIN_USERS)
 export class AdminAnalyticsController {
   constructor(private adminAnalyticsService: AdminAnalyticsService) {}
 
