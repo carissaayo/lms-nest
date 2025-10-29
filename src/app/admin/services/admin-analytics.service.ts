@@ -92,19 +92,46 @@ export class AdminAnalyticsService {
       activeStudents,
       activeCourses,
     ] = await Promise.all([
+      // Total courses within date range
       this.courseModel.countDocuments(dateFilter),
+
+      // Total students (users with role student)
       this.userModel.countDocuments({ role: 'student', ...dateFilter }),
+
+      // Total instructors
       this.userModel.countDocuments({ role: 'instructor', ...dateFilter }),
+
+      // Total enrollments
       this.enrollmentModel.countDocuments(dateFilter),
+
+      // Total successful withdrawals
       this.withdrawalModel.countDocuments({
         status: 'successful',
         ...dateFilter,
       }),
+
+      // Total revenue
       this.earningModel.aggregate([
         { $match: { ...dateFilter } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      this.enrollmentModel.countDocuments({ status: 'active', ...dateFilter }),
+
+      // Active students — distinct users with active enrollments
+      this.enrollmentModel
+        .aggregate([
+          {
+            $match: { status: 'active', ...dateFilter },
+          },
+          {
+            $group: { _id: '$user' }, // group by unique user
+          },
+          {
+            $count: 'uniqueStudents',
+          },
+        ])
+        .then((res) => res[0]?.uniqueStudents || 0),
+
+      // Active approved courses
       this.courseModel.countDocuments({ status: 'approved', ...dateFilter }),
     ]);
 
