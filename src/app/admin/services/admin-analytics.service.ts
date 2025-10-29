@@ -35,8 +35,8 @@ export class AdminAnalyticsService {
   ) {}
 
   async getAdminAnalytics(query: any, req: CustomRequest) {
-    const user = await this.userModel.findById(req.userId);
-    if (!user) throw customError.notFound('Instructor not found');
+    const user = await this.adminModel.findById(req.userId);
+    if (!user) throw customError.notFound('Admin not found');
 
     const { timeRange } = query;
     const now = new Date();
