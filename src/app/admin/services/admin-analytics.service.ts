@@ -80,6 +80,16 @@ export class AdminAnalyticsService {
     }
 
     const dateFilter = startDate ? { createdAt: { $gte: startDate } } : {};
+    // --- Recent Withdrawals ---
+    const recentWithdrawals = await this.withdrawalModel
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate({
+        path: 'user',
+        select: 'firstName lastName email',
+      })
+      .lean();
 
     // --- Overview Metrics (Filtered by date) ---
     const [
@@ -263,6 +273,7 @@ export class AdminAnalyticsService {
           successful: successfulWithdrawals,
           total: totalWithdrawals,
         },
+        recentWithdrawals,
       },
     };
   }
