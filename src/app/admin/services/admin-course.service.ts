@@ -22,7 +22,7 @@ export class AdminCoursesService {
     private emailService: EmailService,
   ) {}
 
-  // In admin-courses.service.ts
+
   async viewCourses(query: QueryString) {
     const dbQuery = new DBQuery(this.courseModel, query);
 
@@ -31,9 +31,7 @@ export class AdminCoursesService {
       .sort()
       .limitFields()
       .paginate()
-      .populate('category')
-      .populate('lessons')
-      .populate('assignments');
+  
 
     const [courses, total] = await Promise.all([
       dbQuery.exec(),
