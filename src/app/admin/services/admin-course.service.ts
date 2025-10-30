@@ -23,28 +23,52 @@ export class AdminCoursesService {
   ) {}
 
 
-  async viewCourses(query: QueryString) {
-    const dbQuery = new DBQuery(this.courseModel, query);
+async viewCourses(query: any) {
+  const {
+    search,
+    category,
+    status,
+    page = 1,
+    limit = 10,
+  } = query;
 
-    dbQuery
-      .filter()
-      .sort()
-      .limitFields()
-      .paginate()
+  const filter: any = {};
+
   
-
-    const [courses, total] = await Promise.all([
-      dbQuery.exec(),
-      dbQuery.count(),
-    ]);
-
-    return {
-      page: dbQuery.page,
-      results: total,
-      courses,
-      message: 'Courses fetched successfully',
-    };
+  if (category && category !== "all") {
+    filter.category = { $regex: category, $options: "i" };
   }
+
+
+  if (status && status !== "all") {
+    filter.status = status;
+  }
+
+  if (search) {
+    filter.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { instructorName: { $regex: search, $options: "i" } },
+    ];
+  }
+
+ 
+  const courses = await this.courseModel
+    .find(filter)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * Number(limit))
+    .limit(Number(limit))
+    .exec();
+
+  const total = await this.courseModel.countDocuments(filter);
+
+  return {
+    page: Number(page),
+    total,
+    courses,
+    message: "Admin courses fetched successfully",
+  };
+}
+
 
   async approveCourse(
     courseId: string,
