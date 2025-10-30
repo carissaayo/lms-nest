@@ -12,7 +12,7 @@ import { UserRole } from 'src/app/user/user.interface';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { AdminCourseActionDTO } from 'src/app/course/course.dto';
-import { DBQuery, QueryString } from 'src/app/database/dbquery';
+
 
 @Injectable()
 export class AdminCoursesService {
@@ -38,7 +38,6 @@ async viewCourses(query: any) {
   if (category && category !== "all") {
     filter.category = { $regex: category, $options: "i" };
   }
-
 
   if (status && status !== "all") {
     filter.status = status;
