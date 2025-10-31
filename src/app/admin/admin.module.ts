@@ -25,6 +25,7 @@ import { Earning, EarningSchema } from '../models/earning.schema';
 import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
 import { AdminAnalyticsService } from './services/admin-analytics.service';
 import { AdminAnalyticsController } from './controllers/admin-analytics.controller';
+import { Lesson, LessonSchema } from '../models/lesson.schema';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AdminAnalyticsController } from './controllers/admin-analytics.controll
       { name: Course.name, schema: CourseSchema },
       { name: Earning.name, schema: EarningSchema },
       { name: Enrollment.name, schema: EnrollmentSchema },
+      { name: Lesson.name, schema: LessonSchema },
     ]),
     EmailModule,
     CourseModule,

@@ -12,69 +12,69 @@ import { UserRole } from 'src/app/user/user.interface';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { AdminCourseActionDTO } from 'src/app/course/course.dto';
-
+import {
+  Enrollment,
+  EnrollmentDocument,
+} from 'src/app/models/enrollment.schema';
+import { User, UserDocument } from 'src/app/models/user.schema';
+import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
 
 @Injectable()
 export class AdminCoursesService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+    @InjectModel(Enrollment.name)
+    private enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
     private emailService: EmailService,
   ) {}
 
+  async viewCourses(query: any) {
+    const { search, category, status, page = 1, limit = 10 } = query;
 
-async viewCourses(query: any) {
-  const {
-    search,
-    category,
-    status,
-    page = 1,
-    limit = 10,
-  } = query;
+    const filter: any = {};
 
-  const filter: any = {};
+    if (category && category !== 'all') {
+      filter.category = { $regex: category, $options: 'i' };
+    }
 
-  
-  if (category && category !== "all") {
-    filter.category = { $regex: category, $options: "i" };
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { instructorName: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const courses = await this.courseModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * Number(limit))
+      .limit(Number(limit))
+      .exec();
+
+    const total = await this.courseModel.countDocuments(filter);
+
+    return {
+      page: Number(page),
+      total,
+      courses,
+      message: 'Admin courses fetched successfully',
+    };
   }
-
-  if (status && status !== "all") {
-    filter.status = status;
-  }
-
-  if (search) {
-    filter.$or = [
-      { title: { $regex: search, $options: "i" } },
-      { instructorName: { $regex: search, $options: "i" } },
-    ];
-  }
-
- 
-  const courses = await this.courseModel
-    .find(filter)
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * Number(limit))
-    .limit(Number(limit))
-    .exec();
-
-  const total = await this.courseModel.countDocuments(filter);
-
-  return {
-    page: Number(page),
-    total,
-    courses,
-    message: "Admin courses fetched successfully",
-  };
-}
-
 
   async approveCourse(
     courseId: string,
     dto: AdminCourseActionDTO,
     req: CustomRequest,
   ) {
-    if (!courseId) throw customError.notFound('courseId is required');
+      const admin = await this.adminModel.findById(req.userId);
+      if (!admin) throw customError.notFound('Admin not found');
 
     const { action, rejectReason } = dto;
     const course = await this.courseModel
@@ -92,8 +92,7 @@ async viewCourses(query: any) {
       throw customError.forbidden('Invalid instructor');
     }
 
-    const admin = await this.adminModel.findById(req.userId);
-    if (!admin) throw customError.notFound('Admin not found');
+  
 
     if (course.status === action) {
       throw customError.forbidden(`Course is already ${action}.`);
@@ -175,8 +174,62 @@ async viewCourses(query: any) {
     }
   }
 
-  async findAdminById(id: string) {
-    const admin = await this.adminModel.findById(id);
-    return { admin };
+  async getSingleCourse(courseId: string,req: CustomRequest) {
+      const admin = await this.adminModel.findById(req.userId);
+      if (!admin) throw customError.notFound('Admin not found');
+    const course = await this.courseModel.findById(courseId);
+
+    if (!course) {
+      throw customError.notAcceptable('Course not found');
+    }
+
+    const instructor = await this.userModel.findOne({ _id: course.instructor });
+    if (!instructor) {
+      throw customError.notAcceptable('Instructor not found');
+    }
+    const totalEnrollments = await this.enrollmentModel.countDocuments({
+      course: course._id,
+    });
+
+    
+    // const reviewStats = await this.reviewModel.aggregate([
+    //   { $match: { course: course._id } },
+    //   {
+    //     $group: {
+    //       _id: null,
+    //       totalReviews: { $sum: 1 },
+    //       avgRating: { $avg: '$rating' },
+    //     },
+    //   },
+    // ]);
+
+    // const totalReviews = reviewStats[0]?.totalReviews || 0;
+    // const avgRating = reviewStats[0]?.avgRating?.toFixed(1) || 0;
+    const lessons = await this.lessonModel
+      .find({ course: course._id })
+      .select('title duration position videoUrl noteUrl createdAt')
+      .sort({ position: 1 })
+      .lean();
+    return {
+      course: {
+        id: course._id,
+        title: course.title,
+        description: course.description,
+        category: course.category,
+        duration: course.duration,
+        coverImage: course.coverImage,
+        price: course.price,
+        status: course.status,
+        rejectionReason: course.rejectReason,
+        suspensionReason: course.suspendReason,
+        instructor,
+        enrollments: totalEnrollments,
+        // rating: avgRating,
+        // totalReviews,
+        lessons,
+        createdAt: course.createdAt,
+        updatedAt: course.updatedAt,
+      },
+    };
   }
 }

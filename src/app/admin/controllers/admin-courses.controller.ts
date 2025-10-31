@@ -8,6 +8,7 @@ import {
   Get,
   Query,
   Req,
+  Param,
 } from '@nestjs/common';
 
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -57,5 +58,13 @@ export class AdminCoursesController {
   @Get()
   async getCourses(@Query() query: QueryString) {
     return this.adminCoursesService.viewCourses(query);
+  }
+
+  @Get(":courseId")
+  async getSingleCourse(
+    @Param("courseId") courseId: string,
+  @Req() req: CustomRequest
+) {
+    return this.adminCoursesService.getSingleCourse(courseId,req);
   }
 }
