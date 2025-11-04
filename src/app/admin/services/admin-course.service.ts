@@ -190,8 +190,11 @@ export class AdminCoursesService {
     const totalInstructorCourses = await this.courseModel.countDocuments({
       instructor: instructor._id,
     });
-    const totalEnrollments = await this.enrollmentModel.countDocuments({
+    const totalCourseEnrollments = await this.enrollmentModel.countDocuments({
       course: course._id,
+    });
+    const totalInstructorEnrollments = await this.enrollmentModel.countDocuments({
+      user: instructor._id,
     });
 
     
@@ -226,8 +229,9 @@ export class AdminCoursesService {
         rejectionReason: course.rejectReason,
         suspensionReason: course.suspendReason,
         instructor,
- totalCourses: totalInstructorCourses,
-        enrollments: totalEnrollments,
+        totalCourses: totalInstructorCourses,
+        enrollments: totalCourseEnrollments,
+        totalInstructorEnrollments,
         // rating: avgRating,
         // totalReviews,
         lessons,
