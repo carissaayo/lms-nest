@@ -187,6 +187,9 @@ export class AdminCoursesService {
     if (!instructor) {
       throw customError.notAcceptable('Instructor not found');
     }
+    const totalInstructorCourses = await this.courseModel.countDocuments({
+      instructor: instructor._id,
+    });
     const totalEnrollments = await this.enrollmentModel.countDocuments({
       course: course._id,
     });
@@ -222,7 +225,7 @@ export class AdminCoursesService {
         status: course.status,
         rejectionReason: course.rejectReason,
         suspensionReason: course.suspendReason,
-        instructor,
+        instructor:{...instructor, totalCourses: totalInstructorCourses},
         enrollments: totalEnrollments,
         // rating: avgRating,
         // totalReviews,
