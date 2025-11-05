@@ -79,7 +79,7 @@ export class AdminCoursesService {
     const { action, rejectReason } = dto;
     const course = await this.courseModel
       .findById(courseId)
-      .populate('instructorId');
+      .populate('instructor');
     if (!course) throw customError.conflict('Course not found');
     if (course.deleted) throw customError.gone('Course has been deleted');
 
@@ -88,9 +88,6 @@ export class AdminCoursesService {
       throw customError.forbidden('Instructor has been suspended');
     }
 
-    if (instructor.role !== UserRole.INSTRUCTOR) {
-      throw customError.forbidden('Invalid instructor');
-    }
 
     if (course.status === action) {
       throw customError.forbidden(`Course is already ${action}.`);
@@ -102,7 +99,7 @@ export class AdminCoursesService {
           course.isApproved = true;
           course.status = CourseStatus.APPROVED;
           course.approvalDate = new Date();
-          course.approvedBy = admin._id as any; // Explicitly cast to ObjectId
+          course.approvedBy = admin._id as any;
           course.approvedByName =
             `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
           break;
@@ -112,7 +109,7 @@ export class AdminCoursesService {
           course.isApproved = false;
           course.status = CourseStatus.REJECTED;
           course.rejectionDate = new Date();
-          course.rejectedBy = admin._id as any; // Explicitly cast to ObjectId
+          course.rejectedBy = admin._id as any; 
           course.rejectedByName =
             `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
           course.rejectReason = rejectReason ?? '';
@@ -123,7 +120,7 @@ export class AdminCoursesService {
           course.isApproved = false;
           course.status = CourseStatus.SUSPENDED;
           course.suspensionDate = new Date();
-          course.suspendedBy = admin._id as any; // Explicitly cast to ObjectId
+          course.suspendedBy = admin._id as any; 
           course.suspendedByName =
             `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
           course.suspendReason = rejectReason ?? '';
