@@ -70,7 +70,7 @@ export class AdminAuthService {
       existingUser.password = hashedPassword;
       await existingUser.save();
 
-      await this.emailService.sendVerificationEmail(email, emailCode);
+     this.emailService.sendVerificationEmail(email, emailCode);
 
       return {
         message:
@@ -186,7 +186,7 @@ export class AdminAuthService {
 
       await user.save();
 
-      await this.emailService.sendPasswordResetEmail(email, resetCode);
+     this.emailService.sendPasswordResetEmail(email, resetCode);
 
       return {
         message: 'PASSWORD RESET CODE SENT TO YOUR EMAIL',

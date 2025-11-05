@@ -84,7 +84,7 @@ export class StudentService {
 
       const paymentLink = payment.data.authorization_url;
 
-      await this.emailService.paymentLinkGenerated(
+     this.emailService.paymentLinkGenerated(
         student.email,
         `${student.firstName} ${student.lastName}`,
         course.title,

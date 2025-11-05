@@ -90,7 +90,7 @@ export class AuthService {
       const savedUser = await user.save();
       const { emailVerified, _id } = savedUser;
 
-      await this.emailService.sendVerificationEmail(email, emailCode);
+    this.emailService.sendVerificationEmail(email, emailCode);
 
       return {
         message:
@@ -208,7 +208,7 @@ export class AuthService {
       user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
 
       await user.save();
-      await this.emailService.sendPasswordResetEmail(email, resetCode);
+       this.emailService.sendPasswordResetEmail(email, resetCode);
 
       return { message: 'PASSWORD RESET CODE SENT TO YOUR EMAIL' };
     } catch (error) {

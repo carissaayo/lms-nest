@@ -288,7 +288,7 @@ export class CourseService {
       course.lessons = lessons.length;
       await course.save();
 
-      await this.emailService.courseSubmission(
+ this.emailService.courseSubmission(
         instructor.email,
         instructor.firstName,
         course.title,
@@ -329,7 +329,7 @@ export class CourseService {
       course.publishedAt = new Date();
       await course.save();
 
-      await this.emailService.coursePublish(
+    this.emailService.coursePublish(
         instructor.email,
         instructor.firstName,
         course.title,

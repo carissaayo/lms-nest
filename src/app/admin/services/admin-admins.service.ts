@@ -72,7 +72,7 @@ export class AdminAdminsService {
 
       await newAdmin.save();
 
-      await this.emailService.adminInvitationEmail(email);
+ this.emailService.adminInvitationEmail(email);
 
       return {
         accessToken: req.token,
@@ -126,7 +126,7 @@ export class AdminAdminsService {
       await user.save();
       await admin.save();
 
-      await this.emailService.suspensionEmail(
+      this.emailService.suspensionEmail(
         user.email,
         user.firstName,
         action,

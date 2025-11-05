@@ -148,7 +148,7 @@ switch (action) {
       await admin.save();
       await course.save();
 
-      await this.emailService.courseStatusEmail(
+ this.emailService.courseStatusEmail(
         instructor.email,
         instructor.firstName,
         course.title,
