@@ -94,48 +94,49 @@ export class AdminCoursesService {
     }
 
     try {
-      switch (course.status) {
-        case CourseStatus.APPROVED: {
-          course.isApproved = true;
-          course.status = CourseStatus.APPROVED;
-          course.approvalDate = new Date();
-          course.approvedBy = admin._id as any;
-          course.approvedByName =
-            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-          break;
-        }
+switch (action) {
+  case CourseStatus.APPROVED: {
+    course.isApproved = true;
+    course.status = CourseStatus.APPROVED;
+    course.approvalDate = new Date();
+    course.approvedBy = admin._id as any;
+    course.approvedByName =
+      `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+    break;
+  }
 
-        case CourseStatus.REJECTED: {
-          course.isApproved = false;
-          course.status = CourseStatus.REJECTED;
-          course.rejectionDate = new Date();
-          course.rejectedBy = admin._id as any; 
-          course.rejectedByName =
-            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-          course.rejectReason = rejectReason ?? '';
-          break;
-        }
+  case CourseStatus.REJECTED: {
+    course.isApproved = false;
+    course.status = CourseStatus.REJECTED;
+    course.rejectionDate = new Date();
+    course.rejectedBy = admin._id as any;
+    course.rejectedByName =
+      `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+    course.rejectReason = dto.rejectReason ?? '';
+    break;
+  }
 
-        case CourseStatus.SUSPENDED: {
-          course.isApproved = false;
-          course.status = CourseStatus.SUSPENDED;
-          course.suspensionDate = new Date();
-          course.suspendedBy = admin._id as any; 
-          course.suspendedByName =
-            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-          course.suspendReason = rejectReason ?? '';
-          break;
-        }
+  case CourseStatus.SUSPENDED: {
+    course.isApproved = false;
+    course.status = CourseStatus.SUSPENDED;
+    course.suspensionDate = new Date();
+    course.suspendedBy = admin._id as any;
+    course.suspendedByName =
+      `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+    course.suspendReason = dto.suspendReason ?? '';
+    break;
+  }
 
-        case CourseStatus.PENDING: {
-          course.isApproved = false;
-          course.status = CourseStatus.PENDING;
-          break;
-        }
+  case CourseStatus.PENDING: {
+    course.isApproved = false;
+    course.status = CourseStatus.PENDING;
+    break;
+  }
 
-        default:
-          throw customError.badRequest('Unsupported course action transition');
-      }
+  default:
+    throw customError.badRequest('Unsupported course action transition');
+}
+
 
       const newAdminAction = {
         action: `${action} course ${course.id}`,
