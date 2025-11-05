@@ -48,7 +48,7 @@ export class AdminCoursesController {
 
   @Patch(':courseId/action')
   async approveCourse(
-    @IdParam('courseId') courseId: string,
+    @Param('courseId') courseId: string,
     @Body() dto: AdminCourseActionDTO,
     @Req() req: CustomRequest,
   ) {

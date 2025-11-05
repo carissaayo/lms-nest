@@ -73,8 +73,8 @@ export class AdminCoursesService {
     dto: AdminCourseActionDTO,
     req: CustomRequest,
   ) {
-      const admin = await this.adminModel.findById(req.userId);
-      if (!admin) throw customError.notFound('Admin not found');
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
 
     const { action, rejectReason } = dto;
     const course = await this.courseModel
@@ -91,8 +91,6 @@ export class AdminCoursesService {
     if (instructor.role !== UserRole.INSTRUCTOR) {
       throw customError.forbidden('Invalid instructor');
     }
-
-  
 
     if (course.status === action) {
       throw customError.forbidden(`Course is already ${action}.`);
@@ -174,9 +172,9 @@ export class AdminCoursesService {
     }
   }
 
-  async getSingleCourse(courseId: string,req: CustomRequest) {
-      const admin = await this.adminModel.findById(req.userId);
-      if (!admin) throw customError.notFound('Admin not found');
+  async getSingleCourse(courseId: string, req: CustomRequest) {
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
     const course = await this.courseModel.findById(courseId);
 
     if (!course) {
@@ -193,11 +191,11 @@ export class AdminCoursesService {
     const totalCourseEnrollments = await this.enrollmentModel.countDocuments({
       course: course._id,
     });
-    const totalInstructorEnrollments = await this.enrollmentModel.countDocuments({
-      user: instructor._id,
-    });
+    const totalInstructorEnrollments =
+      await this.enrollmentModel.countDocuments({
+        user: instructor._id,
+      });
 
-    
     // const reviewStats = await this.reviewModel.aggregate([
     //   { $match: { course: course._id } },
     //   {
