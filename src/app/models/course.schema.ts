@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { UserAdmin } from './admin.schema';
+import { User } from './user.schema';
 
 export enum CourseStatus {
   PENDING = 'pending',
@@ -18,7 +19,7 @@ export class Course extends Document {
   description: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  instructor: MongooseSchema.Types.ObjectId | UserAdmin;
+  instructor: MongooseSchema.Types.ObjectId | User;
 
   @Prop({ required: true })
   instructorName: string;

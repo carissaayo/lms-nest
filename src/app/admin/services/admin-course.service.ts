@@ -83,7 +83,7 @@ export class AdminCoursesService {
     if (!course) throw customError.conflict('Course not found');
     if (course.deleted) throw customError.gone('Course has been deleted');
 
-    const instructor = course.instructor as UserAdmin;
+    const instructor = course.instructor as User;
     if (!instructor.isActive) {
       throw customError.forbidden('Instructor has been suspended');
     }
