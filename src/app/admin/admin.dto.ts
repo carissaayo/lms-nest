@@ -9,6 +9,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PermissionsEnum } from './admin.interface';
+import { UserStatus } from '../models/user.schema';
 
 export enum SuspendStatus {
   SUSPEND = 'suspend',
@@ -19,6 +20,7 @@ export enum PermissionsActions {
   ADD = 'add',
   REMOVE = 'remove',
 }
+
 export class SuspendUserDTO {
   @IsString()
   @IsNotEmpty()
@@ -53,4 +55,25 @@ export class AddAnAdminDTO {
   @IsEmail()
   @IsNotEmpty()
   email: string;
+}
+export class UpdateInstructorStatusDTO {
+  @IsEnum(UserStatus, {
+    message: 'Status must be either approve, reject, pending or suspend',
+  })
+  @IsNotEmpty()
+  status: UserStatus;
+
+  @ValidateIf((o) => o.status === UserStatus.REJECTED)
+  @IsString()
+  @IsNotEmpty({
+    message: 'Rejection reason is required when rejecting an instructor',
+  })
+  rejectReason?: string;
+
+  @ValidateIf((o) => o.status === UserStatus.SUSPENDED)
+  @IsString()
+  @IsNotEmpty({
+    message: 'Suspension reason is required when suspending an instructor',
+  })
+  suspendReason?: string;
 }

@@ -1,11 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { UserRole } from '../user/user.interface';
+import { UserAdmin } from './admin.schema';
 
 export enum UserStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
   REJECTED = 'rejected',
+  SUSPENDED= 'suspended',
 }
 
 @Schema({ timestamps: true, collection: 'users' })
@@ -99,8 +101,42 @@ export class User extends Document {
   @Prop({ default: false })
   isSignedUp: boolean;
 
+  @Prop({ default: false })
+  isDeleted: boolean;
+  
   @Prop({ type: [Object], default: [] })
   actions: any[];
+
+  @Prop()
+  suspendReason?: string;
+
+  @Prop()
+  suspensionDate?: Date;
+  @Prop()
+  suspendedByName?: string;
+  @Prop()
+  suspendedBy?: MongooseSchema.Types.ObjectId;
+
+  @Prop()
+  rejectedBy?: MongooseSchema.Types.ObjectId;
+
+  @Prop()
+  rejectedByName?: string;
+
+  @Prop()
+  rejectReason?: string;
+
+  @Prop()
+  rejectionDate?: Date;
+
+  @Prop()
+  approvalDate?: Date;
+
+  @Prop()
+  approvedByName?: string;
+
+  @Prop()
+  approvedBy?: MongooseSchema.Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
