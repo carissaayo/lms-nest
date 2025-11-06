@@ -26,6 +26,8 @@ import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
 import { AdminAnalyticsService } from './services/admin-analytics.service';
 import { AdminAnalyticsController } from './controllers/admin-analytics.controller';
 import { Lesson, LessonSchema } from '../models/lesson.schema';
+import { AdminInstructorService } from './services/admin-instructor.service';
+import { AdminInstructorController } from './controllers/admin-instructor.controller';
 
 @Module({
   imports: [
@@ -49,6 +51,7 @@ import { Lesson, LessonSchema } from '../models/lesson.schema';
     AdminAuthService,
     AdminPaymentsService,
     AdminAnalyticsService,
+    AdminInstructorService,
   ],
   controllers: [
     AdminUserController,
@@ -57,6 +60,7 @@ import { Lesson, LessonSchema } from '../models/lesson.schema';
     AdminAuthController,
     AdminPaymentsController,
     AdminAnalyticsController,
+    AdminInstructorController,
   ],
   exports: [],
 })
