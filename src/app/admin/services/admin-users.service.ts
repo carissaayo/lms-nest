@@ -10,12 +10,18 @@ import { AdminProfileInterface } from '../admin.interface';
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
+import { Course, CourseDocument } from 'src/app/models/course.schema';
+import { Enrollment, EnrollmentDocument } from 'src/app/models/enrollment.schema';
+import { Earning, EarningDocument } from 'src/app/models/earning.schema';
 
 @Injectable()
 export class AdminUserService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+    @InjectModel(Enrollment.name) private enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(Earning.name) private earningModel: Model<EarningDocument>,
     private emailService: EmailService,
   ) {}
 
@@ -119,7 +125,6 @@ export class AdminUserService {
     }
   }
 
-
   async viewInstructors(query: any) {
     const { search, status, page = 1, limit = 10 } = query;
 
@@ -137,6 +142,7 @@ export class AdminUserService {
       ];
     }
 
+    // Get instructors
     const instructors = await this.userModel
       .find(filter)
       .sort({ createdAt: -1 })
@@ -147,7 +153,7 @@ export class AdminUserService {
 
     const total = await this.userModel.countDocuments(filter);
 
-    
+    // Stats for dashboard summary
     const [activeCount, pendingCount, suspendedCount] = await Promise.all([
       this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
       this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
@@ -156,6 +162,42 @@ export class AdminUserService {
         status: 'suspended',
       }),
     ]);
+
+    // Add course, enrollment & revenue stats for each instructor
+    const instructorStats = await Promise.all(
+      instructors.map(async (instructor) => {
+        const [coursesCount, studentsCount, earningsAgg] = await Promise.all([
+          this.courseModel.countDocuments({
+            instructor: instructor._id,
+            deleted: false,
+          }),
+
+          
+          this.enrollmentModel.countDocuments({
+            course: {
+              $in: await this.courseModel
+                .find({ instructor: instructor._id })
+                .distinct('_id'),
+            },
+          }),
+
+          
+          this.earningModel.aggregate([
+            { $match: { instructor: instructor._id } },
+            { $group: { _id: null, totalRevenue: { $sum: '$amount' } } },
+          ]),
+        ]);
+
+        const totalRevenue = earningsAgg[0]?.totalRevenue || 0;
+
+        return {
+          ...instructor,
+          coursesCount,
+          studentsCount,
+          totalRevenue,
+        };
+      }),
+    );
 
     return {
       page: Number(page),
@@ -166,7 +208,7 @@ export class AdminUserService {
         pendingInstructors: pendingCount,
         suspendedInstructors: suspendedCount,
       },
-      instructors,
+      instructors: instructorStats,
       message: 'Admin instructors fetched successfully',
     };
   }
