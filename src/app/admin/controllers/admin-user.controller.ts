@@ -1,6 +1,5 @@
 import {
   Controller,
-  Post,
   Body,
   UsePipes,
   ValidationPipe,
@@ -8,9 +7,10 @@ import {
   Req,
   Patch,
   Param,
+  Get,
+  Query,
 } from '@nestjs/common';
 
-import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -50,5 +50,11 @@ export class AdminUserController {
     req: CustomRequest,
   ) {
     return this.adminUserService.suspendUser(userId, suspendDto, req);
+  }
+  @Get('instructors')
+  viewInstructors(
+@Query() query:any
+  ) {
+    return this.adminUserService.viewInstructors(query);
   }
 }

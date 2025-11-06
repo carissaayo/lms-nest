@@ -10,7 +10,7 @@ import {
   CourseStatus,
 } from 'src/app/models/course.schema';
 import { User, UserDocument } from 'src/app/models/user.schema';
-import { Category, CategoryDocument } from 'src/app/models/main.schema';
+
 import { CreateCourseDTO } from '../course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { singleImageValidation } from 'src/utils/file-validation';

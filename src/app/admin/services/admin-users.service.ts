@@ -118,4 +118,56 @@ export class AdminUserService {
       throw customError.internalServerError('Internal Server Error', 500);
     }
   }
+
+
+  async viewInstructors(query: any) {
+    const { search, status, page = 1, limit = 10 } = query;
+
+    const filter: any = { role: 'instructor' };
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const instructors = await this.userModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * Number(limit))
+      .limit(Number(limit))
+      .select('firstName lastName email avatar status createdAt specialization')
+      .lean();
+
+    const total = await this.userModel.countDocuments(filter);
+
+    
+    const [activeCount, pendingCount, suspendedCount] = await Promise.all([
+      this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
+      this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
+      this.userModel.countDocuments({
+        role: 'instructor',
+        status: 'suspended',
+      }),
+    ]);
+
+    return {
+      page: Number(page),
+      total,
+      stats: {
+        totalInstructors: total,
+        activeInstructors: activeCount,
+        pendingInstructors: pendingCount,
+        suspendedInstructors: suspendedCount,
+      },
+      instructors,
+      message: 'Admin instructors fetched successfully',
+    };
+  }
 }
