@@ -62,7 +62,7 @@ export class AdminInstructorController {
     return this.adminInstructorService.viewInstructors(query);
   }
 
-  @Get('instructorId')
+  @Get(':instructorId')
   getSingleInstructor(@Param('instructorId') instructorId: string) {
     return this.adminInstructorService.getSingleInstructor(instructorId);
   }
