@@ -28,6 +28,8 @@ import { AdminAnalyticsController } from './controllers/admin-analytics.controll
 import { Lesson, LessonSchema } from '../models/lesson.schema';
 import { AdminInstructorService } from './services/admin-instructor.service';
 import { AdminInstructorController } from './controllers/admin-instructor.controller';
+import { AdminStudentsService } from './services/admin-students.service';
+import { AdminStudentsController } from './controllers/admin-students.service';
 
 @Module({
   imports: [
@@ -52,6 +54,7 @@ import { AdminInstructorController } from './controllers/admin-instructor.contro
     AdminPaymentsService,
     AdminAnalyticsService,
     AdminInstructorService,
+    AdminStudentsService,
   ],
   controllers: [
     AdminUserController,
@@ -61,6 +64,7 @@ import { AdminInstructorController } from './controllers/admin-instructor.contro
     AdminPaymentsController,
     AdminAnalyticsController,
     AdminInstructorController,
+    AdminStudentsController,
   ],
   exports: [],
 })
