@@ -198,6 +198,8 @@ export class AdminInstructorService {
           instructor.suspendedBy = undefined;
           instructor.suspendedByName = undefined;
           instructor.suspendReason = undefined;
+          instructor.status = UserStatus.APPROVED;
+
           break;
         }
 
@@ -236,16 +238,16 @@ export class AdminInstructorService {
           );
       }
 
-      // Log admin action
-      const newAdminAction = {
-        action: `${status} instructor ${instructor.id}`,
-        ...(rejectReason ? { reason: rejectReason } : {}),
-        ...(suspendReason ? { reason: suspendReason } : {}),
-        date: new Date(),
-      };
+    //   // Log admin action
+    //   const newAdminAction = {
+    //     action: `${status} instructor ${instructor.id}`,
+    //     ...(rejectReason ? { reason: rejectReason } : {}),
+    //     ...(suspendReason ? { reason: suspendReason } : {}),
+    //     date: new Date(),
+    //   };
 
-      admin.actions = [...(admin.actions || []), newAdminAction];
-      await admin.save();
+    //   admin.actions = [...(admin.actions || []), newAdminAction];
+    //   await admin.save();
       await instructor.save();
 
       return {
