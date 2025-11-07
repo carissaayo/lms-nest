@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
@@ -13,6 +14,7 @@ import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
 import { Course, CourseDocument } from 'src/app/models/course.schema';
 import { Enrollment, EnrollmentDocument } from 'src/app/models/enrollment.schema';
 import { Earning, EarningDocument } from 'src/app/models/earning.schema';
+import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
 
 @Injectable()
 export class AdminUserService {
@@ -23,6 +25,7 @@ export class AdminUserService {
     @InjectModel(Enrollment.name)
     private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Earning.name) private earningModel: Model<EarningDocument>,
+    @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     private emailService: EmailService,
   ) {}
 
@@ -127,13 +130,10 @@ export class AdminUserService {
   }
 
   async viewStudents(query: any, req: CustomRequest) {
-    console.log("id",req.userId);
-    
     const admin = await this.adminModel.findById(req.userId);
     if (!admin) throw customError.notFound('Admin not found');
 
     const { search, status, page = 1, limit = 10 } = query;
-
     const filter: any = { role: 'student' };
 
     if (status && status !== 'all') {
@@ -148,43 +148,84 @@ export class AdminUserService {
       ];
     }
 
+    // Fetch students (only useful fields)
     const students = await this.userModel
       .find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * Number(limit))
       .limit(Number(limit))
-      .select('-password ')
-      .exec();
+      .select('firstName lastName email phoneNumber status createdAt')
+      .lean();
 
     const total = await this.userModel.countDocuments(filter);
-    const enrollmentCounts = await this.enrollmentModel.aggregate([
-      { $group: { _id: '$user', totalEnrollments: { $sum: 1 } } },
-    ]);
 
-    const enrollmentMap = new Map(
+    // Aggregate enrollment counts per student
+    const enrollmentCounts = await this.enrollmentModel.aggregate<{
+      _id: ObjectId;
+      totalEnrollments: number;
+    }>([{ $group: { _id: '$user', totalEnrollments: { $sum: 1 } } }]);
+
+    // Aggregate total payments per student
+    const paymentTotals = await this.paymentModel.aggregate<{
+      _id: ObjectId;
+      totalPayments: number;
+    }>([{ $group: { _id: '$student', totalPayments: { $sum: '$amount' } } }]);
+
+    // Create maps for faster lookup
+    const enrollmentMap = new Map<string, number>(
       enrollmentCounts.map((item) => [
         item._id.toString(),
         item.totalEnrollments,
       ]),
     );
 
-    const studentsWithCounts = students.map((student) => ({
-      ...student,
-      totalEnrollments: enrollmentMap.get(student._id as ObjectId) || 0,
-    }));
+    const paymentMap = new Map<string, number>(
+      paymentTotals.map((item) => [item._id.toString(), item.totalPayments]),
+    );
+
+    // Attach stats to each student
+    const studentsWithStats = students.map((student) => {
+      const studentId = String(student._id as ObjectId);
+
+      return {
+        _id: student._id as ObjectId,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        phoneNumber: student.phoneNumber,
+        status: student.status,
+        createdAt: student.createdAt,
+        totalEnrollments: enrollmentMap.get(studentId) || 0,
+        totalPayments: paymentMap.get(studentId) || 0,
+      };
+    });
+
+    // Global totals for dashboard summary
+    const [globalEnrollments, globalPayments] = await Promise.all([
+      this.enrollmentModel.countDocuments(),
+      this.paymentModel.aggregate<{ totalPayments: number }>([
+        { $group: { _id: null, totalPayments: { $sum: '$amount' } } },
+      ]),
+    ]);
+
+    const totalPaymentAmount =
+      globalPayments.length > 0 ? globalPayments[0].totalPayments : 0;
+
     return {
       page: Number(page),
-      total,
-      students: studentsWithCounts,
+      limit: Number(limit),
+      totalStudents: total,
+      totalAppEnrollments: globalEnrollments,
+      totalAppPayments: totalPaymentAmount,
+      students: studentsWithStats,
       message: 'Admin students fetched successfully',
     };
   }
 
   async viewInstructors(query: any, req: CustomRequest) {
     const { search, status, page = 1, limit = 10 } = query;
-     const admin = await this.adminModel.findById(req.userId);
-     if (!admin) throw customError.notFound('Admin not found');
-
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
 
     const filter: any = { role: 'instructor' };
 
@@ -200,7 +241,6 @@ export class AdminUserService {
       ];
     }
 
-    
     const instructors = await this.userModel
       .find(filter)
       .sort({ createdAt: -1 })
@@ -211,7 +251,6 @@ export class AdminUserService {
 
     const total = await this.userModel.countDocuments(filter);
 
-    
     const [activeCount, pendingCount, suspendedCount] = await Promise.all([
       this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
       this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
@@ -221,7 +260,7 @@ export class AdminUserService {
       }),
     ]);
 
-     const instructorStats = await Promise.all(
+    const instructorStats = await Promise.all(
       instructors.map(async (instructor) => {
         const [coursesCount, studentsCount, earningsAgg] = await Promise.all([
           this.courseModel.countDocuments({
