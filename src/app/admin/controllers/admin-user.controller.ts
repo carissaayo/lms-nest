@@ -43,6 +43,16 @@ import {
 export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 
+  @Get('instructors')
+  viewInstructors(@Query() query: any, req: CustomRequest) {
+    return this.adminUserService.viewInstructors(query, req);
+  }
+
+  @Get('students')
+  async getAllStudents(@Query() query: any, req: CustomRequest) {
+    return this.adminUserService.viewStudents(query, req);
+  }
+
   @Patch(':userid/action')
   suspendUser(
     @Param('id') userId: string,
@@ -50,14 +60,5 @@ export class AdminUserController {
     req: CustomRequest,
   ) {
     return this.adminUserService.suspendUser(userId, suspendDto, req);
-  }
-  @Get('instructors')
-  viewInstructors(@Query() query: any, req: CustomRequest) {
-    return this.adminUserService.viewInstructors(query,req);
-  }
-
-  @Get('students')
-  async getAllStudents(@Query() query: any, req: CustomRequest) {
-    return this.adminUserService.viewStudents(query, req);
   }
 }
