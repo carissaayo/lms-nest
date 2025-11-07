@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, ObjectId } from 'mongoose';
 import { EmailService } from '../../email/email.service';
 import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
 import { User, UserDocument } from 'src/app/models/user.schema';
@@ -20,7 +20,8 @@ export class AdminUserService {
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
-    @InjectModel(Enrollment.name) private enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(Enrollment.name)
+    private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Earning.name) private earningModel: Model<EarningDocument>,
     private emailService: EmailService,
   ) {}
@@ -125,8 +126,63 @@ export class AdminUserService {
     }
   }
 
-  async viewInstructors(query: any) {
+  async viewStudents(query: any, req: CustomRequest) {
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
+
     const { search, status, page = 1, limit = 10 } = query;
+
+    const filter: any = { role: 'student' };
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const students = await this.userModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * Number(limit))
+      .limit(Number(limit))
+      .select('-password ')
+      .exec();
+
+    const total = await this.userModel.countDocuments(filter);
+    const enrollmentCounts = await this.enrollmentModel.aggregate([
+      { $group: { _id: '$user', totalEnrollments: { $sum: 1 } } },
+    ]);
+
+    const enrollmentMap = new Map(
+      enrollmentCounts.map((item) => [
+        item._id.toString(),
+        item.totalEnrollments,
+      ]),
+    );
+
+    const studentsWithCounts = students.map((student) => ({
+      ...student,
+      totalEnrollments: enrollmentMap.get(student._id as ObjectId) || 0,
+    }));
+    return {
+      page: Number(page),
+      total,
+      students: studentsWithCounts,
+      message: 'Admin students fetched successfully',
+    };
+  }
+
+  async viewInstructors(query: any, req: CustomRequest) {
+    const { search, status, page = 1, limit = 10 } = query;
+     const admin = await this.adminModel.findById(req.userId);
+     if (!admin) throw customError.notFound('Admin not found');
+
 
     const filter: any = { role: 'instructor' };
 
@@ -142,7 +198,7 @@ export class AdminUserService {
       ];
     }
 
-    // Get instructors
+    
     const instructors = await this.userModel
       .find(filter)
       .sort({ createdAt: -1 })
@@ -153,7 +209,7 @@ export class AdminUserService {
 
     const total = await this.userModel.countDocuments(filter);
 
-    // Stats for dashboard summary
+    
     const [activeCount, pendingCount, suspendedCount] = await Promise.all([
       this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
       this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
@@ -163,8 +219,7 @@ export class AdminUserService {
       }),
     ]);
 
-    // Add course, enrollment & revenue stats for each instructor
-    const instructorStats = await Promise.all(
+     const instructorStats = await Promise.all(
       instructors.map(async (instructor) => {
         const [coursesCount, studentsCount, earningsAgg] = await Promise.all([
           this.courseModel.countDocuments({
@@ -172,7 +227,6 @@ export class AdminUserService {
             deleted: false,
           }),
 
-          
           this.enrollmentModel.countDocuments({
             course: {
               $in: await this.courseModel
@@ -181,7 +235,6 @@ export class AdminUserService {
             },
           }),
 
-          
           this.earningModel.aggregate([
             { $match: { instructor: instructor._id } },
             { $group: { _id: null, totalRevenue: { $sum: '$amount' } } },

@@ -41,7 +41,7 @@ export class AdminInstructorService {
       ];
     }
 
-    // Get instructors
+    
     const instructors = await this.userModel
       .find(filter)
       .sort({ createdAt: -1 })
@@ -52,7 +52,7 @@ export class AdminInstructorService {
 
     const total = await this.userModel.countDocuments(filter);
 
-    // Stats for dashboard summary
+    
     const [activeCount, pendingCount, suspendedCount] = await Promise.all([
       this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
       this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
@@ -62,7 +62,7 @@ export class AdminInstructorService {
       }),
     ]);
 
-    // Add course, enrollment & revenue stats for each instructor
+   
     const instructorStats = await Promise.all(
       instructors.map(async (instructor) => {
         const [coursesCount, studentsCount, earningsAgg] = await Promise.all([
