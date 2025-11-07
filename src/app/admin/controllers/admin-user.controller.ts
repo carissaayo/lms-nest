@@ -44,7 +44,9 @@ export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 
   @Get('instructors')
-  viewInstructors(@Query() query: any, req: CustomRequest) {
+  viewInstructors(
+    @Query() query: any,
+   @Req() req: CustomRequest) {
     return this.adminUserService.viewInstructors(query, req);
   }
 
@@ -57,7 +59,7 @@ export class AdminUserController {
   suspendUser(
     @Param('id') userId: string,
     @Body() suspendDto: SuspendUserDTO,
-    req: CustomRequest,
+    @Req() req: CustomRequest,
   ) {
     return this.adminUserService.suspendUser(userId, suspendDto, req);
   }
