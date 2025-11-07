@@ -44,14 +44,12 @@ export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 
   @Get('instructors')
-  viewInstructors(
-    @Query() query: any,
-   @Req() req: CustomRequest) {
+  viewInstructors(@Query() query: any, @Req() req: CustomRequest) {
     return this.adminUserService.viewInstructors(query, req);
   }
 
   @Get('students')
-  async getAllStudents(@Query() query: any, req: CustomRequest) {
+  async getAllStudents(@Query() query: any, @Req() req: CustomRequest) {
     return this.adminUserService.viewStudents(query, req);
   }
 
