@@ -127,6 +127,8 @@ export class AdminUserService {
   }
 
   async viewStudents(query: any, req: CustomRequest) {
+    console.log("id",req.userId);
+    
     const admin = await this.adminModel.findById(req.userId);
     if (!admin) throw customError.notFound('Admin not found');
 
