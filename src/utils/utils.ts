@@ -63,3 +63,7 @@ export const generateOtp = (
     return '0000';
   }
 };
+
+export const escapeRegex =(text: string) =>{
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

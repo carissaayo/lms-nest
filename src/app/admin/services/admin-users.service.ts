@@ -15,6 +15,7 @@ import { Course, CourseDocument } from 'src/app/models/course.schema';
 import { Enrollment, EnrollmentDocument } from 'src/app/models/enrollment.schema';
 import { Earning, EarningDocument } from 'src/app/models/earning.schema';
 import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
+import { escapeRegex } from 'src/utils/utils';
 
 @Injectable()
 export class AdminUserService {
@@ -140,15 +141,16 @@ export class AdminUserService {
       filter.status = status;
     }
 
-    if (search) {
+    if (search && search.trim()) {
+      const safeSearch = escapeRegex(search.trim());
+      const regex = new RegExp(safeSearch, 'i');
       filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { firstName: { $regex: regex } },
+        { lastName: { $regex: regex } },
       ];
     }
 
-    // Fetch students (only useful fields)
+    
     const students = await this.userModel
       .find(filter)
       .sort({ createdAt: -1 })
@@ -159,19 +161,18 @@ export class AdminUserService {
 
     const total = await this.userModel.countDocuments(filter);
 
-    // Aggregate enrollment counts per student
+    
     const enrollmentCounts = await this.enrollmentModel.aggregate<{
       _id: ObjectId;
       totalEnrollments: number;
     }>([{ $group: { _id: '$user', totalEnrollments: { $sum: 1 } } }]);
 
-    // Aggregate total payments per student
+    
     const paymentTotals = await this.paymentModel.aggregate<{
       _id: ObjectId;
       totalPayments: number;
     }>([{ $group: { _id: '$student', totalPayments: { $sum: '$amount' } } }]);
 
-    // Create maps for faster lookup
     const enrollmentMap = new Map<string, number>(
       enrollmentCounts.map((item) => [
         item._id.toString(),
@@ -183,10 +184,9 @@ export class AdminUserService {
       paymentTotals.map((item) => [item._id.toString(), item.totalPayments]),
     );
 
-    // Attach stats to each student
+    
     const studentsWithStats = students.map((student) => {
-      const studentId = String(student._id as ObjectId);
-
+      const studentId = student._id.toString();
       return {
         _id: student._id as ObjectId,
         firstName: student.firstName,
@@ -200,7 +200,7 @@ export class AdminUserService {
       };
     });
 
-    // Global totals for dashboard summary
+    
     const [globalEnrollments, globalPayments] = await Promise.all([
       this.enrollmentModel.countDocuments(),
       this.paymentModel.aggregate<{ totalPayments: number }>([
