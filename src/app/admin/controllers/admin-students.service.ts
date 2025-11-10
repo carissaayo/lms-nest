@@ -45,7 +45,7 @@ export class AdminStudentsController {
   constructor(private adminStudentsService: AdminStudentsService) {}
 
   @Get(':studentId')
-  getSingleStudent(@Param() studentId: string) {
+  getSingleStudent(@Param("studentId") studentId: string) {
     return this.adminStudentsService.getSingleStudent(studentId);
   }
 
