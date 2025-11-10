@@ -25,7 +25,7 @@ export class AdminStudentsService {
    */
   async getSingleStudent(id: string) {
     const student = await this.userModel
-      .findById(id)
+      .findOne({_id:id})
       .select('-password')
       .lean();
 
