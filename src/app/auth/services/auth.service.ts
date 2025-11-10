@@ -22,10 +22,11 @@ import {
   CustomRequest,
   generateToken,
   GET_PROFILE,
-  handleFailedAuthAttempt,
 } from 'src/utils/auth-utils';
 
 import bcrypt from 'bcryptjs';
+import config from 'src/app/config/config';
+const appConfig= config()
 @Injectable()
 export class AuthService {
   constructor(
@@ -38,12 +39,6 @@ export class AuthService {
     return bcrypt.hash(password, 10);
   }
 
-  private async validatePassword(
-    password: string,
-    hashed: string,
-  ): Promise<boolean> {
-    return bcrypt.compare(password, hashed);
-  }
 
   /** ----------------- REGISTER ----------------- */
   async register(body: RegisterDto) {
@@ -90,7 +85,7 @@ export class AuthService {
       const savedUser = await user.save();
       const { emailVerified, _id } = savedUser;
 
-    this.emailService.sendVerificationEmail(email, emailCode);
+      this.emailService.sendVerificationEmail(email, emailCode);
 
       return {
         message:
@@ -116,26 +111,22 @@ export class AuthService {
 
     const user = await this.userModel.findOne({ email });
     if (!user) {
-      throw customError.unauthorized('User not found');
+      throw customError.notFound('User not found');
     }
 
     try {
-      const isPasswordValid = await this.validatePassword(
-        password,
+      await this.validatePassword(
+        user,
         user.password,
       );
-      if (!isPasswordValid) {
-        await handleFailedAuthAttempt(user, this.userModel);
-      }
+     
 
       user.failedAuthAttempts = 0;
       await user.save();
-
-      const { token, refreshToken, session } = await generateToken(user, req);
-
-      user.sessions = [session];
+      
       user.failedSignInAttempts = 0;
       user.nextSignInAttempt = new Date();
+      const { token, refreshToken, session } = await generateToken(user, req);
       await user.save();
 
       const profile: ProfileInterface = GET_PROFILE(user);
@@ -150,6 +141,31 @@ export class AuthService {
       console.log(error);
       throw customError.internalServerError('Internal Server Error', 500);
     }
+  }
+
+  private async validatePassword(
+    user: User,
+    password: string,
+  ): Promise<void> {
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+
+      if (user.failedLoginAttempts >= Number(appConfig.max_failed_attempts)) {
+        user.lockUntil = new Date(Date.now() + appConfig.lock_time);
+        user.failedLoginAttempts = 0; // reset after lock
+      }
+
+      await user.save();
+      throw customError.unauthorized('Invalid credentials');
+    }
+
+    // ✅ Successful login → reset counters
+    user.failedLoginAttempts = 0;
+    user.lockUntil = undefined;
+    user.lastLogin = new Date();
+    await user.save();
   }
 
   /** ----------------- VERIFY EMAIL ----------------- */
@@ -208,7 +224,7 @@ export class AuthService {
       user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
 
       await user.save();
-       this.emailService.sendPasswordResetEmail(email, resetCode);
+      this.emailService.sendPasswordResetEmail(email, resetCode);
 
       return { message: 'PASSWORD RESET CODE SENT TO YOUR EMAIL' };
     } catch (error) {
@@ -265,12 +281,10 @@ export class AuthService {
 
     try {
       const isPasswordValid = await this.validatePassword(
-        password,
+        user,
         user.password,
       );
-      if (!isPasswordValid) {
-        throw customError.badRequest('Current password is incorrect');
-      }
+     
 
       if (newPassword !== confirmNewPassword) {
         throw customError.badRequest('New passwords do not match');

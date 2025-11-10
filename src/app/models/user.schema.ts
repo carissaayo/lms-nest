@@ -83,6 +83,12 @@ export class User extends Document {
   @Prop({ type: Date })
   nextAuthDate: Date;
 
+  @Prop({ type: Date })
+  lockUntil?: Date ;
+
+  @Prop({ type: Date })
+  lastLogin?: Date;
+  
   @Prop({ default: 0 })
   failedAuthAttempts: number;
 
@@ -98,12 +104,15 @@ export class User extends Document {
   @Prop({ default: 0 })
   failedEmailVerifyAttempts: number;
 
+  @Prop({ default: 0 })
+  failedLoginAttempts: number;
+
   @Prop({ default: false })
   isSignedUp: boolean;
 
   @Prop({ default: false })
   isDeleted: boolean;
-  
+
   @Prop({ type: [Object], default: [] })
   actions: any[];
 

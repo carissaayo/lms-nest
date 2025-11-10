@@ -59,6 +59,8 @@ const config = () => {
       api_key: env.MONNIFY_APIKEY,
       secret_key: env.MONNIFY_SECRET,
     },
+    max_failed_attempts: env.MAX_FAILED_ATTEMPTS,
+    lock_time: env.LOCK_TIME,
   };
 };
 
