@@ -68,7 +68,6 @@ export class AuthService {
       throw customError.conflict('Email has already been used', 409);
     }
 
-    try {
       const emailCode = generateOtp('numeric', 8);
       const hashedPassword = await this.hashPassword(password);
 
@@ -100,9 +99,7 @@ export class AuthService {
           id: _id,
         },
       };
-    } catch (error) {
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
+  
   }
 
   /** ----------------- LOGIN ----------------- */
@@ -114,7 +111,7 @@ export class AuthService {
       throw customError.notFound('User not found');
     }
 
-    try {
+
       await this.validatePassword(
         user,
         user.password,
@@ -137,10 +134,7 @@ export class AuthService {
         profile,
         message: 'Signed In successfully',
       };
-    } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
+   
   }
 
   private async validatePassword(

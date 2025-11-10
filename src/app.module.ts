@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import config from './app/config/config';
 
 import { AuthModule } from './app/auth/auth.module';
@@ -21,6 +22,14 @@ const appConfig = config();
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+        JwtModule.registerAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: async (configService: ConfigService) => ({
+            secret: configService.get<string>('JWT_SECRET'),
+            signOptions: { expiresIn: '1d' },
+          }),
+        }),
     MongooseModule.forRoot(appConfig.mongoUri),
     AuthModule,
     UserModule,
