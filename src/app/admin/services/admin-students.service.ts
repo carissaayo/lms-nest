@@ -42,7 +42,7 @@ export class AdminStudentsService {
 
     // Fetch payment history
     const paymentHistory = await this.paymentModel
-      .find({ user: id })
+      .find({ student: id })
       .populate({
         path: 'course',
         select: 'title',
