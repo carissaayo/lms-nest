@@ -4,7 +4,6 @@ import {
   IsString,
   IsEmail,
   MinLength,
-  IsEnum,
 } from 'class-validator';
 import { UserRole } from '../user/user.interface';
 import { MatchesProperty } from '../common/validators/matches-property.validator';

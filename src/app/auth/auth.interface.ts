@@ -1,5 +1,3 @@
-import { Course } from '../course/course.entity';
-
 export interface ProfileInterface {
   userId: any;
   firstName: string | null | undefined;

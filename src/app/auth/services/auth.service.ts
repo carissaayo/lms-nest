@@ -69,7 +69,7 @@ export class AuthService {
     }
 
       const emailCode = generateOtp('numeric', 8);
-      const hashedPassword = await this.hashPassword(password);
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = new this.userModel({
         email,
@@ -110,19 +110,18 @@ export class AuthService {
     if (!user) {
       throw customError.notFound('User not found');
     }
-
+if (user.lockUntil && user.lockUntil > new Date()) {
+  throw customError.forbidden(
+    'Account temporarily locked due to failed attempts',
+  );
+}
 
       await this.validatePassword(
         user,
-        user.password,
+        password,
       );
      
-
-      user.failedAuthAttempts = 0;
-      await user.save();
-      
-      user.failedSignInAttempts = 0;
-      user.nextSignInAttempt = new Date();
+   
       const { token, refreshToken, session } = await generateToken(user, req);
       await user.save();
 
