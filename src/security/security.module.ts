@@ -21,6 +21,7 @@ import { UserAdminSchema } from 'src/models/admin.schema';
 
 import { SecurityMiddleware } from './middlewares/security.middleware';
 import { RefreshTokenSchema } from 'src/models/refreshToken.schema';
+import { SecurityLogSchema } from 'src/models/securitylog.schema';
 
 const appConfig = config();
 @Module({
@@ -33,7 +34,8 @@ const appConfig = config();
     MongooseModule.forFeature([
       { name: 'UserAdmin', schema: UserAdminSchema },
       { name: 'User', schema: UserSchema },
-      { name: 'RefreshToken', schema: RefreshTokenSchema  },
+      { name: 'RefreshToken', schema: RefreshTokenSchema },
+      { name: 'SecurityLog', schema: SecurityLogSchema },
     ]),
   ],
   providers: [

@@ -87,12 +87,12 @@ const config = () => {
     //   secret_hash: env.FLW_SECRET_HASH,
     //   flw_autodebit_secret_salt: env.FLW_AUTODEBIT_SECRET_SALT,
     // },
-    monnify: {
-      api_key: env.MONNIFY_API_KEY,
-      secret_key: env.MONNIFY_SECRET_KEY,
-      base_url: env.MONNIFY_BASE_URL,
-      source_account_number: env.MONNIFY_SOURCE_ACCOUNT,
-    },
+    // monnify: {
+    //   api_key: env.MONNIFY_API_KEY,
+    //   secret_key: env.MONNIFY_SECRET_KEY,
+    //   base_url: env.MONNIFY_BASE_URL,
+    //   source_account_number: env.MONNIFY_SOURCE_ACCOUNT,
+    // },
     // base: {
     //   logo: env.CREDLOCK_LOGO,
     //   flw_redirect_url: env.FLW_FRONTEND_REDIRECT_URL,

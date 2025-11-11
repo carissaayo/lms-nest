@@ -49,50 +49,50 @@ export const envSchema = z.object({
   HELMET: z.string().min(1, 'LOGGING is required'),
   MAX_FAILED_ATTEMPTS: z.string().min(1, 'MAX_FAILED_ATTEMPTS is required'),
   LOCK_TIME: z.string().min(1, 'LOCK_TIME is required'),
-  PREMBLY_API_KEY: z.string().min(1, 'PREMBLY_API_KEY is required'),
-  PREMBLY_BASE_URL: z.string().min(1, 'PREMBLY_BASE_URL is required'),
-  QOREID_SECRET: z.string().min(1, 'QOREID_SECRET is required'),
-  QOREID_CLIENTID: z.string().min(1, 'QOREID_CLIENTID is required'),
-  QOREID_BASE_URL: z.string().min(1, 'QOREID_BASE_URL is required'),
-  FLW_PUBLIC_KEY_CREDLOCK: z
-    .string()
-    .min(1, 'FLW_PUBLIC_KEY_CREDLOCK is required'),
-  FLW_SECRET_KEY_CREDLOCK: z
-    .string()
-    .min(1, 'FLW_SECRET_KEY_CREDLOCK is required'),
-  FLW_ENCRYPTION_KEY_CREDLOCK: z
-    .string()
-    .min(1, 'FLW_ENCRYPTION_KEY_CREDLOCK is required'),
-  PARTNER_EFINANCE: z.string().min(1, 'PARTNER_EFINANCE is required'),
-  FLW_PUBLIC_KEY_EFINANCE: z
-    .string()
-    .min(1, 'FLW_PUBLIC_KEY_EFINANCE is required'),
-  FLW_SECRET_KEY_EFINANCE: z
-    .string()
-    .min(1, 'FLW_SECRET_KEY_EFINANCE is required'),
-  PARTNER_CREDLOCK: z.string().min(1, 'PARTNER_CREDLOCK is required'),
+  // PREMBLY_API_KEY: z.string().min(1, 'PREMBLY_API_KEY is required'),
+  // PREMBLY_BASE_URL: z.string().min(1, 'PREMBLY_BASE_URL is required'),
+  // QOREID_SECRET: z.string().min(1, 'QOREID_SECRET is required'),
+  // QOREID_CLIENTID: z.string().min(1, 'QOREID_CLIENTID is required'),
+  // QOREID_BASE_URL: z.string().min(1, 'QOREID_BASE_URL is required'),
+  // FLW_PUBLIC_KEY_CREDLOCK: z
+  //   .string()
+  //   .min(1, 'FLW_PUBLIC_KEY_CREDLOCK is required'),
+  // FLW_SECRET_KEY_CREDLOCK: z
+  //   .string()
+  //   .min(1, 'FLW_SECRET_KEY_CREDLOCK is required'),
+  // FLW_ENCRYPTION_KEY_CREDLOCK: z
+  //   .string()
+  //   .min(1, 'FLW_ENCRYPTION_KEY_CREDLOCK is required'),
+  // PARTNER_EFINANCE: z.string().min(1, 'PARTNER_EFINANCE is required'),
+  // FLW_PUBLIC_KEY_EFINANCE: z
+  //   .string()
+  //   .min(1, 'FLW_PUBLIC_KEY_EFINANCE is required'),
+  // FLW_SECRET_KEY_EFINANCE: z
+  //   .string()
+  //   .min(1, 'FLW_SECRET_KEY_EFINANCE is required'),
+  // PARTNER_CREDLOCK: z.string().min(1, 'PARTNER_CREDLOCK is required'),
 
-  MONNIFY_API_KEY: z.string().min(1, 'MONNIFY_API_KEY is required'),
+  // MONNIFY_API_KEY: z.string().min(1, 'MONNIFY_API_KEY is required'),
 
-  MONNIFY_SECRET_KEY: z.string().min(1, 'MONNIFY_SECRET_KEY is required'),
+  // MONNIFY_SECRET_KEY: z.string().min(1, 'MONNIFY_SECRET_KEY is required'),
 
-  MONNIFY_BASE_URL: z.string().min(1, 'MONNIFY_BASE_URL is required'),
+  // MONNIFY_BASE_URL: z.string().min(1, 'MONNIFY_BASE_URL is required'),
 
-  MONNIFY_SOURCE_ACCOUNT: z
-    .string()
-    .min(1, 'MONNIFY_SOURCE_ACCOUNT is required'),
-  FLW_SECRET_KEY: z.string().min(1, 'FLW_SECRET_KEY is required'),
-  FLW_PUBLIC_KEY: z.string().min(1, 'FLW_PUBLIC_KEY is required'),
-  FLW_BASE_URL: z.string().min(1, 'FLW_BASE_URL is required'),
-  FLW_SECRET_HASH: z.string().min(1, 'FLW_SECRET_HASH is required'),
-  BASE_URL: z.string().min(1, 'BASE_URL is required'),
-  CREDLOCK_LOGO: z.string().min(1, 'CREDLOCK_LOGO is required'),
-  FLW_FRONTEND_REDIRECT_URL: z
-    .string()
-    .min(1, 'FLW_FRONTEND_REDIRECT_URL is required'),
-  FLW_AUTODEBIT_SECRET_SALT: z
-    .string()
-    .min(1, 'FLW_AUTODEBIT_SECRET_SALT is required'),
+  // MONNIFY_SOURCE_ACCOUNT: z
+  //   .string()
+  //   .min(1, 'MONNIFY_SOURCE_ACCOUNT is required'),
+  // FLW_SECRET_KEY: z.string().min(1, 'FLW_SECRET_KEY is required'),
+  // FLW_PUBLIC_KEY: z.string().min(1, 'FLW_PUBLIC_KEY is required'),
+  // FLW_BASE_URL: z.string().min(1, 'FLW_BASE_URL is required'),
+  // FLW_SECRET_HASH: z.string().min(1, 'FLW_SECRET_HASH is required'),
+  // BASE_URL: z.string().min(1, 'BASE_URL is required'),
+  // CREDLOCK_LOGO: z.string().min(1, 'CREDLOCK_LOGO is required'),
+  // FLW_FRONTEND_REDIRECT_URL: z
+  //   .string()
+  //   .min(1, 'FLW_FRONTEND_REDIRECT_URL is required'),
+  // FLW_AUTODEBIT_SECRET_SALT: z
+  //   .string()
+  //   .min(1, 'FLW_AUTODEBIT_SECRET_SALT is required'),
 });
 
 export type EnvVars = z.infer<typeof envSchema>;
