@@ -26,9 +26,12 @@ import { QueryString } from 'src/app/database/dbquery';
 
 import { UpdateLessonProgressDTO } from '../student.dto';
 
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
+
 @Controller('students')
-@UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
-@Roles(UserRole.STUDENT)
+@UseGuards(RoleGuard)
+
+@RequireRoles(UserRole.STUDENT)
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 
@@ -77,18 +80,13 @@ export class StudentController {
   }
 
   @Get('payments')
-  async getStudentPayments(
-    @Req() req: CustomRequest,
-  ) {
+  async getStudentPayments(@Req() req: CustomRequest) {
     return this.studentService.getStudentPayments(req);
   }
 
   @Get('analytics')
-  async getDetailedAnalytics(
-    @Query() query: any,
-    @Req() req: CustomRequest,
-  ) {
-    return this.studentService.getDetailedAnalytics(query,req);
+  async getDetailedAnalytics(@Query() query: any, @Req() req: CustomRequest) {
+    return this.studentService.getDetailedAnalytics(query, req);
   }
   @Post('lessons/:lessonId/start')
   async startLesson(

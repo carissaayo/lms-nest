@@ -4,6 +4,8 @@ import { setupSecurity } from './app/security/setup-security.middleware';
 import { ValidationPipe } from '@nestjs/common';
 import bodyParser from 'body-parser';
 import { AllExceptionsFilter } from './libs/all-exception.filter';
+import { HttpsRedirectMiddleware } from './security/middlewares/https-redirect.middleware';
+import { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +22,12 @@ async function bootstrap() {
     }),
   );
 
+  const httpsMiddleware = new HttpsRedirectMiddleware();
+  app.use((req: Request, res: Response, next: NextFunction) =>
+    httpsMiddleware.use(req, res, next),
+  );
+
+
   app.use(
     bodyParser.json({
       verify: (req: any, res, buf) => {
@@ -27,6 +35,8 @@ async function bootstrap() {
       },
     }),
   );
+
+  
 
   app.enableCors({
     origin: ['http://localhost:5173', 'https://lms-frontend-rsbi.vercel.app'],
@@ -39,7 +49,12 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`✅ Application running on port ${port}`);
+    const serverUrl =
+      process.env.NODE_ENV === 'production'
+        ? process.env.BASE_URL
+        : `http://localhost:${port}`;
+
+    console.log(`Server running on ${serverUrl}`);
 }
 
 bootstrap();

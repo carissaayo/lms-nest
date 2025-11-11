@@ -15,6 +15,7 @@ import { AssignmentModule } from './app/assignment/assignment.module';
 import { StudentModule } from './app/student/student.module';
 import { PaymentModule } from './app/payment/payment.module';
 import { InstructorModule } from './app/instructor/instructor.module';
+import { SecurityModule } from './security/security.module';
 
 const appConfig = config();
 @Module({
@@ -22,15 +23,16 @@ const appConfig = config();
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-        JwtModule.registerAsync({
-          imports: [ConfigModule],
-          inject: [ConfigService],
-          useFactory: async (configService: ConfigService) => ({
-            secret: configService.get<string>('JWT_SECRET'),
-            signOptions: { expiresIn: '1d' },
-          }),
-        }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1d' },
+      }),
+    }),
     MongooseModule.forRoot(appConfig.mongoUri),
+    SecurityModule,
     AuthModule,
     UserModule,
     CourseModule,
