@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
-import { UserRole } from '../user/user.interface';
-import { UserAdmin } from './admin.schema';
+
+import { UserRole } from 'src/app/user/user.interface';
 
 export enum UserStatus {
   PENDING = 'pending',

@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import config from 'src/common/config/config';
 
-import { SecurityMiddleware } from 'src/shared/security/middlewares/security.middleware';
+
 import { RedisRateLimiter } from './services/radis-rate-limiter.service';
 import { CorsHandler } from './services/cors-handler.service';
 import { RateLimitHandler } from './services/rate-limit-handler.service';
@@ -17,10 +17,10 @@ import { AttackDetector } from './services/attack-detector.service';
 import { TokenManager } from './services/token-manager.service';
 
 import { UserSchema } from 'src/models/user.schema';
-import { UserAdminSchema } from 'src/models/useradmin.schema';
-import { SecurityLogSchema } from 'src/models/securitylog.schema';
-import { RefreshTokenSchema } from 'src/models/refreshtoken.schema';
-import { UserMerchantSchema } from 'src/models/userMerchant.schema';
+import { UserAdminSchema } from 'src/models/admin.schema';
+
+import { SecurityMiddleware } from './middlewares/security.middleware';
+import { RefreshTokenSchema } from 'src/models/refreshToken.schema';
 
 const appConfig = config();
 @Module({
@@ -33,9 +33,7 @@ const appConfig = config();
     MongooseModule.forFeature([
       { name: 'UserAdmin', schema: UserAdminSchema },
       { name: 'User', schema: UserSchema },
-      { name: 'UserMerchant', schema: UserMerchantSchema },
-      { name: 'SecurityLog', schema: SecurityLogSchema },
-      { name: 'RefreshToken', schema: RefreshTokenSchema },
+      { name: 'RefreshToken', schema: RefreshTokenSchema  },
     ]),
   ],
   providers: [

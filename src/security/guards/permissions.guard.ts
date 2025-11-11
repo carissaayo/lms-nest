@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   SetMetadata,
   createParamDecorator,
@@ -10,16 +9,17 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Permission } from 'src/modules/adminApp/interface/admin.interface';
+import { PermissionsEnum } from 'src/app/admin/admin.interface';
 
 
 
 
-export const RequirePermissions = (...permissions: Permission[]) =>
+
+export const RequirePermissions = (...permissions: PermissionsEnum[]) =>
   SetMetadata('permissions', permissions);
 
 
-export const RequireAllPermissions = (...permissions: Permission[]) =>
+export const RequireAllPermissions = (...permissions: PermissionsEnum[]) =>
   SetMetadata('all-permissions', permissions);
 
 
@@ -39,13 +39,12 @@ export class PermissionGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     // Get required permissions from decorator
-    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(
-      'permissions',
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredPermissions = this.reflector.getAllAndOverride<
+      PermissionsEnum[]
+    >('permissions', [context.getHandler(), context.getClass()]);
 
     const requiredAllPermissions = this.reflector.getAllAndOverride<
-      Permission[]
+      PermissionsEnum[]
     >('all-permissions', [context.getHandler(), context.getClass()]);
 
     // If no permissions specified, allow access

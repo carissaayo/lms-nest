@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import {
   SetMetadata,
   createParamDecorator,
@@ -8,10 +8,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { UserRole } from 'src/app/user/user.interface';
 
 
 import { customError } from 'src/common/error-handling/custom-handlers';
-import { Role } from 'src/shared/interfaces/model.interface';
+
 
 // 🎯 SIMPLE DECORATOR - Require user to have ONE of these roles
 export const RequireRoles = (...roles: string[]) => SetMetadata('roles', roles);
@@ -49,7 +50,7 @@ export class RoleGuard implements CanActivate {
       throw customError.unauthorized('Authentication required');
     }
 
-    const userRole: Role = user.role;
+    const userRole: UserRole = user.role;
 
     if (!userRole) {
       throw customError.badRequest('User has no role assigned');

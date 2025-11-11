@@ -1,15 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Request, Response } from 'express';
 import { Model } from 'mongoose';
 import { TokenExpiredError } from 'jsonwebtoken';
-import { UserAdmin } from 'src/models/useradmin.schema';
+
 import { TokenManager } from './token-manager.service';
 import config from 'src/common/config/config';
 import { User } from 'src/models/user.schema';
-import { UserMerchant } from 'src/models/userMerchant.schema';
+import { UserAdmin } from 'src/models/admin.schema';
+
 
 const appConfig = config();
 
@@ -20,8 +20,7 @@ export class AuthHandler {
     private readonly tokenManager: TokenManager,
     @InjectModel('UserAdmin') private readonly userAdminModel: Model<UserAdmin>,
     @InjectModel('User') private readonly userModel: Model<User>,
-    @InjectModel('UserMerchant')
-    private readonly userMerchantModel: Model<UserMerchant>,
+    
   ) {}
 
   async authenticateToken(
@@ -29,7 +28,7 @@ export class AuthHandler {
     res: Response,
   ): Promise<{
     success: boolean;
-    user?: UserAdmin | User | UserMerchant;
+    user?: UserAdmin | User ;
   }> {
     const authHeader = req.headers.authorization;
     const refreshToken = req.headers['refreshtoken'] as string | undefined;
@@ -107,16 +106,14 @@ export class AuthHandler {
    */
   private async findUserById(
     userId: string,
-  ): Promise<User | UserAdmin | UserMerchant | null> {
+  ): Promise<User | UserAdmin  | null> {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (user) return user;
 
       const admin = await this.userAdminModel.findById(userId).exec();
       if (admin) return admin;
-
-      const merchant = await this.userMerchantModel.findById(userId).exec();
-      if (merchant) return merchant;
+      
 
       return null;
     } catch (error) {

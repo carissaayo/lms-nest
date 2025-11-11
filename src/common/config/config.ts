@@ -64,40 +64,40 @@ const config = () => {
     },
     max_failed_attempts: env.MAX_FAILED_ATTEMPTS,
     lock_time: env.LOCK_TIME,
-    prembly: {
-      api_key: env.PREMBLY_API_KEY,
-      base_url: env.PREMBLY_BASE_URL,
-    },
-    qoreid: {
-      secret_key: env.QOREID_SECRET,
-      client_id: env.QOREID_CLIENTID,
-      base_url: env.QOREID_BASE_URL,
-    },
-    flw: {
-      credlock_pulic_key: env.FLW_PUBLIC_KEY_CREDLOCK,
-      credlock_secret_key: env.FLW_SECRET_KEY_CREDLOCK,
-      credlock_encrption_key: env.FLW_ENCRYPTION_KEY_CREDLOCK,
-      partner_efinance: env.PARTNER_EFINANCE,
-      efinance_public_key: env.FLW_PUBLIC_KEY_EFINANCE,
-      efinance_secret_key: env.FLW_SECRET_KEY_EFINANCE,
-      partner_credlock: env.PARTNER_CREDLOCK,
-      secret_key: env.FLW_SECRET_KEY,
-      public_key: env.FLW_PUBLIC_KEY,
-      base_url: env.FLW_BASE_URL,
-      secret_hash: env.FLW_SECRET_HASH,
-      flw_autodebit_secret_salt: env.FLW_AUTODEBIT_SECRET_SALT,
-    },
+    // prembly: {
+    //   api_key: env.PREMBLY_API_KEY,
+    //   base_url: env.PREMBLY_BASE_URL,
+    // },
+    // qoreid: {
+    //   secret_key: env.QOREID_SECRET,
+    //   client_id: env.QOREID_CLIENTID,
+    //   base_url: env.QOREID_BASE_URL,
+    // },
+    // flw: {
+    //   credlock_pulic_key: env.FLW_PUBLIC_KEY_CREDLOCK,
+    //   credlock_secret_key: env.FLW_SECRET_KEY_CREDLOCK,
+    //   credlock_encrption_key: env.FLW_ENCRYPTION_KEY_CREDLOCK,
+    //   partner_efinance: env.PARTNER_EFINANCE,
+    //   efinance_public_key: env.FLW_PUBLIC_KEY_EFINANCE,
+    //   efinance_secret_key: env.FLW_SECRET_KEY_EFINANCE,
+    //   partner_credlock: env.PARTNER_CREDLOCK,
+    //   secret_key: env.FLW_SECRET_KEY,
+    //   public_key: env.FLW_PUBLIC_KEY,
+    //   base_url: env.FLW_BASE_URL,
+    //   secret_hash: env.FLW_SECRET_HASH,
+    //   flw_autodebit_secret_salt: env.FLW_AUTODEBIT_SECRET_SALT,
+    // },
     monnify: {
       api_key: env.MONNIFY_API_KEY,
       secret_key: env.MONNIFY_SECRET_KEY,
       base_url: env.MONNIFY_BASE_URL,
       source_account_number: env.MONNIFY_SOURCE_ACCOUNT,
     },
-    base: {
-      logo: env.CREDLOCK_LOGO,
-      flw_redirect_url: env.FLW_FRONTEND_REDIRECT_URL,
-      base_url:env.BASE_URL
-    },
+    // base: {
+    //   logo: env.CREDLOCK_LOGO,
+    //   flw_redirect_url: env.FLW_FRONTEND_REDIRECT_URL,
+    //   base_url:env.BASE_URL
+    // },
   };
 };
 

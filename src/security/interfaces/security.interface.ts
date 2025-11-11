@@ -1,5 +1,6 @@
+import { UserAdmin } from 'src/models/admin.schema';
 import type { User } from 'src/models/user.schema';
-import type { UserAdmin } from 'src/models/useradmin.schema';
+
 
 export interface RateLimitResult {
   totalHits: number;

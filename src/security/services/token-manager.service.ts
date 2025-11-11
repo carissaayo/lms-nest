@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -10,15 +7,17 @@ import { Model } from 'mongoose';
 import ms from 'ms';
 
 
-import { UserAdmin } from 'src/models/useradmin.schema';
-import { LoginType, RefreshToken } from 'src/models/refreshtoken.schema';
+
+
 import config from 'src/common/config/config';
 import { RedisRateLimiter } from './radis-rate-limiter.service';
 import { SecurityLogger } from './security.logger.service';
 import { User } from 'src/models/user.schema';
 import { AuthResult } from '../interfaces/security.interface';
-import { UserMerchant } from 'src/models/userMerchant.schema';
+
 import { AuthenticatedRequest } from '../interfaces/custom-request.interface';
+import { UserAdmin } from 'src/models/admin.schema';
+import { RefreshToken } from 'src/models/refreshToken.schema';
 
 const appConfig = config();
 
@@ -31,8 +30,6 @@ export class TokenManager {
     private readonly redisRateLimiter: RedisRateLimiter,
     private readonly securityLogger: SecurityLogger,
     @InjectModel('UserAdmin') private readonly userAdminModel: Model<UserAdmin>,
-    @InjectModel('UserMerchant')
-    private readonly userMerchantModel: Model<UserMerchant>,
     @InjectModel('User') private readonly userModel: Model<User>,
     @InjectModel('RefreshToken')
     private readonly refreshTokenModel: Model<RefreshToken>,
@@ -171,7 +168,7 @@ export class TokenManager {
               revokedReason: 'Token rotation',
             },
           ),
-          this.storeRefreshToken(String(user._id), newRefreshToken, req),
+          this.storeRefreshToken(String(user._id), user.role,newRefreshToken, req),
         ]);
       }
 
@@ -233,19 +230,18 @@ export class TokenManager {
 
   private async storeRefreshToken(
     userId: string,
+    role:string,
     refreshToken: string,
     req?: Request,
-    loginType: LoginType = LoginType.PASSWORD,
     expiresIn = '365d',
   ): Promise<void> {
     const hashedToken = this.hashToken(refreshToken);
-      const expiresMs = ms(expiresIn);
+    const expiresMs = ms(expiresIn);
 
-
-  if (!expiresMs) {
-    throw new Error(`Invalid expiresIn format: ${expiresIn}`);
-  }
-      const expiresAt = new Date(Date.now() + expiresMs);
+    if (!expiresMs) {
+      throw new Error(`Invalid expiresIn format: ${expiresIn}`);
+    }
+    const expiresAt = new Date(Date.now() + expiresMs);
 
     const ipAddress = req ? this.getClientIP(req) : '';
 
@@ -260,7 +256,7 @@ export class TokenManager {
       isRevoked: false,
       userAgent,
       ipAddress,
-      loginType,
+      role,
     });
   }
 
@@ -275,9 +271,9 @@ export class TokenManager {
   }
 
   public async signTokens(
-    user: UserAdmin | User | UserMerchant,
+    user: UserAdmin | User ,
     req: Request | AuthenticatedRequest,
-    options?: { shortRefresh?: boolean; loginType?: LoginType },
+    options?: { shortRefresh?: boolean;  },
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const accessPayload = {
       sub: user._id,
@@ -291,7 +287,6 @@ export class TokenManager {
       sub: user._id,
       type: 'refresh',
       iat: Math.floor(Date.now() / 1000),
-      loginType: options?.loginType ?? LoginType.PASSWORD,
     };
     const accessToken = this.jwtService.sign(accessPayload, {
       expiresIn: appConfig.jwt.duration10m,
@@ -306,9 +301,9 @@ export class TokenManager {
 
     await this.storeRefreshToken(
       String(user._id),
+      user.role,
       refreshToken,
       req,
-      options?.loginType ?? LoginType.PASSWORD,
       refreshExpiresIn,
     );
 
@@ -317,7 +312,7 @@ export class TokenManager {
 
   private async trackSession(
     req: Request,
-    user: UserAdmin | User | UserMerchant,
+    user: UserAdmin | User ,
   ): Promise<void> {
     const ipAddress = this.getClientIP(req);
     const userAgent = req.headers['user-agent'] || 'unknown';
@@ -363,14 +358,9 @@ export class TokenManager {
 
   private async findAdminOrUserById(
     userId: string,
-  ): Promise<(UserAdmin | User | UserMerchant) | null> {
-    
+  ): Promise<(UserAdmin | User ) | null> {
     const admin = await this.userAdminModel.findById(userId).exec();
     if (admin) return admin as UserAdmin;
-
-    // Then merchant
-    const merchant = await this.userMerchantModel.findById(userId).exec();
-    if (merchant) return merchant;
     // Fallback to regular user
     const regularUser = await this.userModel.findById(userId).exec();
     return regularUser ? (regularUser as User) : null;

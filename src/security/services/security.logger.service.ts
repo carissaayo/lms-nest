@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Request, Response } from 'express';
 import { Model } from 'mongoose';
-import { SecurityLog } from 'src/models/securitylog.schema';
+
 import { AttackDetector } from './attack-detector.service';
+import { SecurityLog } from 'src/models/securitylog.schema';
 
 @Injectable()
 export class SecurityLogger {

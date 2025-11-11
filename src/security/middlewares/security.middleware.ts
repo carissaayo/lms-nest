@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-require-imports */
 import { Injectable, NestMiddleware, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 import { CorsHandler } from '../services/cors-handler.service';
@@ -9,7 +7,8 @@ import { InputSanitizer } from '../services/input-sanitizer.service';
 import { AuthHandler } from '../services/auth-handler.service';
 import { SecurityLogger } from '../services/security.logger.service';
 import { ResponseMonitor } from '../services/response-monitor.service';
-import { publicRoutes } from 'src/shared/constants/public-routes';
+import { publicRoutes } from '../constants/public-routes';
+
 
 
 @Injectable()

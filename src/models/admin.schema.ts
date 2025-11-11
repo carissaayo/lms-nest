@@ -5,9 +5,9 @@ import {
   Model,
   Schema as MongooseSchema,
 } from 'mongoose';
+import { PermissionsEnum } from 'src/app/admin/admin.interface';
+import { UserRole } from 'src/app/user/user.interface';
 
-import { UserRole } from '../user/user.interface';
-import { PermissionsEnum } from '../admin/admin.interface';
 
 export enum AdminStatus {
   PENDING = 'pending',
