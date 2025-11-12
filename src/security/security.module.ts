@@ -5,9 +5,9 @@ import { ConfigModule } from '@nestjs/config';
 import config from 'src/common/config/config';
 
 
-import { RedisRateLimiter } from './services/radis-rate-limiter.service';
+// import { RedisRateLimiter } from './services/radis-rate-limiter.service';
 import { CorsHandler } from './services/cors-handler.service';
-import { RateLimitHandler } from './services/rate-limit-handler.service';
+// import { RateLimitHandler } from './services/rate-limit-handler.service';
 import { IpReputationHandler } from './services/ip-reputation-handler.service';
 import { InputSanitizer } from './services/input-sanitizer.service';
 import { AuthHandler } from './services/auth-handler.service';
@@ -40,7 +40,7 @@ const appConfig = config();
   ],
   providers: [
     CorsHandler,
-    RateLimitHandler,
+    // RateLimitHandler,
     IpReputationHandler,
     InputSanitizer,
     AuthHandler,
@@ -48,7 +48,7 @@ const appConfig = config();
     ResponseMonitor,
     AttackDetector,
     TokenManager,
-    RedisRateLimiter,
+    // RedisRateLimiter,
   ],
   exports: [TokenManager],
 })

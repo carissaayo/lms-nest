@@ -10,7 +10,7 @@ import ms from 'ms';
 
 
 import config from 'src/common/config/config';
-import { RedisRateLimiter } from './radis-rate-limiter.service';
+// import { RedisRateLimiter } from './radis-rate-limiter.service';
 import { SecurityLogger } from './security.logger.service';
 import { User } from 'src/models/user.schema';
 import { AuthResult } from '../interfaces/security.interface';
@@ -27,7 +27,7 @@ export class TokenManager {
 
   constructor(
     private readonly jwtService: JwtService,
-    private readonly redisRateLimiter: RedisRateLimiter,
+    // private readonly redisRateLimiter: RedisRateLimiter,
     private readonly securityLogger: SecurityLogger,
     @InjectModel('UserAdmin') private readonly userAdminModel: Model<UserAdmin>,
     @InjectModel('User') private readonly userModel: Model<User>,
@@ -44,23 +44,23 @@ export class TokenManager {
     try {
       // 1. Apply rate limiting specifically for refresh attempts
       const clientIP = this.getClientIP(req);
-      const refreshRateLimit = await this.redisRateLimiter.checkRateLimit(
-        `refresh:${clientIP}`,
-        {
-          windowMs: 15 * 60 * 1000, // 15 minutes
-          maxRequests: 5, // Max 5 refresh attempts per IP per 15 min
-          blockDurationMs: 60 * 60 * 1000, // 1 hour block
-        },
-      );
+      // const refreshRateLimit = await this.redisRateLimiter.checkRateLimit(
+      //   `refresh:${clientIP}`,
+      //   {
+      //     windowMs: 15 * 60 * 1000, // 15 minutes
+      //     maxRequests: 5, // Max 5 refresh attempts per IP per 15 min
+      //     blockDurationMs: 60 * 60 * 1000, // 1 hour block
+      //   },
+      // );
 
-      if (refreshRateLimit.isBlocked) {
-        res.status(HttpStatus.TOO_MANY_REQUESTS).json({
-          success: false,
-          message: 'Too many refresh attempts. Try again later.',
-          timestamp: new Date().toISOString(),
-        });
-        return { success: false };
-      }
+      // if (refreshRateLimit.isBlocked) {
+      //   res.status(HttpStatus.TOO_MANY_REQUESTS).json({
+      //     success: false,
+      //     message: 'Too many refresh attempts. Try again later.',
+      //     timestamp: new Date().toISOString(),
+      //   });
+      //   return { success: false };
+      // }
 
       // 2. Verify refresh token with different secret
       const decodedRefresh: any = this.jwtService.verify(refreshToken, {
