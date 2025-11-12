@@ -25,6 +25,8 @@ import { PermissionsEnum } from '../admin.interface';
 
 import { QueryString } from 'src/app/database/dbquery';
 import { AdminAnalyticsService } from '../services/admin-analytics.service';
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
+import { PermissionGuard } from 'src/security/guards/permissions.guard';
 
 @Controller('admin-analytics')
 @UsePipes(
@@ -33,14 +35,12 @@ import { AdminAnalyticsService } from '../services/admin-analytics.service';
     transform: true,
   }),
 )
-@UseGuards(
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-  PermissionsGuard,
-)
-@Roles(UserRole.ADMIN)
+
+@UseGuards(RoleGuard, PermissionGuard)
+@RequireRoles(UserRole.ADMIN)
 export class AdminAnalyticsController {
   constructor(private adminAnalyticsService: AdminAnalyticsService) {}
+  // @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
 
   @Get('')
   getAdminAnalytics(@Query() query: QueryString, @Req() req: CustomRequest) {

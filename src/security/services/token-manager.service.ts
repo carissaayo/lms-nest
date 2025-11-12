@@ -293,6 +293,7 @@ export class TokenManager {
       secret: appConfig.jwt.access_token_secret,
     });
     const refreshExpiresIn = options?.shortRefresh ? '1h' : '365d';
+console.log(refreshExpiresIn);
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
       expiresIn: refreshExpiresIn,

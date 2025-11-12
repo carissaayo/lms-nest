@@ -12,12 +12,7 @@ import {
   Query,
   Param,
 } from '@nestjs/common';
-import { Roles } from 'src/app/common/decorators/roles.decorator';
-import { RolesGuard } from 'src/app/common/guards/role.guard';
-import {
-  AuthenticateTokenUserGuard,
-  ReIssueTokenUserGuard,
-} from 'src/app/common/guards/user-auth.guard';
+
 import { UserRole } from 'src/app/user/user.interface';
 
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -26,20 +21,15 @@ import { CreateLessonDTO, UpdateLessonDTO } from '../lesson.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 import { QueryString } from 'src/app/database/dbquery';
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 
 @Controller('lessons')
-@UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard, RolesGuard)
-@Roles(UserRole.INSTRUCTOR)
+@UseGuards(RoleGuard)
+
+@RequireRoles(UserRole.STUDENT)
 export class LessonController {
   constructor(private readonly lessonService: LessonService) {}
 
-  @Post('create/')
-  @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'video', maxCount: 1 },
-      { name: 'note', maxCount: 1 },
-    ]),
-  )
   async createLesson(
     @Body() dto: CreateLessonDTO,
     @UploadedFiles()

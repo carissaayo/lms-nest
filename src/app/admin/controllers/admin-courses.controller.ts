@@ -28,6 +28,8 @@ import {
   ReIssueTokenAdminGuard,
 } from 'src/app/common/guards/admin-auth.guard';
 import { QueryString } from 'src/app/database/dbquery';
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
+import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 
 @Controller('admin-courses')
 @UsePipes(
@@ -36,13 +38,9 @@ import { QueryString } from 'src/app/database/dbquery';
     transform: true,
   }),
 )
-@UseGuards(
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-  PermissionsGuard,
-)
-@Roles(UserRole.ADMIN)
-@Permissions(PermissionsEnum.ADMIN_COURSES)
+@UseGuards(RoleGuard, PermissionGuard)
+@RequireRoles(UserRole.ADMIN)
+@RequirePermissions(PermissionsEnum.ADMIN_COURSES)
 export class AdminCoursesController {
   constructor(private adminCoursesService: AdminCoursesService) {}
 
@@ -60,11 +58,11 @@ export class AdminCoursesController {
     return this.adminCoursesService.viewCourses(query);
   }
 
-  @Get(":courseId")
+  @Get(':courseId')
   async getSingleCourse(
-    @Param("courseId") courseId: string,
-  @Req() req: CustomRequest
-) {
-    return this.adminCoursesService.getSingleCourse(courseId,req);
+    @Param('courseId') courseId: string,
+    @Req() req: CustomRequest,
+  ) {
+    return this.adminCoursesService.getSingleCourse(courseId, req);
   }
 }

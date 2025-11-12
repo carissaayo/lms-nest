@@ -11,15 +11,16 @@ import {
 
 import { CustomRequest } from 'src/utils/auth-utils';
 import { UsersService } from './user.service';
-import {
-  AuthenticateTokenUserGuard,
-  ReIssueTokenUserGuard,
-} from '../common/guards/user-auth.guard';
+
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateUserDTO } from './user.dto';
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
+import { UserRole } from './user.interface';
 
 @Controller('users')
-@UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
+@UseGuards(RoleGuard)
+
+@RequireRoles(UserRole.STUDENT)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 

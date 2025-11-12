@@ -27,10 +27,9 @@ import {
 } from '../admin.dto';
 import { AdminAdminsService } from '../services/admin-admins.service';
 import { PermissionsEnum } from '../admin.interface';
-import {
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-} from 'src/app/common/guards/admin-auth.guard';
+
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
+import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 
 @Controller('admin-admins')
 @UsePipes(
@@ -39,12 +38,8 @@ import {
     transform: true,
   }),
 )
-@UseGuards(
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-  PermissionsGuard,
-)
-@Roles(UserRole.ADMIN)
+@UseGuards(RoleGuard, PermissionGuard)
+@RequireRoles(UserRole.ADMIN)
 export class AdminAdminsController {
   constructor(private adminAdminService: AdminAdminsService) {}
 
@@ -53,12 +48,12 @@ export class AdminAdminsController {
     return this.adminAdminService.viewProfile(req);
   }
 
-  @Permissions(PermissionsEnum.ADMIN_ADMINS)
+  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
   @Post('add-admin')
   async addAdminByEmail(@Body() dto: AddAnAdminDTO, @Req() req: CustomRequest) {
     return this.adminAdminService.addAdminByEmail(dto, req);
   }
-  @Permissions(PermissionsEnum.ADMIN_ADMINS)
+  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
   @Patch(':userId/action')
   async suspendUser(
     @Param('id') userId: string,
@@ -68,7 +63,7 @@ export class AdminAdminsController {
     return this.adminAdminService.suspendAdmin(userId, suspendDto, req);
   }
 
-  @Permissions(PermissionsEnum.ADMIN_PERMISSIONS)
+  @RequirePermissions(PermissionsEnum.ADMIN_PERMISSIONS)
   @Patch(':userId/permissions')
   async assignPermission(
     @Param('userId') userId: string,

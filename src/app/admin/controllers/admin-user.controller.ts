@@ -1,8 +1,6 @@
 import {
   Controller,
   Body,
-  UsePipes,
-  ValidationPipe,
   UseGuards,
   Req,
   Patch,
@@ -13,33 +11,19 @@ import {
 
 import { CustomRequest } from 'src/utils/auth-utils';
 
-import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../user/user.interface';
 
-import { PermissionsGuard } from '../../common/guards/permissions.gurad';
-import { Permissions } from '../../common/decorators/permissions.decorator';
 import { AdminUserService } from '../services/admin-users.service';
 import { SuspendUserDTO } from '../admin.dto';
 import { PermissionsEnum } from '../admin.interface';
-import {
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-} from 'src/app/common/guards/admin-auth.guard';
+
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
+import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 
 @Controller('admin-users')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
-@UseGuards(
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-  PermissionsGuard,
-)
-@Roles(UserRole.ADMIN)
-@Permissions(PermissionsEnum.ADMIN_USERS)
+@UseGuards(RoleGuard, PermissionGuard)
+@RequireRoles(UserRole.ADMIN)
+@RequirePermissions(PermissionsEnum.ADMIN_USERS)
 export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 

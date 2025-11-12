@@ -38,6 +38,7 @@ async function bootstrap() {
 
   
 
+
   app.enableCors({
     origin: ['http://localhost:5173', 'https://lms-frontend-rsbi.vercel.app'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
