@@ -9,6 +9,7 @@ import { TokenManager } from './token-manager.service';
 import config from 'src/common/config/config';
 import { User } from 'src/models/user.schema';
 import { UserAdmin } from 'src/models/admin.schema';
+import { UserRole } from 'src/app/user/user.interface';
 
 
 const appConfig = config();
@@ -50,7 +51,7 @@ export class AuthHandler {
         }
 
         // Find user from either collection
-        const foundUser = await this.findUserById(decoded.sub);
+        const foundUser = await this.findUserById(decoded.sub,decoded.role);
 
         if (!foundUser || !foundUser.isActive) {
           res.status(HttpStatus.UNAUTHORIZED).json({
@@ -112,21 +113,19 @@ export class AuthHandler {
   /**
    * Tries to find user from either User or UserAdmin collection
    */
-  private async findUserById(
-    userId: string,
-  ): Promise<User | UserAdmin  | null> {
-    try {
-      const user = await this.userModel.findById(userId).exec();
-      if (user) return user;
-
-      const admin = await this.userAdminModel.findById(userId).exec();
-      if (admin) return admin;
-      
-
-      return null;
-    } catch (error) {
-      console.error('❌ AUTH: Error finding user:', error);
-      return null;
+    private async findUserById(
+      userId: string,
+      role: UserRole,
+    ): Promise<(UserAdmin | User ) | null> {
+      let user: User | UserAdmin | null = null;
+      if (role === UserRole.INSTRUCTOR || role === UserRole.STUDENT) {
+        user = await this.userModel.findById(userId).exec();
+      }
+  
+      if (role === UserRole.ADMIN) {
+        user = await this.userAdminModel.findById(userId).exec();
+      }
+  
+      return user;
     }
-  }
 }

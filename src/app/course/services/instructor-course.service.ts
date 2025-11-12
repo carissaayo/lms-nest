@@ -322,8 +322,6 @@ export class InstructorCourseService {
     };
   }
 
-
-
   async viewInstructorCourses(req: CustomRequest, query: any) {
 
     const instructor = await this.userModel.findOne({_id:req.userId})

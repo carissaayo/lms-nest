@@ -46,13 +46,15 @@ export class InstructorCourseController {
     );
   }
 
-  @Get('instructor')
+  @Get('')
   async getInstructorCourses(
     @Req() req: CustomRequest,
     @Query() query: QueryString,
   ) {
     return this.instructorCourseService.viewInstructorCourses(req, query);
   }
+
+  
 
   @Delete(':id')
   async deleteCourse(@Param('id') courseId: string, @Req() req: CustomRequest) {

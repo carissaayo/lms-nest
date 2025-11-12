@@ -18,6 +18,7 @@ import { AuthResult } from '../interfaces/security.interface';
 import { AuthenticatedRequest } from '../interfaces/custom-request.interface';
 import { UserAdmin } from 'src/models/admin.schema';
 import { RefreshToken } from 'src/models/refreshToken.schema';
+import { UserRole } from 'src/app/user/user.interface';
 
 const appConfig = config();
 
@@ -113,15 +114,16 @@ export class TokenManager {
       }
 
       // 6. Validate user account
-      const user = await this.findAdminOrUserById(decodedRefresh.sub);
+      const user = await this.findUserById(decodedRefresh.sub,decodedRefresh.role);
 
       if (!user || !user.isActive) {
         this.logger.error('Invalid or inactive user account');
         throw new Error('Invalid or inactive user account');
       }
 
+      const tokenHash = this.hashToken(refreshToken);
       // 🔹 6b. Track session and revoke last refresh token if necessary
-      await this.trackSession(req, user);
+      await this.trackSession(req, user, tokenHash);
 
       // 7. Generate new access token
       const newAccessToken = this.jwtService.sign(
@@ -168,7 +170,7 @@ export class TokenManager {
               revokedReason: 'Token rotation',
             },
           ),
-          this.storeRefreshToken(String(user._id), user.role,newRefreshToken, req),
+          this.storeRefreshToken(String(user._id), newRefreshToken, req),
         ]);
       }
 
@@ -230,10 +232,9 @@ export class TokenManager {
 
   private async storeRefreshToken(
     userId: string,
-    role:string,
     refreshToken: string,
     req?: Request,
-    expiresIn = '365d',
+    expiresIn = '1d',
   ): Promise<void> {
     const hashedToken = this.hashToken(refreshToken);
     const expiresMs = ms(expiresIn);
@@ -244,22 +245,33 @@ export class TokenManager {
     const expiresAt = new Date(Date.now() + expiresMs);
 
     const ipAddress = req ? this.getClientIP(req) : '';
-
     const userAgent = req?.headers['user-agent'] || '';
 
-    await this.refreshTokenModel.create({
-      tokenHash: hashedToken,
+    const existingToken = await this.refreshTokenModel.findOne({
       userId,
-      expiresAt,
-      createdAt: new Date(),
-      lastUsedAt: new Date(),
-      isRevoked: false,
-      userAgent,
       ipAddress,
-      role,
+      userAgent,
+      isRevoked: false,
     });
-  }
 
+    if (existingToken) {
+      existingToken.lastUsedAt = new Date();
+      existingToken.expiresAt = expiresAt;
+      existingToken.tokenHash = hashedToken;
+      await existingToken.save();
+    } else {
+      await this.refreshTokenModel.create({
+        tokenHash: hashedToken,
+        userId,
+        expiresAt,
+        createdAt: new Date(),
+        lastUsedAt: new Date(),
+        isRevoked: false,
+        userAgent,
+        ipAddress,
+      });
+    }
+  }
   private getClientIP(req: Request): string {
     const xfwd = (req.headers['x-forwarded-for'] as string | undefined)
       ?.split(',')[0]
@@ -271,9 +283,9 @@ export class TokenManager {
   }
 
   public async signTokens(
-    user: UserAdmin | User ,
+    user: UserAdmin | User,
     req: Request | AuthenticatedRequest,
-    options?: { shortRefresh?: boolean;  },
+    options?: { shortRefresh?: boolean },
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const accessPayload = {
       sub: user._id,
@@ -293,7 +305,7 @@ export class TokenManager {
       secret: appConfig.jwt.access_token_secret,
     });
     const refreshExpiresIn = options?.shortRefresh ? '1h' : '365d';
-console.log(refreshExpiresIn);
+    console.log(refreshExpiresIn);
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
       expiresIn: refreshExpiresIn,
@@ -302,7 +314,6 @@ console.log(refreshExpiresIn);
 
     await this.storeRefreshToken(
       String(user._id),
-      user.role,
       refreshToken,
       req,
       refreshExpiresIn,
@@ -313,61 +324,62 @@ console.log(refreshExpiresIn);
 
   private async trackSession(
     req: Request,
-    user: UserAdmin | User ,
+    user: User | UserAdmin,
+    tokenHash: string,
   ): Promise<void> {
     const ipAddress = this.getClientIP(req);
     const userAgent = req.headers['user-agent'] || 'unknown';
 
-    const lastSession = await this.findAdminOrUserById(String(user._id));
+    const existingToken = await this.refreshTokenModel.findOne({
+      userId: user._id,
+      ipAddress,
+      userAgent,
+      isRevoked: false,
+    });
 
-    if (lastSession && lastSession?.sessions?.length > 0) {
-      const previousSession =
-        lastSession.sessions[lastSession.sessions.length - 1];
-
-      // revoke ONLY the refresh token tied to that last session
-      await this.refreshTokenModel.updateOne(
+    if (existingToken) {
+      existingToken.lastUsedAt = new Date();
+      await existingToken.save();
+    } else {
+      await this.refreshTokenModel.updateMany(
         {
           userId: user._id,
           isRevoked: false,
-          ipAddress: previousSession.ipAddress,
         },
         {
           $set: {
             isRevoked: true,
             revokedAt: new Date(),
-            revokedReason: 'New login from another IP',
+            revokedReason: 'New login from another device or IP',
           },
         },
       );
-    }
 
-    // create/update new session for this IP
-    await this.userModel.updateOne(
-      { _id: user._id },
-      {
-        $push: {
-          sessions: {
-            ipAddress,
-            userAgent,
-            authDate: new Date(),
-            lastSeen: new Date(),
-          },
-        },
-      },
-    );
+      await this.refreshTokenModel.create({
+        tokenHash,
+        userId: user._id,
+        ipAddress,
+        userAgent,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+    }
   }
 
-  private async findAdminOrUserById(
-    userId: string,
-  ): Promise<(UserAdmin | User ) | null> {
-    const admin = await this.userAdminModel.findById(userId).exec();
-    console.log(admin,"Admin");
-    
-    if (admin) return admin as UserAdmin;
-    // Fallback to regular user
-    const regularUser = await this.userModel.findById(userId).exec();
-    console.log(regularUser, 'regularUser');
 
-    return regularUser ? (regularUser as User) : null;
+  private async findUserById(
+    userId: string,
+    role: UserRole,
+  ): Promise<(UserAdmin | User ) | null> {
+    let user: User | UserAdmin | null = null;
+    if (role === UserRole.INSTRUCTOR || role === UserRole.STUDENT) {
+      user = await this.userModel.findById(userId).exec();
+    }
+
+    if (role === UserRole.ADMIN) {
+      user = await this.userAdminModel.findById(userId).exec();
+    }
+
+    return user;
   }
 }
