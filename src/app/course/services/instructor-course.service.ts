@@ -43,17 +43,13 @@ export class InstructorCourseService {
       throw customError.badRequest('body is missing');
     }
 
-    const { title, description, category, price } = createCourseDto;
+    const { title, description, category, price ,duration} = createCourseDto;
 
     if (!coverImage) {
       throw customError.badRequest('coverImage is required');
     }
-    if (!category) {
-      throw customError.badRequest('category is required');
-    }
-    if (!Object.values(CourseCategory).includes(category as CourseCategory)) {
-      throw customError.badRequest('Category is not valid');
-    }
+  
+   
     const instructor = await this.userModel.findById(req.userId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
@@ -69,12 +65,11 @@ export class InstructorCourseService {
     const course = new this.courseModel({
       title,
       description,
-      category: category,
+      category,
       price,
-      instructor: instructor._id,
       coverImage: uploadImg,
       instructorId: instructor.id,
-      categoryId: category,
+      duration,
       instructorName: `${instructor.firstName} ${instructor.lastName}`,
     });
 
@@ -124,9 +119,6 @@ export class InstructorCourseService {
     const { title, description, category, price } = updateCourseDto || {};
 
     if (category) {
-      if (!Object.values(CourseCategory).includes(category as CourseCategory)) {
-        throw customError.badRequest('Category is not valid');
-      }
       course.category = category;
     }
 

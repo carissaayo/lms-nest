@@ -10,6 +10,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { CourseStatus } from '../models/course.schema';
+import { CourseCategory } from './course.interface';
 
 export class CreateCourseDTO {
   @IsString()
@@ -22,15 +23,21 @@ export class CreateCourseDTO {
   @IsNotEmpty({ message: 'Description is required' })
   description!: string;
 
-  @IsString()
+  @IsEnum(CourseCategory)
   @IsNotEmpty({ message: 'category is required' })
-  category!: string;
+  category!: CourseCategory;
 
   @IsNumber()
   @IsPositive()
   @IsNotEmpty({ message: 'price is required' })
   @Type(() => Number)
   price!: number;
+
+  @IsNumber()
+  @IsPositive()
+  @IsNotEmpty({ message: 'Duration is required' })
+  @Type(() => Number)
+  duration!: number;
 }
 
 export class UpdateCourseDTO {
@@ -44,15 +51,20 @@ export class UpdateCourseDTO {
   @MinLength(30, { message: 'Description must be at least 30 characters long' })
   description?: string;
 
-  @IsString()
-  @IsOptional()
-  category?: string;
+  @IsEnum(CourseCategory)
+  category?: CourseCategory;
 
   @IsNumber()
   @IsPositive()
   @Type(() => Number)
   @IsOptional()
   price?: number;
+
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  @IsOptional()
+  duration?: number;
 }
 
 export class AdminCourseActionDTO {

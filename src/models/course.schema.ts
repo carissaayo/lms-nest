@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { UserAdmin } from './admin.schema';
 import { User } from './user.schema';
+import { CourseCategory } from 'src/app/course/course.interface';
 
 export enum CourseStatus {
   PENDING = 'pending',
@@ -15,17 +16,17 @@ export class Course extends Document {
   @Prop({ required: true })
   title: string;
 
-  @Prop()
+  @Prop({ required: true })
   description: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  instructor: MongooseSchema.Types.ObjectId | User;
+  instructorId: MongooseSchema.Types.ObjectId | User;
 
   @Prop({ required: true })
   instructorName: string;
 
-  @Prop({ required: true })
-  category: string;
+  @Prop({ enum:CourseCategory, type:String,required: true })
+  category: CourseCategory;
 
   @Prop()
   categoryName: string;
@@ -35,9 +36,6 @@ export class Course extends Document {
 
   @Prop({ type: Number, default: 0 })
   enrollments: number;
-
-  @Prop({ type: Number, default: 0 })
-  duration: number;
 
   @Prop({ required: true })
   coverImage: string;
@@ -95,6 +93,9 @@ export class Course extends Document {
 
   @Prop({ required: true })
   price: number;
+
+  @Prop({ required: true })
+  duration: number;
 
   @Prop({ default: false })
   deleted: boolean;
