@@ -75,7 +75,7 @@ export class InstructorCourseService {
 
     await course.save();
 
-    await this.emailService.courseCreation(
+    this.emailService.courseCreation(
       instructor.email,
       instructor.firstName,
       course.title,
@@ -116,7 +116,7 @@ export class InstructorCourseService {
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    const { title, description, category, price } = updateCourseDto || {};
+    const { title, description, category, price ,duration} = updateCourseDto || {};
 
     if (category) {
       course.category = category;
@@ -141,6 +141,7 @@ export class InstructorCourseService {
     }
 
     if (title) course.title = title;
+    if (duration) course.duration = duration;
     if (description) course.description = description;
     if (price !== undefined) course.price = price;
     if (course.isSubmitted) course.isSubmitted = false;

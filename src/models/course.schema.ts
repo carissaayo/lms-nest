@@ -28,8 +28,7 @@ export class Course extends Document {
   @Prop({ enum:CourseCategory, type:String,required: true })
   category: CourseCategory;
 
-  @Prop()
-  categoryName: string;
+ 
 
   @Prop({ type: Number, default: 0 })
   lessons: number;
