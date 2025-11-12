@@ -18,9 +18,7 @@ import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 import { UserRole } from './user.interface';
 
 @Controller('users')
-@UseGuards(RoleGuard)
 
-@RequireRoles(UserRole.STUDENT)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
