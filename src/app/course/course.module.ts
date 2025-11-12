@@ -3,7 +3,11 @@ import { Module } from '@nestjs/common';
 import { SecurityModule } from 'src/security/security.module';
 
 import { CourseService } from './services/course.service';
+import { InstructorCourseService } from './services/instructor-course.service';
+
 import { CourseController } from './controllers/course.controller';
+
+import { InstructorCourseController } from './controllers/instructor-course.controller';
 
 import { Category, CategorySchema } from '../models/main.schema';
 
@@ -23,8 +27,8 @@ import { Lesson, LessonSchema } from '../models/lesson.schema';
     ]),
     SecurityModule,
   ],
-  providers: [CourseService, EmailService],
-  controllers: [CourseController],
+  providers: [CourseService, InstructorCourseService, EmailService],
+  controllers: [CourseController, InstructorCourseController],
   exports: [CourseService],
 })
 export class CourseModule {}
