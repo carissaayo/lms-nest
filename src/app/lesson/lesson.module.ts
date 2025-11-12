@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
+import { SecurityModule } from 'src/security/security.module';
+
 import { LessonService } from './services/lesson.service';
 import { EmailService } from '../email/email.service';
 
@@ -18,6 +20,8 @@ import { Lesson, LessonSchema } from '../models/lesson.schema';
       { name: Category.name, schema: CategorySchema },
       { name: Lesson.name, schema: LessonSchema },
     ]),
+        SecurityModule,
+    
   ],
   providers: [LessonService, EmailService],
   controllers: [LessonController],

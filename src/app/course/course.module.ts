@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { SecurityModule } from 'src/security/security.module';
+
 import { CourseService } from './services/course.service';
 import { CourseController } from './controllers/course.controller';
 
@@ -19,6 +21,7 @@ import { Lesson, LessonSchema } from '../models/lesson.schema';
       { name: Course.name, schema: CourseSchema },
       { name: Lesson.name, schema: LessonSchema },
     ]),
+    SecurityModule,
   ],
   providers: [CourseService, EmailService],
   controllers: [CourseController],

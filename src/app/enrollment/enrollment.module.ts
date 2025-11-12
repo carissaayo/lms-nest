@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { SecurityModule } from 'src/security/security.module';
+
 import { EmailService } from '../email/email.service';
 
 import { EnrollmentService } from './services/enrollment.service';
@@ -25,6 +27,7 @@ import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
       { name: Earning.name, schema: EarningSchema },
       { name: Enrollment.name, schema: EnrollmentSchema },
     ]),
+    SecurityModule,
   ],
   providers: [EnrollmentService, EmailService, PaymentService],
   controllers: [],

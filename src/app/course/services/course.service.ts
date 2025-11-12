@@ -21,6 +21,7 @@ import {
 import { customError } from 'src/libs/custom-handlers';
 import { CourseCategory } from '../course.interface';
 import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()
 export class CourseService {
@@ -28,6 +29,7 @@ export class CourseService {
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
+    private readonly tokenManager: TokenManager,
 
     private readonly emailService: EmailService,
   ) {}
@@ -83,9 +85,14 @@ export class CourseService {
       instructor.firstName,
       course.title,
     );
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      instructor,
+      req,
+    );
 
     return {
-      accessToken: req.token,
+      accessToken,
+      refreshToken,
       course,
       message: 'Course created successfully',
     };
@@ -156,14 +163,20 @@ export class CourseService {
       course.title,
     );
 
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      instructor,
+      req,
+    );
+
     return {
-      accessToken: req.token,
+      accessToken,
+      refreshToken,
       course,
       message: 'Course updated successfully',
     };
   }
 
-  async viewCourses(query: any) {
+  async viewCourses(query: any,) {
     const {
       category,
       price,
@@ -215,6 +228,8 @@ export class CourseService {
       .exec();
 
     const total = await this.courseModel.countDocuments(filter);
+
+   
 
     return {
       page: Number(page),
@@ -288,17 +303,23 @@ export class CourseService {
       course.lessons = lessons.length;
       await course.save();
 
- this.emailService.courseSubmission(
+      this.emailService.courseSubmission(
         instructor.email,
         instructor.firstName,
         course.title,
       );
 
-      return {
-        message: 'Course submitted successfully',
-        accessToken: req.token,
-        course,
-      };
+     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+       instructor,
+       req,
+     );
+
+     return {
+       accessToken,
+       refreshToken,
+       message: 'Course submitted successfully',
+       course,
+     };
     } catch (error) {
       console.log(error);
       throw new Error(error.message || 'Internal Server Error');
@@ -329,17 +350,22 @@ export class CourseService {
       course.publishedAt = new Date();
       await course.save();
 
-    this.emailService.coursePublish(
+      this.emailService.coursePublish(
         instructor.email,
         instructor.firstName,
         course.title,
       );
+ const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+   instructor,
+   req,
+ );
 
-      return {
-        message: 'Course published successfully',
-        accessToken: req.token,
-        course,
-      };
+ return {
+   accessToken,
+   refreshToken,
+   message: 'Course published successfully',
+   course,
+ };
     } catch (error) {
       console.log(error);
       throw new Error(error.message || 'Internal Server Error');
@@ -369,7 +395,6 @@ export class CourseService {
     }
 
     return {
-      accessToken: req.token,
       course,
       message: 'Course fetched successfully',
     };

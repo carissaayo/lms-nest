@@ -23,6 +23,7 @@ import {
   EnrollmentStatus,
 } from 'src/app/models/enrollment.schema';
 import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()
 export class InstructorService {
@@ -37,6 +38,8 @@ export class InstructorService {
     @InjectModel(Lesson.name)
     private lessonModel: Model<LessonDocument>,
     private readonly emailService: EmailService,
+        private readonly tokenManager: TokenManager,
+    
   ) {}
 
   async getInstructorBalance(req: CustomRequest) {
@@ -73,16 +76,21 @@ export class InstructorService {
     );
 
     const availableBalance = totalEarnings - totalWithdrawals;
+ const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+   instructor,
+   req,
+ );
 
-    return {
-      message: 'Wallet has been fetched successfully',
-      wallet: {
-        availableBalance,
-        totalEarnings,
-        totalWithdrawals,
-      },
-      accessToken: req.token,
-    };
+ return {
+   accessToken,
+   refreshToken,
+   message: 'Wallet has been fetched successfully',
+   wallet: {
+     availableBalance,
+     totalEarnings,
+     totalWithdrawals,
+   },
+ };
   }
   async getInstructorAnalytics(query: any, req: CustomRequest) {
     const instructor = await this.userModel.findById(req.userId);
@@ -376,40 +384,45 @@ export class InstructorService {
         };
       }),
     );
+ const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+   instructor,
+   req,
+ );
 
-    return {
-      accessToken: req.token,
-      message: 'Instructor analytics fetched successfully',
-      analytics: {
-        courseStats: {
-          drafted: draftedCourses,
-          submitted: submittedCourses,
-          published: publishedCourses,
-          rejected: rejectedCourses,
-          suspended: suspendedCourses,
-          total: allCourses.length,
-        },
-        studentStats: {
-          totalStudents,
-          activeStudents,
-          retentionRate:
-            totalStudents > 0
-              ? Math.round((activeStudents / totalStudents) * 100)
-              : 0,
-        },
-        revenueStats: {
-          totalRevenue,
-          averageRevenuePerStudent:
-            totalStudents > 0 ? Math.round(totalRevenue / totalStudents) : 0,
-          monthlyRevenue,
-        },
-        topSellingCourses,
-        recentCourses: recentCoursesData,
-        coursePerformance,
-        engagementData,
-        timeRange,
-      },
-    };
+ return {
+   accessToken,
+   refreshToken,
+   message: 'Instructor analytics fetched successfully',
+   analytics: {
+     courseStats: {
+       drafted: draftedCourses,
+       submitted: submittedCourses,
+       published: publishedCourses,
+       rejected: rejectedCourses,
+       suspended: suspendedCourses,
+       total: allCourses.length,
+     },
+     studentStats: {
+       totalStudents,
+       activeStudents,
+       retentionRate:
+         totalStudents > 0
+           ? Math.round((activeStudents / totalStudents) * 100)
+           : 0,
+     },
+     revenueStats: {
+       totalRevenue,
+       averageRevenuePerStudent:
+         totalStudents > 0 ? Math.round(totalRevenue / totalStudents) : 0,
+       monthlyRevenue,
+     },
+     topSellingCourses,
+     recentCourses: recentCoursesData,
+     coursePerformance,
+     engagementData,
+     timeRange,
+   },
+ };
   }
   async getInstructorStudents(query: any, req: CustomRequest) {
     const instructor = await this.userModel.findById(req.userId);
@@ -480,7 +493,8 @@ export class InstructorService {
 
   async getInstructorEarnings(req: CustomRequest) {
     const instructorId = req.userId;
-
+const instructor= await this.userModel.findOne({_id:req.userId})
+if(!instructor)throw customError.notFound("Instructor not found")
     const [earnings, withdrawals] = await Promise.all([
       this.earningModel.find({ instructor: instructorId }).populate('course'),
       this.withdrawalModel.find({ user: instructorId }).sort({ createdAt: -1 }),
@@ -576,17 +590,24 @@ export class InstructorService {
 
     const coursesSold = courseMap.size;
 
-    return {
-      summary: {
-        totalEarnings,
-        totalWithdrawals,
-        availableBalance,
-        coursesSold,
-      },
-      withdrawal: { availableBalance },
-      chartData,
-      topCourses,
-      payouts,
-    };
+ const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+   instructor,
+   req,
+ );
+
+ return {
+   accessToken,
+   refreshToken,
+   summary: {
+     totalEarnings,
+     totalWithdrawals,
+     availableBalance,
+     coursesSold,
+   },
+   withdrawal: { availableBalance },
+   chartData,
+   topCourses,
+   payouts,
+ };
   }
 }

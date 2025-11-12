@@ -20,6 +20,7 @@ import { User, UserDocument } from 'src/app/models/user.schema';
 import { EmailService } from 'src/app/email/email.service';
 import { UserAdmin } from 'src/app/models/admin.schema';
 import mongoose from 'mongoose';
+import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()
 export class LessonService {
@@ -27,6 +28,7 @@ export class LessonService {
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly tokenManager: TokenManager,
 
     private readonly emailService: EmailService,
   ) {}
@@ -73,9 +75,14 @@ export class LessonService {
       .exec();
 
     const total = await this.lessonModel.countDocuments(searchQuery);
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      instructor,
+      req,
+    );
 
     return {
-      accessToken: req.token,
+      accessToken,
+      refreshToken,
       page: Number(page),
       results: total,
       lessons,
@@ -148,18 +155,21 @@ export class LessonService {
         lesson.title,
       );
 
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        instructor,
+        req,
+      );
+
       return {
-        accessToken: req.token,
+        accessToken,
+        refreshToken,
         message: 'Lesson has been created successfully',
         lesson,
         course,
       };
     } catch (error) {
       console.log(error);
-      throw customError.internalServerError(
-        error.message || '',
-        error.statusCode || 500,
-      );
+      throw new Error(error||"Something Went Wrong")
     }
   }
   async updateLesson(
@@ -239,18 +249,22 @@ export class LessonService {
         lesson.title,
       );
 
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        instructor,
+        req,
+      );
+
       return {
-        accessToken: req.token,
+        accessToken,
+        refreshToken,
         message: 'Lesson has been updated successfully',
         lesson,
         course,
       };
     } catch (error) {
       console.log(error);
-      throw customError.internalServerError(
-        error.message || '',
-        error.statusCode || 500,
-      );
+        throw new Error(error || 'Something Went Wrong');
+
     }
   }
 
@@ -300,20 +314,26 @@ export class LessonService {
         lesson.course.title,
       );
 
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        instructor,
+        req,
+      );
+
       return {
-        accessToken: req.token,
+        accessToken,
+        refreshToken,
         message: 'Lesson deleted successfully',
       };
     } catch (error) {
       console.log(error);
-      throw customError.internalServerError(
-        error.message || '',
-        error.statusCode || 500,
-      );
+         throw new Error(error || 'Something Went Wrong');
+
     }
   }
 
   async getLessons(courseId: string, query: any, req: CustomRequest) {
+    const instructor = await this.userModel.findById(req.userId);
+    if (!instructor) throw customError.notFound('Instructor not found');
     const course = await this.courseModel.findById(courseId);
     if (!course) throw customError.notFound('Course not found');
 
@@ -335,8 +355,14 @@ export class LessonService {
 
     const total = await this.lessonModel.countDocuments({ course: courseId });
 
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      instructor,
+      req,
+    );
+
     return {
-      accessToken: req.token,
+      accessToken,
+      refreshToken,
       page: Number(page),
       results: total,
       lessons,
@@ -345,6 +371,8 @@ export class LessonService {
   }
 
   async getLessonsStudent(courseId: string, req: CustomRequest) {
+        const instructor = await this.userModel.findById(req.userId);
+        if (!instructor) throw customError.notFound('Instructor not found');
     const course = await this.courseModel.findById(courseId);
     if (!course) throw customError.notFound('Course not found');
 
@@ -356,9 +384,14 @@ export class LessonService {
       .exec();
 
     const total = await this.lessonModel.countDocuments({ course: courseId });
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      instructor,
+      req,
+    );
 
     return {
-      accessToken: req.token,
+      accessToken,
+      refreshToken,
       results: total,
       lessons,
       message: 'Lessons fetched successfully',

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
+import { SecurityModule } from 'src/security/security.module';
+
 import { EnrollmentModule } from '../enrollment/enrollment.module';
 
 import { EmailService } from '../email/email.service';
@@ -34,6 +36,7 @@ import { Payment, PaymentSchema } from '../models/payment.schema';
       { name: Payment.name, schema: PaymentSchema },
     ]),
     EnrollmentModule,
+    SecurityModule,
   ],
   providers: [StudentService, EmailService, PaymentService, AssignmentService],
   controllers: [StudentController],

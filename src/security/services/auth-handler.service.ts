@@ -31,15 +31,23 @@ export class AuthHandler {
     user?: UserAdmin | User ;
   }> {
     const authHeader = req.headers.authorization;
-    const refreshToken = req.headers['refreshtoken'] as string | undefined;
+    const refreshToken = req.headers['refreshtoken'] as string | undefined; 
 
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
+
 
       try {
         const decoded: any = this.jwtService.verify(token, {
           secret: appConfig.jwt.access_token_secret,
         });
+        if(!decoded){
+            res.status(HttpStatus.UNAUTHORIZED).json({
+              success: false,
+              message: 'No Token',
+              timestamp: new Date().toISOString(),
+            });
+        }
 
         // Find user from either collection
         const foundUser = await this.findUserById(decoded.sub);

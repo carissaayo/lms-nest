@@ -360,9 +360,13 @@ export class TokenManager {
     userId: string,
   ): Promise<(UserAdmin | User ) | null> {
     const admin = await this.userAdminModel.findById(userId).exec();
+    console.log(admin,"Admin");
+    
     if (admin) return admin as UserAdmin;
     // Fallback to regular user
     const regularUser = await this.userModel.findById(userId).exec();
+    console.log(regularUser, 'regularUser');
+
     return regularUser ? (regularUser as User) : null;
   }
 }

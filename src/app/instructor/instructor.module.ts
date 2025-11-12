@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { StudentModule } from '../student/student.module';
 import { PaymentModule } from '../payment/payment.module';
+import { SecurityModule } from 'src/security/security.module';
 
 import { EmailService } from '../email/email.service';
 import { InstructorService } from './services/instructor.service';
@@ -38,6 +39,7 @@ import { Lesson, LessonSchema } from '../models/lesson.schema';
     ]),
     StudentModule,
     PaymentModule,
+    SecurityModule,
   ],
   providers: [InstructorService, EmailService, WithdrawalService],
   controllers: [InstructorController, WithdrawalController],

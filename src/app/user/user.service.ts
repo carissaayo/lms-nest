@@ -10,10 +10,13 @@ import { customError } from 'src/libs/custom-handlers';
 import { User, UserDocument } from '../models/user.schema';
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
+import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly tokenManager: TokenManager,
+) {}
 
   async create(dto: RegisterDto): Promise<UserDocument> {
     const user = new this.userModel(dto);
@@ -25,6 +28,8 @@ export class UsersService {
     picture: Express.Multer.File,
     req: CustomRequest,
   ) {
+    
+    
     console.log('updateUser');
     const allowedFields = [
       'firstName',
@@ -69,12 +74,17 @@ export class UsersService {
     await user.save();
     // build profile
     const profile: ProfileInterface = GET_PROFILE(user);
+  const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+    user,
+    req,
+  );
 
-    return {
-      accessToken: req.token || '',
-      profile,
-      message: 'Profile updated successfully',
-    };
+  return {
+    accessToken,
+    refreshToken,
+    profile,
+    message: 'Profile updated successfully',
+  };
   }
 
   async viewProfile(req: CustomRequest) {
@@ -86,12 +96,17 @@ export class UsersService {
     }
 
     const profile: ProfileInterface = GET_PROFILE(user);
+ const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+   user,
+   req,
+ );
 
-    return {
-      accessToken: req.token || '',
-      profile,
-      message: 'Profile fetched successfully',
-    };
+ return {
+   accessToken,
+   refreshToken,
+   profile,
+   message: 'Profile fetched successfully',
+ };
   }
 
   async findById(id: string) {

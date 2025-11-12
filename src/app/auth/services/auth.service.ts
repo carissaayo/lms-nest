@@ -26,19 +26,20 @@ import {
 
 import bcrypt from 'bcryptjs';
 import config from 'src/app/config/config';
+import { TokenManager } from 'src/security/services/token-manager.service';
 const appConfig= config()
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private emailService: EmailService,
+    private readonly tokenManager: TokenManager,
   ) {}
 
   /** ----------------- PASSWORD HELPERS ----------------- */
   private async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10);
   }
-
 
   /** ----------------- REGISTER ----------------- */
   async register(body: RegisterDto) {
@@ -68,38 +69,37 @@ export class AuthService {
       throw customError.conflict('Email has already been used', 409);
     }
 
-      const emailCode = generateOtp('numeric', 8);
-      const hashedPassword = await bcrypt.hash(password, 10);
+    const emailCode = generateOtp('numeric', 8);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      const user = new this.userModel({
+    const user = new this.userModel({
+      email,
+      password: hashedPassword,
+      phoneNumber: formattedPhone,
+      firstName,
+      lastName,
+      role,
+      emailCode,
+    });
+
+    const savedUser = await user.save();
+    const { emailVerified, _id } = savedUser;
+
+    this.emailService.sendVerificationEmail(email, emailCode);
+
+    return {
+      message:
+        'User registered successfully. Check your email for the verification link.',
+      user: {
         email,
-        password: hashedPassword,
-        phoneNumber: formattedPhone,
+        phoneNumber,
         firstName,
         lastName,
+        emailVerified,
         role,
-        emailCode,
-      });
-
-      const savedUser = await user.save();
-      const { emailVerified, _id } = savedUser;
-
-      this.emailService.sendVerificationEmail(email, emailCode);
-
-      return {
-        message:
-          'User registered successfully. Check your email for the verification link.',
-        user: {
-          email,
-          phoneNumber,
-          firstName,
-          lastName,
-          emailVerified,
-          role,
-          id: _id,
-        },
-      };
-  
+        id: _id,
+      },
+    };
   }
 
   /** ----------------- LOGIN ----------------- */
@@ -110,36 +110,31 @@ export class AuthService {
     if (!user) {
       throw customError.notFound('User not found');
     }
-if (user.lockUntil && user.lockUntil > new Date()) {
-  throw customError.forbidden(
-    'Account temporarily locked due to failed attempts',
-  );
-}
-
-      await this.validatePassword(
-        user,
-        password,
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      throw customError.forbidden(
+        'Account temporarily locked due to failed attempts',
       );
-     
-   
-      const { token, refreshToken, session } = await generateToken(user, req);
-      await user.save();
+    }
 
-      const profile: ProfileInterface = GET_PROFILE(user);
+    await this.validatePassword(user, password);
 
-      return {
-        accessToken: token,
-        refreshToken,
-        profile,
-        message: 'Signed In successfully',
-      };
-   
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      user,
+      req,
+    );
+    await user.save();
+
+    const profile: ProfileInterface = GET_PROFILE(user);
+
+    return {
+      accessToken,
+      refreshToken,
+      profile,
+      message: 'Signed In successfully',
+    };
   }
 
-  private async validatePassword(
-    user: User,
-    password: string,
-  ): Promise<void> {
+  private async validatePassword(user: User, password: string): Promise<void> {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -273,11 +268,7 @@ if (user.lockUntil && user.lockUntil > new Date()) {
     }
 
     try {
-      const isPasswordValid = await this.validatePassword(
-        user,
-        user.password,
-      );
-     
+      const isPasswordValid = await this.validatePassword(user, user.password);
 
       if (newPassword !== confirmNewPassword) {
         throw customError.badRequest('New passwords do not match');

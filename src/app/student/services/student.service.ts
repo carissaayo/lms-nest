@@ -35,6 +35,7 @@ import {
 } from 'src/app/models/lesson-progress.schema';
 import { UpdateLessonProgressDTO } from '../student.dto';
 import config from 'src/app/config/config';
+import { TokenManager } from 'src/security/services/token-manager.service';
 
 const appConfig = config();
 @Injectable()
@@ -55,6 +56,8 @@ export class StudentService {
     @InjectModel(LessonProgress.name)
     private lessonProgressModel: Model<LessonProgressDocument>,
     private readonly emailService: EmailService,
+            private readonly tokenManager: TokenManager,
+    
   ) {}
 
   async enroll(courseId: string, req: CustomRequest) {
@@ -92,17 +95,21 @@ export class StudentService {
         paymentLink,
       );
 
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        student,
+        req,
+      );
+
       return {
-        accessToken: req.token,
+        accessToken,
+        refreshToken,
         message: 'Payment required',
         paymentLink,
       };
     } catch (error) {
       console.log(error);
-      throw customError.internalServerError(
-        error.message || '',
-        error.statusCode || 500,
-      );
+           throw new Error(error || 'Something Went Wrong');
+
     }
   }
 
@@ -127,6 +134,9 @@ export class StudentService {
   }
 
   async getLessonsForStudent(courseId: string, query: any, req: CustomRequest) {
+       const student = await this.userModel.findById(req.userId);
+       if (!student) throw customError.notFound('Student not found');
+
     const enrollment = await this.enrollmentModel
       .findOne({
         course: courseId,
@@ -152,14 +162,19 @@ export class StudentService {
       .exec();
 
     const total = await this.lessonModel.countDocuments({ course: courseId });
+  const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+    student,
+    req,
+  );
 
-    return {
-      accessToken: req.token,
-      page: Number(page),
-      results: total,
-      lessons,
-      message: 'Lessons fetched successfully',
-    };
+  return {
+    accessToken,
+    refreshToken,
+    page: Number(page),
+    results: total,
+    lessons,
+    message: 'Lessons fetched successfully',
+  };
   }
 
   async getSingleEnrollmentForStudent(
@@ -167,6 +182,9 @@ export class StudentService {
     query: any,
     req: CustomRequest,
   ) {
+        const student = await this.userModel.findById(req.userId);
+        if (!student) throw customError.notFound('Student not found');
+
     const enrollment = await this.enrollmentModel.findOne({
       course: courseId,
       user: req.userId,
@@ -194,14 +212,20 @@ export class StudentService {
 
     const total = await this.lessonModel.countDocuments({ course: courseId });
 
-    return {
-      accessToken: req.token,
-      page: Number(page),
-      results: total,
-      lessons,
-      course,
-      message: 'Course fetched successfully',
-    };
+   const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+     student,
+     req,
+   );
+
+   return {
+     accessToken,
+     refreshToken,
+     page: Number(page),
+     results: total,
+     lessons,
+     course,
+     message: 'Course fetched successfully',
+   };
   }
 
   async startLesson(lessonId: string, req: CustomRequest) {
@@ -245,11 +269,17 @@ export class StudentService {
 
     await progress.save();
     await enrollment.save();
-    return {
-      accessToken: req.token,
-      message: 'Lesson has started successfully',
-      progress,
-    };
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        user,
+        req,
+      );
+
+      return {
+        accessToken,
+        refreshToken,
+        message: 'Lesson has started successfully',
+        progress,
+      };
   }
 
   async startCourse(courseId: string, req: CustomRequest) {
@@ -272,10 +302,16 @@ export class StudentService {
 
     enrollment.status = EnrollmentStatus.ACTIVE;
     await enrollment.save();
-    return {
-      accessToken: req.token,
-      message: 'Course has started successfully',
-    };
+   const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+     user,
+     req,
+   );
+
+   return {
+     accessToken,
+     refreshToken,
+     message: 'Course has started successfully',
+   };
   }
   async getALesson(lessonId: string, req: CustomRequest) {
     const student = await this.userModel.findById(req.userId);
@@ -310,13 +346,19 @@ export class StudentService {
       })
       .sort({ position: -1 });
 
-    return {
-      accessToken: req.token,
-      lesson,
-      nextLesson: nextLesson || null,
-      previousLesson: previousLesson || null,
-      message: 'Lesson fetched successfully',
-    };
+   const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+     student,
+     req,
+   );
+
+   return {
+     accessToken,
+     refreshToken,
+     lesson,
+     nextLesson: nextLesson || null,
+     previousLesson: previousLesson || null,
+     message: 'Lesson fetched successfully',
+   };
   }
   async updateProgress(
     lessonId: string,
@@ -360,8 +402,14 @@ export class StudentService {
     await this.calculateCourseProgress(lesson.courseId, String(user._id));
     await progress.save();
 
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      user,
+      req,
+    );
+
     return {
-      accessToken: req.token,
+      accessToken,
+      refreshToken,
       message: 'Lesson progress updated successfully',
       progress,
     };
@@ -401,11 +449,17 @@ export class StudentService {
     await progress.save();
     await enrollment.save();
 
-    return {
-      accessToken: req.token,
-      message: 'Lesson has been completed successfully',
-      progress,
-    };
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        user,
+        req,
+      );
+
+      return {
+        accessToken,
+        refreshToken,
+        message: 'Lesson has been completed successfully',
+        progress,
+      };
   }
 
   async completeCourse(courseId: string, req: CustomRequest) {
@@ -428,10 +482,16 @@ export class StudentService {
     enrollment.status = EnrollmentStatus.COMPLETED;
     await enrollment.save();
 
-    return {
-      accessToken: req.token,
-      message: 'Course has been completed successfully',
-    };
+   const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+     user,
+     req,
+   );
+
+   return {
+     accessToken,
+     refreshToken,
+     message: 'Course has been completed successfully',
+   };
   }
 
   async calculateCourseProgress(courseId: string, userId: string) {
@@ -534,13 +594,19 @@ export class StudentService {
       .map((enrollment) => enrollment.course)
       .filter(Boolean);
     const total = await this.enrollmentModel.countDocuments(enrollmentFilter);
+   const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+     user,
+     req,
+   );
 
-    return {
-      page: Number(page),
-      results: total,
-      courses,
-      message: 'Enrolled courses fetched successfully',
-    };
+   return {
+     accessToken,
+     refreshToken,
+     page: Number(page),
+     results: total,
+     courses,
+     message: 'Enrolled courses fetched successfully',
+   };
   }
 
   async analytic(req: CustomRequest) {
@@ -565,13 +631,20 @@ export class StudentService {
       status: EnrollmentStatus.PENDING,
     });
 
-    return {
-      message: 'Student analytics fetched successfully',
-      completedEnrollments: completedEnrollments || 0,
-      activeEnrollments: activeEnrollments || 0,
-      pendingEnrollments: pendingEnrollments || 0,
-      totalEnrollments: totalEnrollments || 0,
-    };
+   const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+     user,
+     req,
+   );
+
+   return {
+     accessToken,
+     refreshToken,
+     message: 'Student analytics fetched successfully',
+     completedEnrollments: completedEnrollments || 0,
+     activeEnrollments: activeEnrollments || 0,
+     pendingEnrollments: pendingEnrollments || 0,
+     totalEnrollments: totalEnrollments || 0,
+   };
   }
 
   async getDetailedAnalytics(query: any, req: CustomRequest) {
@@ -895,6 +968,9 @@ export class StudentService {
   }
 
   async getStudentPayments(req: CustomRequest) {
+        const user = await this.userModel.findById(req.userId);
+        if (!user) throw customError.notFound('User not found');
+
     const studentId = req.userId;
 
     // Fetch all payments and enrollments for this student
@@ -927,12 +1003,19 @@ export class StudentService {
       date: p.createdAt,
     }));
 
-    return {
-      summary: {
-        totalSpent,
-        totalCourses,
-      },
-      paymentHistory,
-    };
+  const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+    user,
+    req,
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+    summary: {
+      totalSpent,
+      totalCourses,
+    },
+    paymentHistory,
+  };
   }
 }

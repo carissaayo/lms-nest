@@ -19,7 +19,7 @@ import { Earning, EarningDocument } from 'src/app/models/earning.schema';
 
 import { UserRole } from 'src/app/user/user.interface';
 import { PermissionsEnum } from 'src/app/admin/admin.interface';
-import { EnrollStudentAfterPayment } from '../enrollment.dto';
+
 
 @Injectable()
 export class EnrollmentService {
