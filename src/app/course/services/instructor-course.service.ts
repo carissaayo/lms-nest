@@ -323,8 +323,8 @@ export class InstructorCourseService {
     const { status, title, sort, page = 1, limit = 10 } = query;
 
     const filter: any = {
-      instructor: instructor._id,
-      deleted: { $ne: true },
+      instructorId: instructor._id,
+      isDeleted:false,
     };
 
     // if (status) filter.status = status;
