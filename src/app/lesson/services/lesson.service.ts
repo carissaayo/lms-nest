@@ -48,7 +48,7 @@ export class LessonService {
     // Find all courses by this instructor
     const instructorCourses = await this.courseModel
       .find({
-        instructor: req.userId,
+        instructorId: req.userId,
       })
       .select('_id');
 
