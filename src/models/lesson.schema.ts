@@ -23,7 +23,7 @@ export class Lesson extends Document {
   @Prop({ required: true })
   courseId: string;
 
-  @Prop({ type: Number, default: 0 })
+  @Prop({ type: Number,required:true })
   duration: number;
 
   @Prop({ required: true })
@@ -32,8 +32,6 @@ export class Lesson extends Document {
   @Prop()
   noteUrl: string;
 
-  @Prop({ type: Number, default: 0 })
-  progress: number;
 
   @Prop()
   createdAt: Date;

@@ -25,11 +25,17 @@ import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 
 @Controller('lessons')
 @UseGuards(RoleGuard)
-
-@RequireRoles(UserRole.STUDENT)
+@RequireRoles(UserRole.INSTRUCTOR)
 export class LessonController {
   constructor(private readonly lessonService: LessonService) {}
 
+  @Post('')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'video', maxCount: 1 },
+      { name: 'note', maxCount: 1 },
+    ]),
+  )
   async createLesson(
     @Body() dto: CreateLessonDTO,
     @UploadedFiles()

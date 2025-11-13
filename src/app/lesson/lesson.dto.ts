@@ -13,15 +13,15 @@ export class CreateLessonDTO {
   @MinLength(10, { message: 'Title must be at least 10 characters long' })
   @IsNotEmpty({ message: 'Title is required' })
   @IsString()
-  title: string;
+  title!: string;
 
   @IsNotEmpty({ message: 'courseId is required' })
-  courseId: string;
+  courseId!: string;
 
   @MinLength(10, { message: 'Description must be at least 10 characters long' })
   @IsNotEmpty({ message: 'Description is required' })
   @IsString()
-  description: string;
+  description!: string;
 
   @IsNumber()
   @IsPositive()

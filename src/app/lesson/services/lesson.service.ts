@@ -118,8 +118,11 @@ export class LessonService {
     let videoUrl: string | undefined;
     let noteUrl: string | undefined;
 
+    console.log(files.video,"files.video");
+    console.log(files, 'files');
     try {
       if (files.video && files.video.length > 0) {
+        
         const videoFile = files.video[0];
         videoUrl = await saveFileS3(videoFile, `lessons/${courseId}/videos/`);
       }

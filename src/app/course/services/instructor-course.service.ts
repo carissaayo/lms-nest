@@ -256,7 +256,7 @@ export class InstructorCourseService {
   }
 
   async publishCourse(courseId: string, req: CustomRequest) {
-    const course = await this.courseModel.findById(courseId);
+    const course = await this.courseModel.findOne({_id:courseId});
     if (!course) {
       throw customError.notFound('Course not found');
     }
