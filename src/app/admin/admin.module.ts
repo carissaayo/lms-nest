@@ -29,6 +29,7 @@ import { AdminInstructorService } from './services/admin-instructor.service';
 import { AdminInstructorController } from './controllers/admin-instructor.controller';
 import { AdminStudentsService } from './services/admin-students.service';
 import { AdminStudentsController } from './controllers/admin-students.service';
+import { SecurityModule } from 'src/security/security.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AdminStudentsController } from './controllers/admin-students.service';
     ]),
     EmailModule,
     CourseModule,
+    SecurityModule
   ],
   providers: [
     AdminUserService,

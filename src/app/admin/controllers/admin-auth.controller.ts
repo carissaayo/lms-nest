@@ -19,21 +19,16 @@ import {
 import { RolesGuard } from '../../common/guards/role.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
-import { Public } from '../../common/decorators/public.decorator';
+
 import { Roles } from '../../common/decorators/roles.decorator';
 
 import { AdminAuthService } from '../services/admin-auth.service';
 import { UserRole } from 'src/app/user/user.interface';
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 
 @Controller('admin-auth')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
-@UseGuards(RolesGuard)
-@Roles(UserRole.ADMIN)
+
+@UseGuards(RoleGuard)
 export class AdminAuthController {
   constructor(private authService: AdminAuthService) {}
 
@@ -48,6 +43,7 @@ export class AdminAuthController {
   }
 
   @Post('verify-email')
+  @RequireRoles(UserRole.ADMIN)
   async verifyEmail(
     @Body() verifyEmailDto: VerifyEmailDTO,
     @Req() req: CustomRequest,
@@ -68,6 +64,7 @@ export class AdminAuthController {
   }
 
   @Post('change-password')
+  @RequireRoles(UserRole.ADMIN)
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDTO,
     @Req() req: CustomRequest,

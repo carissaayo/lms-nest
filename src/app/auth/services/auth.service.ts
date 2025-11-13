@@ -36,10 +36,7 @@ export class AuthService {
     private readonly tokenManager: TokenManager,
   ) {}
 
-  /** ----------------- PASSWORD HELPERS ----------------- */
-  private async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
-  }
+
 
   /** ----------------- REGISTER ----------------- */
   async register(body: RegisterDto) {
@@ -122,7 +119,7 @@ export class AuthService {
       user,
       req,
     );
-    await user.save();
+    
 
     const profile: ProfileInterface = GET_PROFILE(user);
 
@@ -241,8 +238,10 @@ export class AuthService {
       );
     }
 
-    try {
-      user.password = await this.hashPassword(newPassword);
+    try {     
+       const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+      user.password = hashedPassword;
       user.passwordResetCode = null;
       user.resetPasswordExpires = null;
 
@@ -264,17 +263,18 @@ export class AuthService {
 
     const user = await this.userModel.findById(req.userId);
     if (!user) {
-      throw customError.forbidden('Access Denied');
+      throw customError.notFound('Admin not found');
     }
 
     try {
-      const isPasswordValid = await this.validatePassword(user, user.password);
+         await this.validatePassword(user, password);
 
       if (newPassword !== confirmNewPassword) {
         throw customError.badRequest('New passwords do not match');
       }
 
-      user.password = await this.hashPassword(newPassword);
+          const hashedPassword = await bcrypt.hash(password, 10);
+user.password= hashedPassword
       await user.save();
 
       return { message: 'Password changed successfully' };

@@ -1,16 +1,9 @@
 export const publicRoutes = [
-  '/auth/initiate-login',
+  'auth/register',
   '/auth/login',
   '/admin-auth/login',
   '/admin-auth/register',
   '/admin-auth/request-password-reset',
   '/admin-auth/password-reset',
-  '/merchant-auth/login',
-  '/merchant-auth/register',
-  '/merchant-auth/request-password-reset',
-  '/merchant-auth/password-reset',
-  '/repayments/verify-repayment/:txRef',
-  '/health',
-  '/api/docs',
-  '/flutterwave/webhook',
+
 ];

@@ -29,7 +29,7 @@ export class UserAdmin extends Document {
   @Prop()
   state: string;
 
-  @Prop({ enum: UserRole, default: UserRole.ADMIN ,type:String})
+  @Prop({ enum: UserRole, default: UserRole.ADMIN, type: String })
   role: UserRole;
 
   @Prop()
@@ -94,16 +94,24 @@ export class UserAdmin extends Document {
 
   @Prop()
   nextAuthDate: Date;
+  @Prop({ type: Date })
+  lockUntil?: Date;
+
+  @Prop({ type: Date })
+  lastLogin?: Date;
 
   @Prop({ default: 0 })
   failedAuthAttempts: number;
 
-  @Prop()
+  @Prop({ type: Date })
   nextPasswordResetDate: Date;
 
   @Prop({ default: 0 })
   failedPasswordResetAttempts: number;
 
+  @Prop({ default: 0 })
+  failedLoginAttempts: number;
+  
   @Prop()
   nextEmailVerifyDate: Date;
 

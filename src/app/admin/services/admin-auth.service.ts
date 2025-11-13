@@ -21,12 +21,17 @@ import {
   handleFailedAuthAttempt,
 } from 'src/utils/admin-auth-utils';
 import { AdminProfileInterface } from '../admin.interface';
+import config from 'src/app/config/config';
+import { TokenManager } from 'src/security/services/token-manager.service';
 
+const appConfig = config();
 @Injectable()
 export class AdminAuthService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     private emailService: EmailService,
+        private readonly tokenManager: TokenManager,
+    
   ) {}
 
   async register(body: RegisterDto) {
@@ -62,14 +67,14 @@ export class AdminAuthService {
     try {
       const emailCode = generateOtp('numeric', 8);
 
-      const hashedPassword = await this.hashPassword(password);
+      
+      const hashedPassword = await bcrypt.hash(password, 10);
       existingUser.phoneNumber = phoneNumber;
       existingUser.firstName = firstName;
       existingUser.lastName = lastName;
       existingUser.emailCode = emailCode;
       existingUser.password = hashedPassword;
       await existingUser.save();
-
      this.emailService.sendVerificationEmail(email, emailCode);
 
       return {
@@ -95,34 +100,26 @@ export class AdminAuthService {
 
     const user = await this.adminModel.findOne({ email });
     if (!user) {
-      throw customError.unauthorized('User not found');
+      throw customError.unauthorized('Admin not found');
     }
 
     try {
-      const isPasswordValid = await this.validatePassword(
-        password,
-        user.password,
-      );
-      if (!isPasswordValid) {
-        await handleFailedAuthAttempt(user, this.adminModel);
-      }
+    
+    await this.validatePassword(user, password);
+ 
 
-      user.failedAuthAttempts = 0;
-      await user.save();
-
-      const { token, refreshToken, session } = await generateToken(user, req);
-
-      user.sessions = [session];
-      user.failedSignInAttempts = 0;
-      user.nextSignInAttempt = new Date();
-      await user.save();
+    
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      user,
+      req,
+    );
 
       const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
 
       return {
-        accessToken: token,
-        refreshToken: refreshToken,
-        profile: profile,
+        accessToken,
+        refreshToken,
+        profile,
         message: 'Signed In successfully',
       };
     } catch (error) {
@@ -131,6 +128,28 @@ export class AdminAuthService {
     }
   }
 
+  private async validatePassword(user: UserAdmin, password: string): Promise<void> {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+  
+      if (!isPasswordValid) {
+        user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+  
+        if (user.failedLoginAttempts >= Number(appConfig.max_failed_attempts)) {
+          user.lockUntil = new Date(Date.now() + appConfig.lock_time);
+          user.failedLoginAttempts = 0; // reset after lock
+        }
+  
+        await user.save();
+        throw customError.unauthorized('Invalid credentials');
+      }
+  
+      // ✅ Successful login → reset counters
+      user.failedLoginAttempts = 0;
+      user.lockUntil = undefined;
+      user.lastLogin = new Date();
+      await user.save();
+    }
+  
   async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
     const { emailCode } = verifyEmailDto;
     const trimmedEmailCode = emailCode?.trim();
@@ -217,7 +236,9 @@ export class AdminAuthService {
     }
 
     try {
-      user.password = await this.hashPassword(newPassword);
+       const hashedPassword = await bcrypt.hash(newPassword, 10);
+     
+       user.password = hashedPassword;
       user.passwordResetCode = null;
       user.resetPasswordExpires = null;
       await user.save();
@@ -243,18 +264,14 @@ export class AdminAuthService {
     }
 
     try {
-      const isPasswordValid = await this.validatePassword(
-        password,
-        user.password,
-      );
-      if (!isPasswordValid) {
-        throw customError.badRequest('Current password is incorrect');
-      }
-
+   
+      await this.validatePassword(user, password);
       if (newPassword !== confirmNewPassword) {
         throw customError.badRequest('New passwords do not match');
       }
-      user.password = await this.hashPassword(newPassword);
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+      user.password = hashedPassword;
       await user.save();
 
       return {
@@ -266,15 +283,6 @@ export class AdminAuthService {
     }
   }
 
-  /** ----------------- PASSWORD HELPERS ----------------- */
-  private async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
-  }
+ 
 
-  private async validatePassword(
-    password: string,
-    hashed: string,
-  ): Promise<boolean> {
-    return bcrypt.compare(password, hashed);
-  }
 }
