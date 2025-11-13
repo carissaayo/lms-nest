@@ -39,7 +39,7 @@ export class LessonController {
   async createLesson(
     @Body() dto: CreateLessonDTO,
     @UploadedFiles()
-    files: { video?: Express.Multer.File[]; note?: Express.Multer.File[] },
+    files: { video: Express.Multer.File[]; note?: Express.Multer.File[] },
     @Req() req: CustomRequest,
   ) {
     return this.lessonService.createLesson(dto, files, req);
