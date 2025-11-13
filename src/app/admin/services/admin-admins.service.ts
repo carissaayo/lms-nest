@@ -8,7 +8,7 @@ import {
   UserAdmin,
   UserAdminDocument,
   AdminStatus,
-} from 'src/app/models/admin.schema';
+} from 'src/models/admin.schema';
 import { EmailService } from '../../email/email.service';
 import {
   GET_ADMIN_PROFILE,

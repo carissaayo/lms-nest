@@ -3,18 +3,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 import { EmailService } from '../../email/email.service';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 import { VerifyEmailDTO } from '../../auth/auth.dto';
 import { SuspendUserDTO } from '../admin.dto';
 import { AdminProfileInterface } from '../admin.interface';
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
-import { Course, CourseDocument } from 'src/app/models/course.schema';
-import { Enrollment, EnrollmentDocument } from 'src/app/models/enrollment.schema';
-import { Earning, EarningDocument } from 'src/app/models/earning.schema';
-import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
+import { Course, CourseDocument } from 'src/models/course.schema';
+import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
+import { Earning, EarningDocument } from 'src/models/earning.schema';
+import { Payment, PaymentDocument } from 'src/models/payment.schema';
 import { escapeRegex } from 'src/utils/utils';
 
 @Injectable()

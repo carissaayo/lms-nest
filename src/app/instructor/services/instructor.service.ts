@@ -2,27 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import { User, UserDocument } from 'src/app/models/user.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { EmailService } from 'src/app/email/email.service';
-import { Earning, EarningDocument } from 'src/app/models/earning.schema';
+import { Earning, EarningDocument } from 'src/models/earning.schema';
 import {
   Withdrawal,
   WithdrawalDocument,
   WithdrawalStatus,
-} from 'src/app/models/withdrawal.schema';
+} from 'src/models/withdrawal.schema';
 import {
   Course,
   CourseDocument,
   CourseStatus,
-} from 'src/app/models/course.schema';
+} from 'src/models/course.schema';
 import {
   Enrollment,
   EnrollmentDocument,
   EnrollmentStatus,
-} from 'src/app/models/enrollment.schema';
-import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+} from 'src/models/enrollment.schema';
+import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()

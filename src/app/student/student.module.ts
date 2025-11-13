@@ -11,17 +11,17 @@ import { PaymentService } from '../payment/services/payment.service.';
 import { AssignmentService } from '../assignment/services/assignment.service';
 
 import { StudentController } from './controllers/student.controller';
-import { User, UserSchema } from '../models/user.schema';
-import { Assignment, AssignmentSchema } from '../models/assignment.schema';
-import { Lesson, LessonSchema } from '../models/lesson.schema';
-import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
-import { Submission, SubmissionSchema } from '../models/submission.schema';
+import { User, UserSchema } from 'src/models/user.schema';
+import { Assignment, AssignmentSchema } from 'src/models/assignment.schema';
+import { Lesson, LessonSchema } from 'src/models/lesson.schema';
+import { Enrollment, EnrollmentSchema } from 'src/models/enrollment.schema';
+import { Submission, SubmissionSchema } from 'src/models/submission.schema';
 import {
   LessonProgress,
   LessonProgressSchema,
-} from '../models/lesson-progress.schema';
-import { Course, CourseSchema } from '../models/course.schema';
-import { Payment, PaymentSchema } from '../models/payment.schema';
+} from 'src/models/lesson-progress.schema';
+import { Course, CourseSchema } from 'src/models/course.schema';
+import { Payment, PaymentSchema } from 'src/models/payment.schema';
 
 @Module({
   imports: [

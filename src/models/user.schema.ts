@@ -53,7 +53,7 @@ export class User extends Document {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ enum: UserRole, default: UserRole.STUDENT })
+  @Prop({ type:String,enum: UserRole, default: UserRole.STUDENT })
   role: UserRole;
 
   @Prop({ enum: UserStatus, default: UserStatus.PENDING })

@@ -8,12 +8,12 @@ import { PaymentController } from './controllers/payment.controller';
 import { StudentModule } from '../student/student.module';
 import { EnrollmentService } from '../enrollment/services/enrollment.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '../models/user.schema';
-import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
-import { Payment, PaymentSchema } from '../models/payment.schema';
-import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
-import { Earning, EarningSchema } from '../models/earning.schema';
-import { Course, CourseSchema } from '../models/course.schema';
+import { User, UserSchema } from 'src/models/user.schema';
+import { UserAdmin, UserAdminSchema } from 'src/models/admin.schema';
+import { Payment, PaymentSchema } from 'src/models/payment.schema';
+import { Enrollment, EnrollmentSchema } from 'src/models/enrollment.schema';
+import { Earning, EarningSchema } from 'src/models/earning.schema';
+import { Course, CourseSchema } from 'src/models/course.schema';
 
 @Module({
   imports: [

@@ -8,8 +8,8 @@ import {
   Course,
   CourseDocument,
   CourseStatus,
-} from 'src/app/models/course.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
+} from 'src/models/course.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 
 import { CreateCourseDTO } from '../course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -19,9 +19,10 @@ import {
   saveImageS3,
 } from 'src/app/fileUpload/image-upload.service';
 import { customError } from 'src/libs/custom-handlers';
-import { CourseCategory } from '../course.interface';
-import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+
+import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 import { TokenManager } from 'src/security/services/token-manager.service';
+import { CourseCategory } from '../course.interface';
 
 @Injectable()
 export class CourseService {
@@ -51,9 +52,7 @@ export class CourseService {
     if (!category) {
       throw customError.badRequest('category is required');
     }
-    if (!Object.values(CourseCategory).includes(category as CourseCategory)) {
-      throw customError.badRequest('Category is not valid');
-    }
+   
     const instructor = await this.userModel.findById(req.userId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
@@ -112,21 +111,18 @@ export class CourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    const instructorId = course.instructor.toString();
+    const instructorId = course.instructorId.toString();
     if (instructorId !== req.userId) {
       throw customError.forbidden('You can only update your course');
     }
 
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
     const { title, description, category, price } = updateCourseDto || {};
 
     if (category) {
-      if (!Object.values(CourseCategory).includes(category as CourseCategory)) {
-        throw customError.badRequest('Category is not valid');
-      }
       course.category = category;
     }
 
@@ -244,15 +240,15 @@ export class CourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only delete your courses');
     }
 
-    course.deleted = true;
+    course.isDeleted = true;
     await course.save();
 
     await this.emailService.courseDeletion(
@@ -271,12 +267,12 @@ export class CourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    if (course.deleted) throw customError.notFound('Course has been deleted');
-    if (String(course.instructor) !== req.userId) {
+    if (course.isDeleted) throw customError.notFound('Course has been deleted');
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only submit your courses');
     }
     if (course.isSubmitted) {
@@ -332,13 +328,13 @@ export class CourseService {
       throw customError.notFound('Course not found');
     }
 
-    if (course.deleted) throw customError.notFound('Course has been deleted');
+    if (course.isDeleted) throw customError.notFound('Course has been deleted');
 
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only publish your courses');
     }
     if (course.status !== CourseStatus.APPROVED) {
@@ -377,7 +373,7 @@ export class CourseService {
     if (!course) throw customError.notFound('Course not found');
     if (course.status !== CourseStatus.APPROVED)
       throw customError.notFound('Course is not available at the moment');
-    if (course.deleted) throw customError.notFound('Course has been deleted');
+    if (course.isDeleted) throw customError.notFound('Course has been deleted');
 
     return {
       course,
@@ -388,9 +384,9 @@ export class CourseService {
   async viewCourseForInstructor(courseId: string, req: CustomRequest) {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw customError.notFound('Course not found');
-    if (course.deleted) throw customError.notFound('Course has been deleted');
+    if (course.isDeleted) throw customError.notFound('Course has been deleted');
 
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only view your own courses');
     }
 

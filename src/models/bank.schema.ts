@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
-import { User } from 'src/app/user/user.entity';
+import { User } from './user.schema';
+
 
 @Schema({ timestamps: true })
 export class Bank extends Document {

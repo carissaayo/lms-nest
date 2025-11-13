@@ -7,15 +7,15 @@ import { customError } from 'src/libs/custom-handlers';
 
 import { EmailService } from 'src/app/email/email.service';
 import { PaymentService } from 'src/app/payment/services/payment.service.';
-import { User, UserDocument } from 'src/app/models/user.schema';
-import { Course, CourseDocument } from 'src/app/models/course.schema';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
-import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
+import { User, UserDocument } from 'src/models/user.schema';
+import { Course, CourseDocument } from 'src/models/course.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
+import { Payment, PaymentDocument } from 'src/models/payment.schema';
 import {
   Enrollment,
   EnrollmentDocument,
-} from 'src/app/models/enrollment.schema';
-import { Earning, EarningDocument } from 'src/app/models/earning.schema';
+} from 'src/models/enrollment.schema';
+import { Earning, EarningDocument } from 'src/models/earning.schema';
 
 import { UserRole } from 'src/app/user/user.interface';
 import { PermissionsEnum } from 'src/app/admin/admin.interface';
@@ -55,7 +55,7 @@ export class EnrollmentService {
     const course = await this.courseModel.findById(courseId);
 
     if (!course) throw customError.notFound('Course not found');
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) throw customError.notFound('Instructor not found');
 
     // --- 3. Prevent duplicate enrollment ---

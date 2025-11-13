@@ -9,8 +9,9 @@ import {
   IsEnum,
   ValidateIf,
 } from 'class-validator';
-import { CourseStatus } from '../models/course.schema';
+
 import { CourseCategory } from './course.interface';
+import { CourseStatus } from 'src/models/course.schema';
 
 export class CreateCourseDTO {
   @IsString()

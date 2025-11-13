@@ -2,21 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CustomRequest } from 'src/utils/auth-utils';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 import { EmailService } from '../../email/email.service';
-import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
+import { Payment, PaymentDocument } from 'src/models/payment.schema';
 import { customError } from 'src/libs/custom-handlers';
 import {
   Withdrawal,
   WithdrawalDocument,
-} from 'src/app/models/withdrawal.schema';
-import { Course, CourseDocument } from 'src/app/models/course.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
+} from 'src/models/withdrawal.schema';
+import { Course, CourseDocument } from 'src/models/course.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 import {
   Enrollment,
   EnrollmentDocument,
-} from 'src/app/models/enrollment.schema';
-import { Earning, EarningDocument } from 'src/app/models/earning.schema';
+} from 'src/models/enrollment.schema';
+import { Earning, EarningDocument } from 'src/models/earning.schema';
 
 @Injectable()
 export class AdminAnalyticsService {

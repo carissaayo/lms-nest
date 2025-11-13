@@ -12,16 +12,16 @@ import { WithdrawalService } from './services/withdrawal.service';
 import { InstructorController } from './controllers/instructor.controller';
 import { WithdrawalController } from './controllers/withdrawal.controller';
 
-import { User, UserSchema } from '../models/user.schema';
-import { UserAdmin, UserAdminSchema } from '../models/admin.schema';
-import { Payment, PaymentSchema } from '../models/payment.schema';
-import { Enrollment, EnrollmentSchema } from '../models/enrollment.schema';
-import { Earning, EarningSchema } from '../models/earning.schema';
-import { Bank, BankSchema } from '../models/bank.schema';
-import { Withdrawal, WithdrawalSchema } from '../models/withdrawal.schema';
-import { Otp, OtpSchema } from '../models/otp.schema';
-import { Course, CourseSchema } from '../models/course.schema';
-import { Lesson, LessonSchema } from '../models/lesson.schema';
+import { User, UserSchema } from 'src/models/user.schema';
+import { UserAdmin, UserAdminSchema } from 'src/models/admin.schema';
+import { Payment, PaymentSchema } from 'src/models/payment.schema';
+import { Enrollment, EnrollmentSchema } from 'src/models/enrollment.schema';
+import { Earning, EarningSchema } from 'src/models/earning.schema';
+import { Bank, BankSchema } from 'src/models/bank.schema';
+import { Withdrawal, WithdrawalSchema } from 'src/models/withdrawal.schema';
+import { Otp, OtpSchema } from 'src/models/otp.schema';
+import { Course, CourseSchema } from 'src/models/course.schema';
+import { Lesson, LessonSchema } from 'src/models/lesson.schema';
 
 @Module({
   imports: [

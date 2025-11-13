@@ -29,7 +29,7 @@ export class UserAdmin extends Document {
   @Prop()
   state: string;
 
-  @Prop({ enum: UserRole, default: UserRole.ADMIN })
+  @Prop({ enum: UserRole, default: UserRole.ADMIN ,type:String})
   role: UserRole;
 
   @Prop()

@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
-import { User } from 'src/app/user/user.entity';
+
 
 export enum WithdrawalStatus {
   PENDING = 'pending',
@@ -12,7 +12,7 @@ export enum WithdrawalStatus {
 @Schema({ timestamps: true })
 export class Withdrawal extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  user: User;
+  user: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: Number, required: true, min: 0 })
   amount: number;

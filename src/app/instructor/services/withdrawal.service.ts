@@ -3,10 +3,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-import { Bank, BankDocument } from 'src/app/models/bank.schema';
-import { Earning, EarningDocument } from 'src/app/models/earning.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
-import { PaymentService } from 'src/app/payment/services/payment.service.';
+import { Bank, BankDocument } from 'src/models/bank.schema';
+import { Earning, EarningDocument } from 'src/models/earning.schema';
+import { User, UserDocument } from 'src/models/user.schema';
+
 import {
   AddBankDto,
   ConfirmWithdrawDto,
@@ -20,8 +20,9 @@ import {
   Withdrawal,
   WithdrawalDocument,
   WithdrawalStatus,
-} from 'src/app/models/withdrawal.schema';
-import { Otp, OtpDocument } from 'src/app/models/otp.schema';
+} from 'src/models/withdrawal.schema';
+import { Otp, OtpDocument } from 'src/models/otp.schema';
+import { PaymentService } from 'src/app/payment/services/payment.service.';
 
 @Injectable()
 export class WithdrawalService {

@@ -7,16 +7,16 @@ import {
   Course,
   CourseDocument,
   CourseStatus,
-} from 'src/app/models/course.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
+} from 'src/models/course.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 import {
   Assignment,
   AssignmentDocument,
-} from 'src/app/models/assignment.schema';
+} from 'src/models/assignment.schema';
 import {
   Submission,
   SubmissionDocument,
-} from 'src/app/models/submission.schema';
+} from 'src/models/submission.schema';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { PaymentService } from 'src/app/payment/services/payment.service.';
@@ -25,14 +25,14 @@ import {
   Enrollment,
   EnrollmentDocument,
   EnrollmentStatus,
-} from 'src/app/models/enrollment.schema';
-import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
-import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
+} from 'src/models/enrollment.schema';
+import { Lesson, LessonDocument } from 'src/models/lesson.schema';
+import { Payment, PaymentDocument } from 'src/models/payment.schema';
 import {
   LessonProgress,
   LessonProgressDocument,
   LessonStatus,
-} from 'src/app/models/lesson-progress.schema';
+} from 'src/models/lesson-progress.schema';
 import { UpdateLessonProgressDTO } from '../student.dto';
 import config from 'src/app/config/config';
 import { TokenManager } from 'src/security/services/token-manager.service';

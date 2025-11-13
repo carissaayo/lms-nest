@@ -3,7 +3,7 @@ import { Model } from 'mongoose';
 
 import { customError } from 'src/libs/custom-handlers';
 
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 import { AdminProfileInterface } from 'src/app/admin/admin.interface';
 
 export interface CustomRequest extends Request {

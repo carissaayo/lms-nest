@@ -289,7 +289,6 @@ export class TokenManager {
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const accessPayload = {
       sub: user._id,
-      phoneNumber: (user as any).phoneNumber ?? user.email,
       role: user.role,
       isActive: user.isActive,
       iat: Math.floor(Date.now() / 1000),

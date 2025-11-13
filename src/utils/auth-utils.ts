@@ -2,9 +2,9 @@ import { Request } from 'express';
 import { generateAccessToken, generateRefreshToken } from './jwt-utils';
 import config from 'src/app/config/config';
 import { customError } from 'src/libs/custom-handlers';
-import { UserDocument } from 'src/app/models/user.schema';
+import { UserDocument } from 'src/models/user.schema';
 import { ProfileInterface } from 'src/app/auth/auth.interface';
-import { UserAdminDocument } from 'src/app/models/admin.schema';
+import { UserAdminDocument } from 'src/models/admin.schema';
 import { Model } from 'mongoose';
 
 export interface CustomRequest extends Request {

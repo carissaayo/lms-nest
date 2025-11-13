@@ -1,4 +1,4 @@
-import { Permissions } from '../common/decorators/permissions.decorator';
+
 import {
   ArrayNotEmpty,
   IsArray,
@@ -9,7 +9,8 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PermissionsEnum } from './admin.interface';
-import { UserStatus } from '../models/user.schema';
+import { UserStatus } from 'src/models/user.schema';
+
 
 export enum SuspendStatus {
   SUSPEND = 'suspend',

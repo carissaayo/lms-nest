@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { EmailService } from '../../email/email.service';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 import {
   Course,
   CourseDocument,
   CourseStatus,
-} from 'src/app/models/course.schema';
+} from 'src/models/course.schema';
 import { UserRole } from 'src/app/user/user.interface';
 import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
@@ -15,9 +15,9 @@ import { AdminCourseActionDTO } from 'src/app/course/course.dto';
 import {
   Enrollment,
   EnrollmentDocument,
-} from 'src/app/models/enrollment.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
-import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+} from 'src/models/enrollment.schema';
+import { User, UserDocument } from 'src/models/user.schema';
+import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 
 @Injectable()
 export class AdminCoursesService {
@@ -81,9 +81,9 @@ export class AdminCoursesService {
       .findById(courseId)
       .populate('instructor');
     if (!course) throw customError.conflict('Course not found');
-    if (course.deleted) throw customError.gone('Course has been deleted');
+    if (course.isDeleted) throw customError.gone('Course has been deleted');
 
-    const instructor = course.instructor as User;
+    const instructor = course.instructorId as User;
     if (!instructor.isActive) {
       throw customError.forbidden('Instructor has been suspended');
     }
@@ -179,7 +179,7 @@ switch (action) {
       throw customError.notAcceptable('Course not found');
     }
 
-    const instructor = await this.userModel.findOne({ _id: course.instructor });
+    const instructor = await this.userModel.findOne({ _id: course.instructorId });
     if (!instructor) {
       throw customError.notAcceptable('Instructor not found');
     }

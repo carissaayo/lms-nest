@@ -8,8 +8,8 @@ import {
   Course,
   CourseDocument,
   CourseStatus,
-} from 'src/app/models/course.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
+} from 'src/models/course.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 
 import { CreateCourseDTO } from '../course.dto';
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -19,8 +19,8 @@ import {
   saveImageS3,
 } from 'src/app/fileUpload/image-upload.service';
 import { customError } from 'src/libs/custom-handlers';
-import { CourseCategory } from '../course.interface';
-import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+
+import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()
@@ -42,15 +42,14 @@ export class InstructorCourseService {
     if (!createCourseDto) {
       throw customError.badRequest('body is missing');
     }
-
+  
     const { title, description, category, price ,duration} = createCourseDto;
 
     if (!coverImage) {
       throw customError.badRequest('coverImage is required');
     }
   
-   
-    const instructor = await this.userModel.findById(req.userId);
+    const instructor = await this.userModel.findOne({_id:req.userId});
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
@@ -107,12 +106,12 @@ export class InstructorCourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    const instructorId = course.instructor.toString();
+    const instructorId = course.instructorId.toString();
     if (instructorId !== req.userId) {
       throw customError.forbidden('You can only update your course');
     }
 
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
@@ -174,15 +173,15 @@ export class InstructorCourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only delete your courses');
     }
 
-    course.deleted = true;
+    course.isDeleted = true;
     await course.save();
 
     await this.emailService.courseDeletion(
@@ -201,12 +200,12 @@ export class InstructorCourseService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    if (course.deleted) throw customError.notFound('Course has been deleted');
-    if (String(course.instructor) !== req.userId) {
+    if (course.isDeleted) throw customError.notFound('Course has been deleted');
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only submit your courses');
     }
     if (course.isSubmitted) {
@@ -262,13 +261,13 @@ export class InstructorCourseService {
       throw customError.notFound('Course not found');
     }
 
-    if (course.deleted) throw customError.notFound('Course has been deleted');
+    if (course.isDeleted) throw customError.notFound('Course has been deleted');
 
-    const instructor = await this.userModel.findById(course.instructor);
+    const instructor = await this.userModel.findById(course.instructorId);
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only publish your courses');
     }
     if (course.status !== CourseStatus.APPROVED) {
@@ -307,7 +306,7 @@ export class InstructorCourseService {
     if (!course) throw customError.notFound('Course not found');
     if (course.status !== CourseStatus.APPROVED)
       throw customError.notFound('Course is not available at the moment');
-    if (course.deleted) throw customError.notFound('Course has been deleted');
+    if (course.isDeleted) throw customError.notFound('Course has been deleted');
 
     return {
       course,
@@ -324,31 +323,31 @@ export class InstructorCourseService {
     const { status, title, sort, page = 1, limit = 10 } = query;
 
     const filter: any = {
-      instructor: instructor.id,
+      instructor: instructor._id,
       deleted: { $ne: true },
     };
 
-    if (status) filter.status = status;
-    if (title) filter.title = { $regex: title, $options: 'i' };
+    // if (status) filter.status = status;
+    // if (title) filter.title = { $regex: title, $options: 'i' };
 
-    let sortOption: any = {};
-    switch (sort) {
-      case 'recent':
-        sortOption = { createdAt: -1 };
-        break;
-      case 'priceLowHigh':
-        sortOption = { price: 1 };
-        break;
-      case 'priceHighLow':
-        sortOption = { price: -1 };
-        break;
-      default:
-        sortOption = { createdAt: -1 };
-    }
+    // let sortOption: any = {};
+    // switch (sort) {
+    //   case 'recent':
+    //     sortOption = { createdAt: -1 };
+    //     break;
+    //   case 'priceLowHigh':
+    //     sortOption = { price: 1 };
+    //     break;
+    //   case 'priceHighLow':
+    //     sortOption = { price: -1 };
+    //     break;
+    //   default:
+    //     sortOption = { createdAt: -1 };
+    // }
 
     const courses = await this.courseModel
       .find(filter)
-      .sort(sortOption)
+      .sort()
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();

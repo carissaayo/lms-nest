@@ -8,10 +8,10 @@ import { EmailService } from '../email/email.service';
 
 import { LessonController } from './controllers/lesson.controller';
 
-import { Category, CategorySchema } from '../models/main.schema';
-import { User, UserSchema } from '../models/user.schema';
-import { Course, CourseSchema } from '../models/course.schema';
-import { Lesson, LessonSchema } from '../models/lesson.schema';
+import { Category, CategorySchema } from 'src/models/main.schema';
+import { User, UserSchema } from 'src/models/user.schema';
+import { Course, CourseSchema } from 'src/models/course.schema';
+import { Lesson, LessonSchema } from 'src/models/lesson.schema';
 @Module({
   imports: [
     MongooseModule.forFeature([

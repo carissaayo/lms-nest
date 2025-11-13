@@ -12,7 +12,7 @@ import { Model } from 'mongoose';
 
 import { verifyRefreshToken } from 'src/utils/jwt-utils';
 import config from 'src/app/config/config';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 
 const appConfig = config();
 

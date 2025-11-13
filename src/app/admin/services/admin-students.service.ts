@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
-import { Enrollment, EnrollmentDocument } from 'src/app/models/enrollment.schema';
-import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
-import { User, UserDocument, UserStatus } from 'src/app/models/user.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
+import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
+import { Payment, PaymentDocument } from 'src/models/payment.schema';
+import { User, UserDocument, UserStatus } from 'src/models/user.schema';
 import { customError } from 'src/libs/custom-handlers';
 import { CustomRequest } from 'src/utils/admin-auth-utils';
 

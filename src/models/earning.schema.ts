@@ -2,7 +2,8 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { User } from './user.schema';
 import { Course } from './course.schema';
-import { Payment } from 'src/app/payment/payment.entity';
+import { Payment } from './payment.schema';
+
 
 @Schema({ timestamps: true })
 export class Earning extends Document {

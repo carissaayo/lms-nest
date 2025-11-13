@@ -7,7 +7,7 @@ import { UpdateUserDTO } from './user.dto';
 import { ProfileInterface } from '../auth/auth.interface';
 import { CustomRequest, GET_PROFILE } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
-import { User, UserDocument } from '../models/user.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from '../fileUpload/image-upload.service';
 import { TokenManager } from 'src/security/services/token-manager.service';

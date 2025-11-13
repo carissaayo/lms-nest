@@ -10,7 +10,7 @@ import * as jwt from 'jsonwebtoken';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-import { User, UserDocument } from 'src/app/models/user.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 import { verifyRefreshToken } from 'src/utils/jwt-utils';
 import config from 'src/app/config/config';
 

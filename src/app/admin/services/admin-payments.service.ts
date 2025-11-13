@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CustomRequest } from 'src/utils/auth-utils';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 import { EmailService } from '../../email/email.service';
-import { Payment, PaymentDocument } from 'src/app/models/payment.schema';
+import { Payment, PaymentDocument } from 'src/models/payment.schema';
 import { customError } from 'src/libs/custom-handlers';
 import {
   Withdrawal,
   WithdrawalDocument,
-} from 'src/app/models/withdrawal.schema';
+} from 'src/models/withdrawal.schema';
 
 @Injectable()
 export class AdminPaymentsService {

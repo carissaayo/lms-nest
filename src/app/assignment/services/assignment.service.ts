@@ -6,10 +6,10 @@ import { Model } from 'mongoose';
 import {
   Assignment,
   AssignmentDocument,
-} from 'src/app/models/assignment.schema';
-import { Course, CourseDocument } from 'src/app/models/course.schema';
-import { User, UserDocument } from 'src/app/models/user.schema';
-import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+} from 'src/models/assignment.schema';
+import { Course, CourseDocument, CourseStatus } from 'src/models/course.schema';
+import { User, UserDocument } from 'src/models/user.schema';
+import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 import { customError } from 'src/libs/custom-handlers';
 import { CustomRequest } from 'src/utils/auth-utils';
 import {
@@ -18,7 +18,7 @@ import {
 } from 'src/app/fileUpload/image-upload.service';
 import { EmailService } from 'src/app/email/email.service';
 import { CreateAssignmentDTO, UpdateAssignmentDTO } from '../assignment.dto';
-import { CourseStatus } from 'src/app/course/course.entity';
+
 
 @Injectable()
 export class AssignmentService {
@@ -58,7 +58,7 @@ export class AssignmentService {
       throw customError.notFound('Course not found');
     }
 
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only update your course');
     }
 
@@ -247,7 +247,7 @@ export class AssignmentService {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw customError.notFound('Course not found');
 
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden(
         'You can only view assignments from your own course',
       );

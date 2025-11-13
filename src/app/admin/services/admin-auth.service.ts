@@ -15,7 +15,7 @@ import { customError } from 'src/libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';
 import { EmailService } from '../../email/email.service';
 import { CustomRequest, generateToken } from 'src/utils/auth-utils';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 import {
   GET_ADMIN_PROFILE,
   handleFailedAuthAttempt,

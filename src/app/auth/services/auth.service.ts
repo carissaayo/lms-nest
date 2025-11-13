@@ -14,7 +14,7 @@ import {
 } from '../auth.dto';
 
 import { ProfileInterface } from '../auth.interface';
-import { User, UserDocument } from 'src/app/models/user.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 
 import { customError } from 'src/libs/custom-handlers';
 import { formatPhoneNumber, generateOtp } from 'src/utils/utils';

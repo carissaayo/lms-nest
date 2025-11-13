@@ -3,6 +3,7 @@ import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { UserAdmin } from './admin.schema';
 import { User } from './user.schema';
 import { CourseCategory } from 'src/app/course/course.interface';
+import { Query } from 'mongoose';
 
 export enum CourseStatus {
   PENDING = 'pending',
@@ -27,8 +28,6 @@ export class Course extends Document {
 
   @Prop({ enum:CourseCategory, type:String,required: true })
   category: CourseCategory;
-
- 
 
   @Prop({ type: Number, default: 0 })
   lessons: number;
@@ -97,7 +96,7 @@ export class Course extends Document {
   duration: number;
 
   @Prop({ default: false })
-  deleted: boolean;
+  isDeleted: boolean;
 
   @Prop()
   createdAt: Date;
@@ -109,3 +108,9 @@ export class Course extends Document {
 export type CourseDocument = HydratedDocument<Course>;
 
 export const CourseSchema = SchemaFactory.createForClass(Course);
+
+// Add pre hook for filtering deleted docs
+CourseSchema.pre(/^find/, function (next) {
+  (this as Query<any, any>).where({ isDeleted: false });
+  next();
+});

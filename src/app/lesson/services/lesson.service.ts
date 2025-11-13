@@ -5,20 +5,20 @@ import { Model } from 'mongoose';
 
 import { customError } from 'src/libs/custom-handlers';
 import { CustomRequest } from 'src/utils/auth-utils';
-import { Lesson, LessonDocument } from 'src/app/models/lesson.schema';
+import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 import {
   Course,
   CourseDocument,
   CourseStatus,
-} from 'src/app/models/course.schema';
+} from 'src/models/course.schema';
 import { CreateLessonDTO, UpdateLessonDTO } from '../lesson.dto';
 import {
   deleteFileS3,
   saveFileS3,
 } from 'src/app/fileUpload/image-upload.service';
-import { User, UserDocument } from 'src/app/models/user.schema';
+import { User, UserDocument } from 'src/models/user.schema';
 import { EmailService } from 'src/app/email/email.service';
-import { UserAdmin } from 'src/app/models/admin.schema';
+import { UserAdmin } from 'src/models/admin.schema';
 import mongoose from 'mongoose';
 import { TokenManager } from 'src/security/services/token-manager.service';
 
@@ -109,7 +109,7 @@ export class LessonService {
     if (!course) {
       throw customError.notFound('Course not found');
     }
-    const instructorId = course.instructor.toString();
+    const instructorId = course.instructorId.toString();
 
     if (instructorId !== req.userId) {
       throw customError.forbidden('You can only update your course');
@@ -197,7 +197,7 @@ export class LessonService {
       throw customError.notFound('Course not found');
     }
 
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden('You can only update your course');
     }
 
@@ -337,7 +337,7 @@ export class LessonService {
     const course = await this.courseModel.findById(courseId);
     if (!course) throw customError.notFound('Course not found');
 
-    if (String(course.instructor) !== req.userId) {
+    if (String(course.instructorId) !== req.userId) {
       throw customError.forbidden(
         'You can only view lessons from your own course',
       );

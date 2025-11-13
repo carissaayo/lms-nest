@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { EmailService } from '../../email/email.service';
-import { UserAdmin, UserAdminDocument } from 'src/app/models/admin.schema';
-import { User, UserDocument, UserStatus } from 'src/app/models/user.schema';
+import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
+import { User, UserDocument, UserStatus } from 'src/models/user.schema';
 
-import { Course, CourseDocument } from 'src/app/models/course.schema';
-import { Enrollment, EnrollmentDocument } from 'src/app/models/enrollment.schema';
-import { Earning, EarningDocument } from 'src/app/models/earning.schema';
+import { Course, CourseDocument } from 'src/models/course.schema';
+import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
+import { Earning, EarningDocument } from 'src/models/earning.schema';
 import { customError } from 'src/libs/custom-handlers';
 import { UpdateInstructorStatusDTO } from '../admin.dto';
 import { CustomRequest } from 'src/utils/admin-auth-utils';
