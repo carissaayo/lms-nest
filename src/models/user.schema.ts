@@ -45,6 +45,9 @@ export class User extends Document {
   picture: string | null;
 
   @Prop({ type: String })
+  bio: string | null;
+
+  @Prop({ type: String })
   passwordResetCode: string | null;
 
   @Prop({ type: Date })
@@ -53,7 +56,7 @@ export class User extends Document {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ type:String,enum: UserRole, default: UserRole.STUDENT })
+  @Prop({ type: String, enum: UserRole, default: UserRole.STUDENT })
   role: UserRole;
 
   @Prop({ enum: UserStatus, default: UserStatus.PENDING })
@@ -84,11 +87,11 @@ export class User extends Document {
   nextAuthDate: Date;
 
   @Prop({ type: Date })
-  lockUntil?: Date ;
+  lockUntil?: Date;
 
   @Prop({ type: Date })
   lastLogin?: Date;
-  
+
   @Prop({ default: 0 })
   failedAuthAttempts: number;
 

@@ -26,7 +26,7 @@ export class Course extends Document {
   @Prop({ required: true })
   instructorName: string;
 
-  @Prop({ enum:CourseCategory, type:String,required: true })
+  @Prop({ enum: CourseCategory, type: String, required: true })
   category: CourseCategory;
 
   @Prop({ type: Number, default: 0 })
@@ -35,8 +35,20 @@ export class Course extends Document {
   @Prop({ type: Number, default: 0 })
   enrollments: number;
 
+  @Prop({ type: Array, default: [] })
+  requirements: [];
+
+  @Prop({ type: Array, default: [] })
+  learningOutcomes: [];
+  
   @Prop({ required: true })
   coverImage: string;
+
+  @Prop({ required: true })
+  level: string;
+
+  @Prop({ required: true })
+  language: string;
 
   @Prop({ enum: CourseStatus, default: CourseStatus.PENDING })
   status: CourseStatus;

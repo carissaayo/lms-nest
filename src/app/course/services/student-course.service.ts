@@ -417,24 +417,120 @@ export class StudentCourseService {
   }
 
   async getSingleCourse(courseId: string, req: CustomRequest) {
+    // --- Validate User ---
     const user = await this.userModel.findById(req.userId);
     if (!user) throw customError.notFound('User not found');
 
-    const course = await this.courseModel.findById(courseId);
+    // --- Validate Course ---
+    const course = await this.courseModel.findById(courseId).lean(); // lean = faster + easier to shape output
     if (!course) throw customError.notFound('Course not found');
     if (course.status !== CourseStatus.APPROVED)
       throw customError.notFound('Course is not available at the moment');
     if (course.isDeleted) throw customError.notFound('Course has been deleted');
 
+    // --- Instructor ---
+    const instructor = await this.userModel.findById(course.instructorId).lean();
+
+    // --- Lessons ---
+    const lessons = await this.lessonModel
+      .find({ course: courseId })
+      .sort({ position: 1 })
+      .lean();
+
+    // --- Enrollments ---
+    const enrollmentsCount = await this.enrollmentModel.countDocuments({
+      course: courseId,
+      status: EnrollmentStatus.ACTIVE,
+    });
+
+    // Check if current user is enrolled
+    const userEnrollment = await this.enrollmentModel.findOne({
+      user: req.userId,
+      course: courseId,
+      status: { $in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED] },
+    });
+
+    const isEnrolled = !!userEnrollment;
+
+    // --- Reviews (if reviews collection exists) ---
+    const reviews: any[] = [];
+    const rating = 0;
+    const totalReviews = 0;
+
+    // try {
+    //   reviews = await this.reviewModel
+    //     .find({ course: courseId })
+    //     .populate({ path: 'user', select: 'firstName lastName picture' })
+    //     .lean();
+
+    //   totalReviews = reviews.length;
+    //   rating = totalReviews
+    //     ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews
+    //     : 0;
+    // } catch (_) {
+    //   // ignore if reviews model not implemented yet
+    // }
+
+    // --- Token Refresh ---
     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
       user,
       req,
     );
 
+    // --- Final Response Construction ---
+    const response = {
+      _id: course._id,
+      title: course.title,
+      description: course.description,
+      coverImage: course.coverImage,
+      price: course.price,
+      category: course.category,
+      duration: course.duration,
+      level: course.level,
+      language: course.language,
+      requirements: course.requirements || [],
+      learningOutcomes: course.learningOutcomes || [],
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt,
+
+      instructor: instructor
+        ? {
+            _id: instructor._id,
+            name: `${instructor.firstName} ${instructor.lastName}`,
+            email: instructor.email,
+            bio: instructor.bio || '',
+            picture: instructor.picture || '',
+          }
+        : null,
+
+      lessons: lessons.map((l) => ({
+        _id: l._id,
+        title: l.title,
+        description: l.description || '',
+        duration: l.duration ? `${l.duration} min` : '',
+      })),
+
+      enrollments: enrollmentsCount,
+      rating,
+      totalReviews,
+      isEnrolled,
+
+      reviews: reviews.map((rev) => ({
+        _id: rev._id,
+        rating: rev.rating,
+        comment: rev.comment,
+        createdAt: rev.createdAt,
+        user: {
+          name: `${rev.user?.firstName ?? ''} ${rev.user?.lastName ?? ''}`.trim(),
+          avatar: rev.user?.picture,
+        },
+      })),
+    };
+
     return {
       accessToken,
       refreshToken,
-      course,
+      course: response,
       message: 'Course fetched successfully',
     };
   }

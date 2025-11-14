@@ -48,7 +48,7 @@ export class StudentCourseController {
     return this.studentCourseService.viewEnrolledCourses(query, req);
   }
 
-  @Get('courses/:courseId')
+  @Get('enrolled/:courseId')
   async viewSingleEnrolledCourse(
     @Param('courseId') courseId: string,
     @Req() req: CustomRequest,
