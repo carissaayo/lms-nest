@@ -5,5 +5,5 @@ export const publicRoutes = [
   '/admin-auth/register',
   '/admin-auth/request-password-reset',
   '/admin-auth/password-reset',
-
+'/payment/paystack/webhook'
 ];
