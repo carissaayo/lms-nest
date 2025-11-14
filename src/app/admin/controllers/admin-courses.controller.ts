@@ -32,12 +32,7 @@ import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 
 @Controller('admin-courses')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
+
 @UseGuards(RoleGuard, PermissionGuard)
 @RequireRoles(UserRole.ADMIN)
 @RequirePermissions(PermissionsEnum.ADMIN_COURSES)

@@ -79,7 +79,7 @@ export class AdminCoursesService {
     const { action, rejectReason } = dto;
     const course = await this.courseModel
       .findById(courseId)
-      .populate('instructor');
+      .populate('instructorId');
     if (!course) throw customError.conflict('Course not found');
     if (course.isDeleted) throw customError.gone('Course has been deleted');
 
