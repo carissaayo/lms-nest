@@ -3,14 +3,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-
 import { User, UserDocument } from 'src/models/user.schema';
-import { Enrollment, EnrollmentDocument, EnrollmentStatus } from 'src/models/enrollment.schema';
 import {
-  Course,
-  CourseDocument,
-  CourseStatus,
-} from 'src/models/course.schema';
+  Enrollment,
+  EnrollmentDocument,
+  EnrollmentStatus,
+} from 'src/models/enrollment.schema';
+import { Course, CourseDocument, CourseStatus } from 'src/models/course.schema';
 
 import { CustomRequest } from 'src/utils/auth-utils';
 
@@ -18,9 +17,13 @@ import { customError } from 'src/libs/custom-handlers';
 
 import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 import { TokenManager } from 'src/security/services/token-manager.service';
-import { LessonProgress, LessonProgressDocument, LessonStatus } from 'src/models/lesson-progress.schema';
+import {
+  LessonProgress,
+  LessonProgressDocument,
+  LessonStatus,
+} from 'src/models/lesson-progress.schema';
 import { UpdateLessonProgressDTO } from 'src/app/student/student.dto';
-
+import { GetInstructorCourseDto } from '../dtos/student-course.dto';
 
 @Injectable()
 export class StudentCourseService {
@@ -35,12 +38,20 @@ export class StudentCourseService {
     private readonly tokenManager: TokenManager,
   ) {}
 
-  async viewInstructorCourses(req: CustomRequest, query: any) {
+  async viewInstructorCourses(
+    req: CustomRequest,
+    dto: GetInstructorCourseDto,
+    query: any,
+  ) {
+    const user = await this.userModel.findOne({ _id: req.userId });
+    if (!user) throw customError.notFound('User not found');
+    const instructor = await this.userModel.findOne({ _id: dto.instructorId });
+    if (!instructor) throw customError.notFound('Instructor not found');
     const { status, title, sort, page = 1, limit = 10 } = query;
 
     const filter: any = {
-      instructor: req.userId,
-      deleted: { $ne: true },
+      instructorId: instructor._id,
+      isDeleted: { $ne: true },
     };
 
     if (status) filter.status = status;

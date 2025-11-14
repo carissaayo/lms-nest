@@ -18,8 +18,9 @@ import { QueryString } from 'src/app/database/dbquery';
 import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 import { StudentCourseService } from '../services/student-course.service';
 import { UpdateLessonProgressDTO } from 'src/app/student/student.dto';
+import { GetInstructorCourseDto } from '../dtos/student-course.dto';
 
-@Controller('student-course')
+@Controller('student-courses')
 @UseGuards(RoleGuard)
 @RequireRoles(UserRole.STUDENT)
 export class StudentCourseController {
@@ -28,9 +29,10 @@ export class StudentCourseController {
   @Get('instructor')
   async getInstructorCourses(
     @Req() req: CustomRequest,
+     @Body() dto: GetInstructorCourseDto,
     @Query() query: QueryString,
   ) {
-    return this.studentCourseService.viewInstructorCourses(req, query);
+    return this.studentCourseService.viewInstructorCourses(req,dto, query);
   }
 
   @Get('')
