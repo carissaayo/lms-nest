@@ -5,7 +5,7 @@ import { EmailService } from '../../email/email.service';
 import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 import { User, UserDocument, UserStatus } from 'src/models/user.schema';
 
-import { Course, CourseDocument } from 'src/models/course.schema';
+import { Course, CourseDocument, CourseStatus } from 'src/models/course.schema';
 import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
 import { Earning, EarningDocument } from 'src/models/earning.schema';
 import { customError } from 'src/libs/custom-handlers';
@@ -134,24 +134,24 @@ export class AdminInstructorService {
         if (!admin) throw customError.notFound('Admin not found');
     const instructor = await this.userModel
       .findById(id)
-      .select('-password')
+      .select('firstName lastName email picture createdAt  bio country phone city country state status approvedByName rejectedByName rejectedDate approvedDate ')
       .lean();
 
     if (!instructor) throw customError.notFound('Instructor not found');
 
     const courses = await this.courseModel
-      .find({ instructor: id, deleted: false })
+      .find({ instructorId: id, isDeleted: false })
       .select('title coverImage price enrollments rating status')
       .lean();
 
     const [
       coursesCount,
-      studentsCount,
+      totalEnrollments,
       totalRevenue,
       approvedCourses,
       pendingCourses,
     ] = await Promise.all([
-      this.courseModel.countDocuments({ instructor: id }),
+      this.courseModel.countDocuments({ instructorId: id }),
       this.enrollmentModel.countDocuments({
         course: { $in: courses.map((c) => c._id) },
       }),
@@ -159,8 +159,14 @@ export class AdminInstructorService {
         { $match: { instructor: instructor._id } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      this.courseModel.countDocuments({ instructor: id, status: 'approved' }),
-      this.courseModel.countDocuments({ instructor: id, status: 'pending' }),
+      this.courseModel.countDocuments({
+        instructorId: id,
+        status: CourseStatus.APPROVED,
+      }),
+      this.courseModel.countDocuments({
+        instructorId: id,
+        status: CourseStatus.PENDING,
+      }),
     ]);
 
     const totalRevenueAmount =
@@ -179,7 +185,7 @@ export class AdminInstructorService {
       courses,
       stats: {
         totalCourses: coursesCount,
-        totalStudents: studentsCount,
+        totalEnrollments: totalEnrollments,
         totalRevenue: totalRevenueAmount,
         approvedCourses,
         pendingCourses,

@@ -39,4 +39,8 @@ export class UpdateUserDTO {
   @IsOptional()
   @IsString()
   street?: string;
+
+  @IsOptional()
+  @IsString()
+  bio?: string;
 }

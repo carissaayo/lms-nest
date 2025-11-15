@@ -25,7 +25,6 @@ import { UpdateUserDTO } from 'src/app/user/user.dto';
 @Controller('admin-users')
 @UseGuards(RoleGuard)
 @RequireRoles(UserRole.ADMIN)
-
 export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 

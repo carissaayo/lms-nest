@@ -42,6 +42,9 @@ export class UserAdmin extends Document {
   picture: string;
 
   @Prop()
+  bio: string;
+
+  @Prop()
   phoneNumber: string;
 
   @Prop()
@@ -86,7 +89,7 @@ export class UserAdmin extends Document {
   @Prop({ default: 0 })
   failedSignInAttempts: number;
 
-  @Prop({type:String, enum: AdminStatus, default: AdminStatus.PENDING })
+  @Prop({ type: String, enum: AdminStatus, default: AdminStatus.PENDING })
   status: AdminStatus;
 
   @Prop()

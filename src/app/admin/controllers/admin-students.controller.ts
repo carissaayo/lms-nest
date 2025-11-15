@@ -43,7 +43,7 @@ export class AdminStudentsController {
     return this.adminStudentsService.updateStudentStatus(studentId, dto, req);
   }
 
-  @Get('students')
+  @Get('')
   async getAllStudents(@Query() query: any, @Req() req: CustomRequest) {
     return this.adminStudentsService.viewStudents(query, req);
   }
