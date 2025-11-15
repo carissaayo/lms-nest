@@ -6,6 +6,7 @@ import {
   Req,
   Body,
   Patch,
+  Query,
 } from '@nestjs/common';
 
 import { UserRole } from '../../user/user.interface';
@@ -39,10 +40,11 @@ export class AdminStudentsController {
     @Body() dto: UpdateStudentStatusDTO,
     @Req() req: CustomRequest,
   ) {
-    return this.adminStudentsService.updateStudentStatus(
-      studentId,
-      dto,
-      req,
-    );
+    return this.adminStudentsService.updateStudentStatus(studentId, dto, req);
+  }
+
+  @Get('students')
+  async getAllStudents(@Query() query: any, @Req() req: CustomRequest) {
+    return this.adminStudentsService.viewStudents(query, req);
   }
 }

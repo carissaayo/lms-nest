@@ -1,95 +1,36 @@
-/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId } from 'mongoose';
+import { Model } from 'mongoose';
+
+import { TokenManager } from 'src/security/services/token-manager.service';
 import { EmailService } from '../../email/email.service';
 import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
 import { User, UserDocument } from 'src/models/user.schema';
 import { VerifyEmailDTO } from '../../auth/auth.dto';
 import { SuspendUserDTO } from '../admin.dto';
 import { AdminProfileInterface } from '../admin.interface';
-import { CustomRequest, generateToken } from 'src/utils/auth-utils';
+import { CustomRequest, generateToken, GET_PROFILE } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
 import { Course, CourseDocument } from 'src/models/course.schema';
 import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
 import { Earning, EarningDocument } from 'src/models/earning.schema';
 import { Payment, PaymentDocument } from 'src/models/payment.schema';
-import { escapeRegex } from 'src/utils/utils';
+import { UpdateUserDTO } from 'src/app/user/user.dto';
+import { singleImageValidation } from 'src/utils/file-validation';
+import { deleteImageS3, saveImageS3 } from 'src/app/fileUpload/image-upload.service';
+import { ProfileInterface } from 'src/app/auth/auth.interface';
+
 
 @Injectable()
 export class AdminUserService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
-    @InjectModel(Enrollment.name)
-    private enrollmentModel: Model<EnrollmentDocument>,
-    @InjectModel(Earning.name) private earningModel: Model<EarningDocument>,
-    @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     private emailService: EmailService,
+    private readonly tokenManager: TokenManager,
   ) {}
 
-  async suspendUser(
-    userId: string,
-    suspendDto: SuspendUserDTO,
-    req: CustomRequest,
-  ) {
-    const { action, suspensionReason } = suspendDto;
-    if (!userId) throw customError.badRequest('UserId is required');
 
-    if (!action) {
-      throw customError.badRequest('Action is required');
-    }
-
-    const admin = await this.adminModel.findById(req.userId);
-    if (!admin) throw customError.notFound('Admin not found');
-
-    if (!admin.isActive) {
-      throw customError.forbidden('Your account has been suspended');
-    }
-
-    const user = await this.userModel.findById(userId);
-    if (!user) throw customError.notFound('User not found');
-
-    try {
-      const newAction = {
-        action: `User is ${action}ed by ${admin.id}`,
-        ...(suspensionReason ? { suspensionReason } : {}),
-        date: new Date(),
-      };
-
-      const newAdminAction = {
-        action: `${action}ed a User ${user.id}`,
-        ...(suspensionReason ? { suspensionReason } : {}),
-        date: new Date(),
-      };
-
-      user.isActive = false;
-      user.actions = [...(user.actions || []), newAction];
-      admin.actions = [...(admin.actions || []), newAdminAction];
-
-      await user.save();
-      await admin.save();
-
-      await this.emailService.suspensionEmail(
-        user.email,
-        user.firstName,
-        action,
-        suspensionReason || '',
-      );
-
-      const { token, refreshToken } = await generateToken(admin, req);
-      return {
-        accessToken: token,
-        refreshToken: refreshToken,
-        message: 'User account has been suspended.',
-      };
-    } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
-  }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
     const { emailCode } = verifyEmailDto;
@@ -130,180 +71,87 @@ export class AdminUserService {
     }
   }
 
-  async viewStudents(query: any, req: CustomRequest) {
-    const admin = await this.adminModel.findById(req.userId);
-    if (!admin) throw customError.notFound('Admin not found');
-
-    const { search, status, page = 1, limit = 10 } = query;
-    const filter: any = { role: 'student' };
-
-    if (status && status !== 'all') {
-      filter.status = status;
+  async updateUser(
+    updateProfile: Partial<UpdateUserDTO>,
+    picture: Express.Multer.File,
+    req: CustomRequest,
+  ) {
+    console.log('updateUser');
+    const allowedFields = [
+      'firstName',
+      'lastName',
+      'phoneNumber',
+      'state',
+      'city',
+      'country',
+      'street',
+      '',
+    ];
+    for (const key of Object.keys(updateProfile)) {
+      if (!allowedFields.includes(key)) delete updateProfile[key];
     }
 
-    if (search && search.trim()) {
-      const safeSearch = escapeRegex(search.trim());
-      const regex = new RegExp(safeSearch, 'i');
-      filter.$or = [
-        { firstName: { $regex: regex } },
-        { lastName: { $regex: regex } },
-      ];
+    const user = await this.adminModel.findOne({ _id: req.userId });
+    if (!user) {
+      throw customError.notFound('User not found');
     }
 
-    
-    const students = await this.userModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * Number(limit))
-      .limit(Number(limit))
-      .select('firstName lastName email phoneNumber status createdAt')
-      .lean();
+    if (picture) {
+      singleImageValidation(picture, 'User picture');
 
-    const total = await this.userModel.countDocuments(filter);
+      if (user.picture) {
+        try {
+          await deleteImageS3(user.picture);
+        } catch (err) {
+          console.warn('Failed to delete old cover image:', err.message);
+        }
+      }
 
-    
-    const enrollmentCounts = await this.enrollmentModel.aggregate<{
-      _id: ObjectId;
-      totalEnrollments: number;
-    }>([{ $group: { _id: '$user', totalEnrollments: { $sum: 1 } } }]);
+      const uploadImg = await saveImageS3(picture, `images/users`);
+      if (!uploadImg) {
+        throw customError.badRequest('Invalid cover image');
+      }
+      user.picture = uploadImg;
+    }
 
-    
-    const paymentTotals = await this.paymentModel.aggregate<{
-      _id: ObjectId;
-      totalPayments: number;
-    }>([{ $group: { _id: '$student', totalPayments: { $sum: '$amount' } } }]);
+    // Update user fields
+    Object.assign(user, updateProfile);
 
-    const enrollmentMap = new Map<string, number>(
-      enrollmentCounts.map((item) => [
-        item._id.toString(),
-        item.totalEnrollments,
-      ]),
+    await user.save();
+    // build profile
+    const profile: ProfileInterface = GET_PROFILE(user);
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      user,
+      req,
     );
-
-    const paymentMap = new Map<string, number>(
-      paymentTotals.map((item) => [item._id.toString(), item.totalPayments]),
-    );
-
-    
-    const studentsWithStats = students.map((student) => {
-      const studentId = student._id.toString();
-      return {
-        _id: student._id as ObjectId,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        email: student.email,
-        phoneNumber: student.phoneNumber,
-        status: student.status,
-        createdAt: student.createdAt,
-        totalEnrollments: enrollmentMap.get(studentId) || 0,
-        totalPayments: paymentMap.get(studentId) || 0,
-      };
-    });
-
-    
-    const [globalEnrollments, globalPayments] = await Promise.all([
-      this.enrollmentModel.countDocuments(),
-      this.paymentModel.aggregate<{ totalPayments: number }>([
-        { $group: { _id: null, totalPayments: { $sum: '$amount' } } },
-      ]),
-    ]);
-
-    const totalPaymentAmount =
-      globalPayments.length > 0 ? globalPayments[0].totalPayments : 0;
 
     return {
-      page: Number(page),
-      limit: Number(limit),
-      totalStudents: total,
-      totalAppEnrollments: globalEnrollments,
-      totalAppPayments: totalPaymentAmount,
-      students: studentsWithStats,
-      message: 'Admin students fetched successfully',
+      accessToken,
+      refreshToken,
+      profile,
+      message: 'Profile updated successfully',
     };
   }
 
-  async viewInstructors(query: any, req: CustomRequest) {
-    const { search, status, page = 1, limit = 10 } = query;
-    const admin = await this.adminModel.findById(req.userId);
-    if (!admin) throw customError.notFound('Admin not found');
+  async viewProfile(req: CustomRequest) {
+    console.log('viewProfile');
 
-    const filter: any = { role: 'instructor' };
-
-    if (status && status !== 'all') {
-      filter.status = status;
+    const user = await this.adminModel.findById(req.userId);
+    if (!user) {
+      throw customError.forbidden('Access Denied');
     }
 
-    if (search) {
-      filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    const instructors = await this.userModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * Number(limit))
-      .limit(Number(limit))
-      .select('firstName lastName email avatar status createdAt specialization')
-      .lean();
-
-    const total = await this.userModel.countDocuments(filter);
-
-    const [activeCount, pendingCount, suspendedCount] = await Promise.all([
-      this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
-      this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
-      this.userModel.countDocuments({
-        role: 'instructor',
-        status: 'suspended',
-      }),
-    ]);
-
-    const instructorStats = await Promise.all(
-      instructors.map(async (instructor) => {
-        const [coursesCount, studentsCount, earningsAgg] = await Promise.all([
-          this.courseModel.countDocuments({
-            instructor: instructor._id,
-            deleted: false,
-          }),
-
-          this.enrollmentModel.countDocuments({
-            course: {
-              $in: await this.courseModel
-                .find({ instructor: instructor._id })
-                .distinct('_id'),
-            },
-          }),
-
-          this.earningModel.aggregate([
-            { $match: { instructor: instructor._id } },
-            { $group: { _id: null, totalRevenue: { $sum: '$amount' } } },
-          ]),
-        ]);
-
-        const totalRevenue = earningsAgg[0]?.totalRevenue || 0;
-
-        return {
-          ...instructor,
-          coursesCount,
-          studentsCount,
-          totalRevenue,
-        };
-      }),
+    const profile: ProfileInterface = GET_PROFILE(user);
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      user,
+      req,
     );
 
     return {
-      page: Number(page),
-      total,
-      stats: {
-        totalInstructors: total,
-        activeInstructors: activeCount,
-        pendingInstructors: pendingCount,
-        suspendedInstructors: suspendedCount,
-      },
-      instructors: instructorStats,
-      message: 'Admin instructors fetched successfully',
+      accessToken,
+      refreshToken,
+      profile,
+      message: 'Profile fetched successfully',
     };
   }
 }

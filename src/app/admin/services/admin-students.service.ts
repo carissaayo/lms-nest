@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -9,6 +10,8 @@ import { customError } from 'src/libs/custom-handlers';
 import { CustomRequest } from 'src/utils/admin-auth-utils';
 import { TokenManager } from 'src/security/services/token-manager.service';
 import { UpdateStudentStatusDTO } from '../admin.dto';
+import { ObjectId } from 'typeorm';
+import { escapeRegex } from 'src/utils/utils';
 
 
 
@@ -176,9 +179,7 @@ export class AdminStudentsService {
       }
 
       default:
-        throw customError.badRequest(
-          'Unsupported student status transition',
-        );
+        throw customError.badRequest('Unsupported student status transition');
     }
 
     await student.save();
@@ -193,6 +194,100 @@ export class AdminStudentsService {
       refreshToken,
       message: `Student has been ${status} successfully`,
       student,
+    };
+  }
+
+  async viewStudents(query: any, req: CustomRequest) {
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
+
+    const { search, status, page = 1, limit = 10 } = query;
+    const filter: any = { role: 'student' };
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (search && search.trim()) {
+      const safeSearch = escapeRegex(search.trim());
+      const regex = new RegExp(safeSearch, 'i');
+      filter.$or = [
+        { firstName: { $regex: regex } },
+        { lastName: { $regex: regex } },
+      ];
+    }
+
+    const students = await this.userModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * Number(limit))
+      .limit(Number(limit))
+      .select('firstName lastName email phoneNumber status createdAt')
+      .lean();
+
+    const total = await this.userModel.countDocuments(filter);
+
+    const enrollmentCounts = await this.enrollmentModel.aggregate<{
+      _id: ObjectId;
+      totalEnrollments: number;
+    }>([{ $group: { _id: '$user', totalEnrollments: { $sum: 1 } } }]);
+
+    const paymentTotals = await this.paymentModel.aggregate<{
+      _id: ObjectId;
+      totalPayments: number;
+    }>([{ $group: { _id: '$student', totalPayments: { $sum: '$amount' } } }]);
+
+    const enrollmentMap = new Map<string, number>(
+      enrollmentCounts.map((item) => [
+        item._id.toString(),
+        item.totalEnrollments,
+      ]),
+    );
+
+    const paymentMap = new Map<string, number>(
+      paymentTotals.map((item) => [item._id.toString(), item.totalPayments]),
+    );
+
+    const studentsWithStats = students.map((student) => {
+      const studentId = String(student._id);
+      return {
+        _id: student._id as ObjectId,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        phoneNumber: student.phoneNumber,
+        status: student.status,
+        createdAt: student.createdAt,
+        totalEnrollments: enrollmentMap.get(studentId) || 0,
+        totalPayments: paymentMap.get(studentId) || 0,
+      };
+    });
+
+    const [globalEnrollments, globalPayments] = await Promise.all([
+      this.enrollmentModel.countDocuments(),
+      this.paymentModel.aggregate<{ totalPayments: number }>([
+        { $group: { _id: null, totalPayments: { $sum: '$amount' } } },
+      ]),
+    ]);
+
+    const totalPaymentAmount =
+      globalPayments.length > 0 ? globalPayments[0].totalPayments : 0;
+
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      page: Number(page),
+      limit: Number(limit),
+      totalStudents: total,
+      totalAppEnrollments: globalEnrollments,
+      totalAppPayments: totalPaymentAmount,
+      students: studentsWithStats,
+      message: 'Admin students fetched successfully',
     };
   }
 }

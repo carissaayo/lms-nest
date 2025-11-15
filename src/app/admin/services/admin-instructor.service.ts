@@ -12,6 +12,7 @@ import { customError } from 'src/libs/custom-handlers';
 import { UpdateInstructorStatusDTO } from '../admin.dto';
 import { CustomRequest } from 'src/utils/admin-auth-utils';
 import { TokenManager } from 'src/security/services/token-manager.service';
+import { UserRole } from 'src/app/user/user.interface';
 
 @Injectable()
 export class AdminInstructorService {
@@ -31,7 +32,7 @@ export class AdminInstructorService {
     if (!admin) throw customError.notFound('Admin not found');
     const { search, status, page = 1, limit = 10 } = query;
 
-    const filter: any = { role: 'instructor' };
+    const filter: any = { role: UserRole.INSTRUCTOR };
 
     if (status && status !== 'all') {
       filter.status = status;
@@ -58,11 +59,17 @@ export class AdminInstructorService {
     const total = await this.userModel.countDocuments(filter);
 
     const [activeCount, pendingCount, suspendedCount] = await Promise.all([
-      this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
-      this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
       this.userModel.countDocuments({
-        role: 'instructor',
-        status: 'suspended',
+        role: UserRole.INSTRUCTOR,
+        status: UserStatus.APPROVED,
+      }),
+      this.userModel.countDocuments({
+        role: UserRole.INSTRUCTOR,
+        status: UserStatus.PENDING,
+      }),
+      this.userModel.countDocuments({
+        role: UserRole.INSTRUCTOR,
+        status: UserStatus.SUSPENDED,
       }),
     ]);
 
@@ -272,5 +279,7 @@ export class AdminInstructorService {
         };
     
   }
+
+  
 }
 

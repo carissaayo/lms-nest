@@ -14,8 +14,7 @@ import { UsersService } from './user.service';
 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateUserDTO } from './user.dto';
-import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
-import { UserRole } from './user.interface';
+
 
 @Controller('users')
 

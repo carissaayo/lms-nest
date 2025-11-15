@@ -7,6 +7,8 @@ import {
   Param,
   Get,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 
 import { CustomRequest } from 'src/utils/auth-utils';
@@ -14,35 +16,33 @@ import { CustomRequest } from 'src/utils/auth-utils';
 import { UserRole } from '../../user/user.interface';
 
 import { AdminUserService } from '../services/admin-users.service';
-import { SuspendUserDTO } from '../admin.dto';
-import { PermissionsEnum } from '../admin.interface';
 
 import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
-import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
+
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdateUserDTO } from 'src/app/user/user.dto';
 
 @Controller('admin-users')
-@UseGuards(RoleGuard, PermissionGuard)
+@UseGuards(RoleGuard)
 @RequireRoles(UserRole.ADMIN)
-@RequirePermissions(PermissionsEnum.ADMIN_USERS)
+
 export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 
-  @Get('instructors')
-  viewInstructors(@Query() query: any, @Req() req: CustomRequest) {
-    return this.adminUserService.viewInstructors(query, req);
+
+
+  @Get('profile')
+  async getUserProfile(@Req() req: CustomRequest) {
+    return this.adminUserService.viewProfile(req);
   }
 
-  @Get('students')
-  async getAllStudents(@Query() query: any, @Req() req: CustomRequest) {
-    return this.adminUserService.viewStudents(query, req);
-  }
-
-  @Patch(':userid/action')
-  suspendUser(
-    @Param('id') userId: string,
-    @Body() suspendDto: SuspendUserDTO,
+  @Patch('profile')
+  @UseInterceptors(FileInterceptor('picture'))
+  async updateUser(
+    @Body() updateProfile: UpdateUserDTO,
+    @UploadedFile() picture: Express.Multer.File,
     @Req() req: CustomRequest,
   ) {
-    return this.adminUserService.suspendUser(userId, suspendDto, req);
+    return this.adminUserService.updateUser(updateProfile, picture, req);
   }
 }
