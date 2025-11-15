@@ -112,6 +112,9 @@ export class AdminAuthService {
     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
       user,
       req,
+      {
+        loginType: true,
+      },
     );
 
       const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);

@@ -118,6 +118,9 @@ export class AuthService {
     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
       user,
       req,
+      {
+        loginType:true
+      }
     );
     
 
