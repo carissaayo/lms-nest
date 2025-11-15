@@ -36,7 +36,12 @@ export class UserAdmin extends Document {
   city: string;
 
   @Prop()
-  address: string;
+  street: string;
+
+
+
+  @Prop()
+  coumntry: string;
 
   @Prop()
   picture: string;
