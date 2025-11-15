@@ -1,13 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
+
+export enum PaymentStatus{
+  SUCCESS="success",
+  FAILED="failed"
+}
 @Schema({ timestamps: true })
 export class Payment extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  student: string;
+  student: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Course', required: true })
-  course: string;
+  course: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true })
   amount: number;
@@ -18,8 +23,8 @@ export class Payment extends Document {
   @Prop({ required: true })
   reference: string;
 
-  @Prop({ default: 'success' })
-  status: string;
+  @Prop({ enum: PaymentStatus, type: String, default: PaymentStatus.SUCCESS })
+  status: PaymentStatus;
 
   @Prop()
   createdAt: Date;

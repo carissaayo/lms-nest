@@ -1,4 +1,3 @@
-
 import {
   ArrayNotEmpty,
   IsArray,
@@ -10,7 +9,6 @@ import {
 } from 'class-validator';
 import { PermissionsEnum } from './admin.interface';
 import { UserStatus } from 'src/models/user.schema';
-
 
 export enum SuspendStatus {
   SUSPEND = 'suspend',
@@ -75,6 +73,28 @@ export class UpdateInstructorStatusDTO {
   @IsString()
   @IsNotEmpty({
     message: 'Suspension reason is required when suspending an instructor',
+  })
+  suspendReason?: string;
+}
+
+export class UpdateStudentStatusDTO {
+  @IsEnum(UserStatus, {
+    message: 'Status must be either approved, rejected, pending or suspended',
+  })
+  @IsNotEmpty()
+  status: UserStatus;
+
+  @ValidateIf((o) => o.status === UserStatus.REJECTED)
+  @IsString()
+  @IsNotEmpty({
+    message: 'Rejection reason is required when rejecting a instructor',
+  })
+  rejectReason?: string;
+
+  @ValidateIf((o) => o.status === UserStatus.SUSPENDED)
+  @IsString()
+  @IsNotEmpty({
+    message: 'Suspension reason is required when suspending a student',
   })
   suspendReason?: string;
 }

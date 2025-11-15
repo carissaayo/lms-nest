@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-import { CustomRequest, generateToken } from 'src/utils/auth-utils';
+import { TokenManager } from 'src/security/services/token-manager.service';
+
 import { customError } from 'src/libs/custom-handlers';
 import {
   UserAdmin,
@@ -19,14 +20,19 @@ import {
   AddAnAdminDTO,
   AssignPermissionsDTO,
   PermissionsActions,
+  SuspendStatus,
   SuspendUserDTO,
 } from '../admin.dto';
+
+import { CustomRequest } from 'src/utils/auth-utils';
 
 @Injectable()
 export class AdminAdminsService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     private emailService: EmailService,
+            private readonly tokenManager: TokenManager,
+    
   ) {}
 
   async viewProfile(req: CustomRequest) {
@@ -61,7 +67,7 @@ export class AdminAdminsService {
       throw customError.forbidden('Your account has been suspended');
     }
 
-    try {
+
       const newAdmin = new this.adminModel({
         email,
         signedUp: false,
@@ -74,14 +80,17 @@ export class AdminAdminsService {
 
  this.emailService.adminInvitationEmail(email);
 
-      return {
-        accessToken: req.token,
-        message: 'Admin has been added successfully',
-      };
-    } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
+     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+       admin,
+       req,
+     );
+
+     return {
+       accessToken,
+       refreshToken,
+       message: 'Admin has been added successfully',
+     };
+   
   }
 
   async suspendAdmin(
@@ -106,22 +115,27 @@ export class AdminAdminsService {
     const user = await this.adminModel.findById(userId);
     if (!user) throw customError.notFound('User not found');
 
-    try {
-      const newAction = {
-        action: `User is ${action}ed by ${admin.id}`,
-        ...(suspensionReason ? { suspensionReason } : {}),
-        date: new Date(),
-      };
+    if (action === SuspendStatus.ACTIVATE && user.status === AdminStatus.APPROVED){
+      throw customError.badRequest("Admin is already approved")
+    }
 
-      const newAdminAction = {
-        action: `${action}ed a User ${user.id}`,
-        ...(suspensionReason ? { suspensionReason } : {}),
-        date: new Date(),
-      };
+     if (
+       action === SuspendStatus.SUSPEND &&
+       user.status === AdminStatus.SUSPENDED
+     ) {
+       throw customError.badRequest('Admin is already suspended');
+     }
+      if (action === SuspendStatus.ACTIVATE) {
+        user.isActive = true;
+        user.status= AdminStatus.APPROVED
+      } else {
+        user.isActive = false;
+        user.status = AdminStatus.SUSPENDED;
 
-      user.isActive = false;
-      user.actions = [...(user.actions || []), newAction];
-      admin.actions = [...(admin.actions || []), newAdminAction];
+      }
+
+      // user.actions = [...(user.actions || []), newAction];
+      // admin.actions = [...(admin.actions || []), newAdminAction];
 
       await user.save();
       await admin.save();
@@ -133,16 +147,17 @@ export class AdminAdminsService {
         suspensionReason || '',
       );
 
-      const { token, refreshToken } = await generateToken(admin, req);
-      return {
-        accessToken: token,
-        refreshToken: refreshToken,
-        message: 'User account has been suspended.',
-      };
-    } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
+     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+       admin,
+       req,
+     );
+
+     return {
+       accessToken,
+       refreshToken,
+       message: 'User account has been updated.',
+     };
+   
   }
 
   async assignPermission(
@@ -168,7 +183,7 @@ export class AdminAdminsService {
     const user = await this.adminModel.findById(userId);
     if (!user) throw customError.notFound('User not found');
 
-    try {
+
       if (!user.permissions) {
         user.permissions = [];
       }
@@ -188,16 +203,18 @@ export class AdminAdminsService {
       user.permissions = updatedPermissions;
       await user.save();
 
-      const { token, refreshToken } = await generateToken(admin, req);
-      return {
-        accessToken: token,
-        refreshToken: refreshToken,
-        message: 'Admin permissions have been updated',
-      };
-    } catch (error) {
-      console.log(error);
-      throw customError.internalServerError('Internal Server Error', 500);
-    }
+      
+     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+       admin,
+       req,
+     );
+
+     return {
+       accessToken,
+       refreshToken,
+       message: 'Admin permissions have been updated',
+     };
+  
   }
 
   async findAdminById(id: string) {

@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { TokenManager } from 'src/security/services/token-manager.service';
+
 import { User, UserDocument } from 'src/models/user.schema';
-import { CustomRequest } from 'src/utils/auth-utils';
-import { customError } from 'src/libs/custom-handlers';
-import { EmailService } from 'src/app/email/email.service';
 import { Earning, EarningDocument } from 'src/models/earning.schema';
 import {
   Withdrawal,
@@ -22,8 +21,9 @@ import {
   EnrollmentDocument,
   EnrollmentStatus,
 } from 'src/models/enrollment.schema';
+import { CustomRequest } from 'src/utils/auth-utils';
+import { customError } from 'src/libs/custom-handlers';
 import { Lesson, LessonDocument } from 'src/models/lesson.schema';
-import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()
 export class InstructorService {
@@ -37,7 +37,6 @@ export class InstructorService {
     private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Lesson.name)
     private lessonModel: Model<LessonDocument>,
-    private readonly emailService: EmailService,
         private readonly tokenManager: TokenManager,
     
   ) {}

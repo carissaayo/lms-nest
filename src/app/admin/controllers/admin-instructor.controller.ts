@@ -23,7 +23,6 @@ import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 
 @Controller('admin-instructors')
-
 @UseGuards(RoleGuard, PermissionGuard)
 @RequireRoles(UserRole.ADMIN)
 @RequirePermissions(PermissionsEnum.ADMIN_USERS)
@@ -43,13 +42,16 @@ export class AdminInstructorController {
     );
   }
 
-  @Get('instructors')
-  viewInstructors(@Query() query: any) {
-    return this.adminInstructorService.viewInstructors(query);
+  @Get('')
+  viewInstructors(@Query() query: any, @Req() req: CustomRequest) {
+    return this.adminInstructorService.viewInstructors(query,req);
   }
 
   @Get(':instructorId')
-  getSingleInstructor(@Param('instructorId') instructorId: string) {
-    return this.adminInstructorService.getSingleInstructor(instructorId);
+  getSingleInstructor(
+    @Param('instructorId') instructorId: string,
+   @Req() req: CustomRequest,
+  ) {
+    return this.adminInstructorService.getSingleInstructor(instructorId,req);
   }
 }

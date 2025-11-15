@@ -11,6 +11,7 @@ import { Earning, EarningDocument } from 'src/models/earning.schema';
 import { customError } from 'src/libs/custom-handlers';
 import { UpdateInstructorStatusDTO } from '../admin.dto';
 import { CustomRequest } from 'src/utils/admin-auth-utils';
+import { TokenManager } from 'src/security/services/token-manager.service';
 
 @Injectable()
 export class AdminInstructorService {
@@ -22,9 +23,12 @@ export class AdminInstructorService {
     private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Earning.name) private earningModel: Model<EarningDocument>,
     private emailService: EmailService,
+    private readonly tokenManager: TokenManager,
   ) {}
 
-  async viewInstructors(query: any) {
+  async viewInstructors(query: any, req: CustomRequest) {
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
     const { search, status, page = 1, limit = 10 } = query;
 
     const filter: any = { role: 'instructor' };
@@ -41,18 +45,18 @@ export class AdminInstructorService {
       ];
     }
 
-    
     const instructors = await this.userModel
       .find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * Number(limit))
       .limit(Number(limit))
-      .select('firstName lastName email avatar status createdAt specialization')
+      .select(
+        'firstName lastName email picture status createdAt specialization',
+      )
       .lean();
 
     const total = await this.userModel.countDocuments(filter);
 
-    
     const [activeCount, pendingCount, suspendedCount] = await Promise.all([
       this.userModel.countDocuments({ role: 'instructor', status: 'active' }),
       this.userModel.countDocuments({ role: 'instructor', status: 'pending' }),
@@ -62,41 +66,49 @@ export class AdminInstructorService {
       }),
     ]);
 
-   
     const instructorStats = await Promise.all(
       instructors.map(async (instructor) => {
-        const [coursesCount, studentsCount, earningsAgg] = await Promise.all([
-          this.courseModel.countDocuments({
-            instructor: instructor._id,
-            deleted: false,
-          }),
+        const [coursesCount, enrollmentsCount, earningsAgg] = await Promise.all(
+          [
+            this.courseModel.countDocuments({
+              instructorId: instructor._id,
+              isDeleted: false,
+            }),
 
-          this.enrollmentModel.countDocuments({
-            course: {
-              $in: await this.courseModel
-                .find({ instructor: instructor._id })
-                .distinct('_id'),
-            },
-          }),
+            this.enrollmentModel.countDocuments({
+              course: {
+                $in: await this.courseModel
+                  .find({ instructorId: instructor._id })
+                  .distinct('_id'),
+              },
+            }),
 
-          this.earningModel.aggregate([
-            { $match: { instructor: instructor._id } },
-            { $group: { _id: null, totalRevenue: { $sum: '$amount' } } },
-          ]),
-        ]);
+            this.earningModel.aggregate([
+              { $match: { instructor: instructor._id } },
+              { $group: { _id: null, totalRevenue: { $sum: '$amount' } } },
+            ]),
+          ],
+        );
 
         const totalRevenue = earningsAgg[0]?.totalRevenue || 0;
 
         return {
           ...instructor,
           coursesCount,
-          studentsCount,
+          enrollmentsCount,
           totalRevenue,
         };
       }),
     );
 
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
+
     return {
+      accessToken,
+      refreshToken,
       page: Number(page),
       total,
       stats: {
@@ -110,7 +122,9 @@ export class AdminInstructorService {
     };
   }
 
-  async getSingleInstructor(id: string) {
+  async getSingleInstructor(id: string, req: CustomRequest) {
+        const admin = await this.adminModel.findById(req.userId);
+        if (!admin) throw customError.notFound('Admin not found');
     const instructor = await this.userModel
       .findById(id)
       .select('-password')
@@ -145,23 +159,30 @@ export class AdminInstructorService {
     const totalRevenueAmount =
       totalRevenue.length > 0 ? totalRevenue[0].total : 0;
 
-    return {
-      instructor: {
-        ...instructor,
-        courses,
-        stats: {
-          totalCourses: coursesCount,
-          totalStudents: studentsCount,
-          totalRevenue: totalRevenueAmount,
-          approvedCourses,
-          pendingCourses,
-          averageRating: 4.5,
-          totalReviews: 0,
-        },
-        joinedDate: instructor.createdAt,
+  const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+    admin,
+    req,
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+    instructor: {
+      ...instructor,
+      courses,
+      stats: {
+        totalCourses: coursesCount,
+        totalStudents: studentsCount,
+        totalRevenue: totalRevenueAmount,
+        approvedCourses,
+        pendingCourses,
+        averageRating: 4.5,
+        totalReviews: 0,
       },
-      message: 'Instructor details fetched successfully',
-    };
+      joinedDate: instructor.createdAt,
+    },
+    message: 'Instructor details fetched successfully',
+  };
   }
 
   async updateInstructorStatus(
@@ -175,15 +196,15 @@ export class AdminInstructorService {
     const { status, rejectReason, suspendReason } = dto;
 
     const instructor = await this.userModel.findById(instructorId);
-    if (!instructor) throw customError.conflict('Instructor not found');
+    if (!instructor) throw customError.notFound('Instructor not found');
     if (instructor.isDeleted)
-      throw customError.gone('Instructor has been deleted');
+      throw customError.badRequest('Instructor has been deleted');
 
     if (instructor.status === status) {
-      throw customError.forbidden(`Instructor is already ${status}.`);
+      throw customError.badRequest(`Instructor is already ${status}.`);
     }
 
-    try {
+ 
       switch (status) {
         case UserStatus.APPROVED: {
           instructor.approvalDate = new Date();
@@ -237,31 +258,19 @@ export class AdminInstructorService {
             'Unsupported instructor status transition',
           );
       }
-
-    //   // Log admin action
-    //   const newAdminAction = {
-    //     action: `${status} instructor ${instructor.id}`,
-    //     ...(rejectReason ? { reason: rejectReason } : {}),
-    //     ...(suspendReason ? { reason: suspendReason } : {}),
-    //     date: new Date(),
-    //   };
-
-    //   admin.actions = [...(admin.actions || []), newAdminAction];
-    //   await admin.save();
+    
       await instructor.save();
 
-      return {
-        accessToken: req.token,
-        message: `Instructor has been ${status} successfully`,
-        instructor,
-      };
-    } catch (error) {
-      console.error('Error updating instructor status:', error);
-      throw customError.internalServerError(
-        error.message || 'Internal Server Error',
-        error.statusCode || 500,
-      );
-    }
+        const { accessToken, refreshToken } =
+          await this.tokenManager.signTokens(admin, req);
+
+        return {
+          accessToken,
+          refreshToken,
+          message: `Instructor has been ${status} successfully`,
+          instructor,
+        };
+    
   }
 }
 

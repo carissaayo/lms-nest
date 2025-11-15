@@ -12,7 +12,7 @@ import { UserRole } from 'src/app/user/user.interface';
 export enum AdminStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
-  REJECTED = 'rejected',
+  SUSPENDED="suspended"
 }
 
 @Schema({ timestamps: true })
@@ -86,8 +86,8 @@ export class UserAdmin extends Document {
   @Prop({ default: 0 })
   failedSignInAttempts: number;
 
-  @Prop({ enum: AdminStatus, default: AdminStatus.PENDING })
-  status: string;
+  @Prop({type:String, enum: AdminStatus, default: AdminStatus.PENDING })
+  status: AdminStatus;
 
   @Prop()
   updatedAt: Date;
@@ -111,7 +111,7 @@ export class UserAdmin extends Document {
 
   @Prop({ default: 0 })
   failedLoginAttempts: number;
-  
+
   @Prop()
   nextEmailVerifyDate: Date;
 

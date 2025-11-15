@@ -32,12 +32,7 @@ import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 
 @Controller('admin-admins')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
+
 @UseGuards(RoleGuard, PermissionGuard)
 @RequireRoles(UserRole.ADMIN)
 export class AdminAdminsController {
@@ -48,15 +43,15 @@ export class AdminAdminsController {
     return this.adminAdminService.viewProfile(req);
   }
 
-  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
   @Post('add-admin')
+  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
   async addAdminByEmail(@Body() dto: AddAnAdminDTO, @Req() req: CustomRequest) {
     return this.adminAdminService.addAdminByEmail(dto, req);
   }
-  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
   @Patch(':userId/action')
+  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
   async suspendUser(
-    @Param('id') userId: string,
+    @Param('userId') userId: string,
     @Body() suspendDto: SuspendUserDTO,
     @Req() req: CustomRequest,
   ) {
