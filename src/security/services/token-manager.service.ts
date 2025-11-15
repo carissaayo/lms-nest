@@ -35,7 +35,6 @@ export class TokenManager {
     @InjectModel('RefreshToken')
     private readonly refreshTokenModel: Model<RefreshToken>,
   ) {}
-
   async handleTokenRefresh(
     req: Request,
     res: Response,
@@ -43,14 +42,14 @@ export class TokenManager {
     refreshToken: string,
   ): Promise<AuthResult> {
     try {
-      // 1. Apply rate limiting specifically for refresh attempts
-      const clientIP = this.getClientIP(req);
+      // 1. Rate limiting (optional but recommended)
+      // const clientIP = this.getClientIP(req);
       // const refreshRateLimit = await this.redisRateLimiter.checkRateLimit(
       //   `refresh:${clientIP}`,
       //   {
-      //     windowMs: 15 * 60 * 1000, // 15 minutes
-      //     maxRequests: 5, // Max 5 refresh attempts per IP per 15 min
-      //     blockDurationMs: 60 * 60 * 1000, // 1 hour block
+      //     windowMs: 15 * 60 * 1000,
+      //     maxRequests: 10,
+      //     blockDurationMs: 60 * 60 * 1000,
       //   },
       // );
 
@@ -63,74 +62,68 @@ export class TokenManager {
       //   return { success: false };
       // }
 
-      // 2. Verify refresh token with different secret
+      // 2. Verify refresh token JWT
       const decodedRefresh: any = this.jwtService.verify(refreshToken, {
         secret: appConfig.jwt.refresh_token_secret,
       });
 
-      // 3. Extract user ID from expired access token for binding verification
-      let expiredUserId: string;
-      try {
-        const expiredDecoded = this.jwtService.decode(
-          expiredAccessToken,
-        ) as any;
-        expiredUserId = expiredDecoded?.sub;
-      } catch {
-        this.logger.error('Cannot decode expired access token');
-        throw new Error('Cannot decode expired access token');
-      }
+      // 3. Extract userId from expired access token for binding
+      const expiredDecoded = this.jwtService.decode(expiredAccessToken) as any;
+      const expiredUserId = expiredDecoded?.sub;
 
-      // 4. Verify token binding (refresh token must belong to same user)
       if (decodedRefresh.sub !== expiredUserId) {
+        this.logger.error('Token binding verification failed');
         await this.securityLogger.logSecurityEvent(
           req,
           res,
           true,
           'Token binding mismatch',
         );
-        this.logger.error('Token binding verification failed');
         throw new Error('Token binding verification failed');
       }
 
-      // 5. Check refresh token in database (persistence layer)
-      const storedRefreshToken = await this.refreshTokenModel
-        .findOne({
-          tokenHash: this.hashToken(refreshToken),
-          userId: decodedRefresh.sub,
-          isRevoked: false,
-          expiresAt: { $gt: new Date() },
-        })
-        .exec();
+      // 4. Find hashed token in DB
+      const tokenHash = this.hashToken(refreshToken);
+      const storedRefreshToken = await this.refreshTokenModel.findOne({
+        tokenHash,
+        userId: String(decodedRefresh.sub),
+        role: decodedRefresh.role,
+        isRevoked: false,
+        expiresAt: { $gt: new Date() },
+      });
 
       if (!storedRefreshToken) {
+        this.logger.error('Refresh token not found or expired');
         await this.securityLogger.logSecurityEvent(
           req,
           res,
           true,
           'Invalid refresh token',
         );
-        this.logger.error('Refresh token not found or expired');
         throw new Error('Refresh token not found or expired');
       }
 
-      // 6. Validate user account
-      const user = await this.findUserById(decodedRefresh.sub,decodedRefresh.role);
+      // 5. Validate user account
+      const user = await this.findUserById(
+        decodedRefresh.sub,
+        decodedRefresh.role,
+      );
 
       if (!user || !user.isActive) {
         this.logger.error('Invalid or inactive user account');
         throw new Error('Invalid or inactive user account');
       }
 
-      const tokenHash = this.hashToken(refreshToken);
-      // 🔹 6b. Track session and revoke last refresh token if necessary
+      // 6. Update lastUsedAt via trackSession
       await this.trackSession(req, user, tokenHash);
 
-      // 7. Generate new access token
+      // 7. Generate new access token ONLY
       const newAccessToken = this.jwtService.sign(
         {
           sub: user._id,
           email: user.email,
-          role: user.role || 'admin',
+          phoneNumber: (user as any).phoneNumber,
+          role: user.role,
           isActive: user.isActive,
           iat: Math.floor(Date.now() / 1000),
         },
@@ -140,53 +133,9 @@ export class TokenManager {
         },
       );
 
-      // 8. Optionally rotate refresh token for enhanced security
-      const shouldRotateRefresh = this.shouldRotateRefreshToken(
-        storedRefreshToken.createdAt,
-      );
-      let newRefreshToken: string | undefined;
-
-      if (shouldRotateRefresh) {
-        newRefreshToken = this.jwtService.sign(
-          {
-            sub: user._id,
-            type: 'refresh',
-            iat: Math.floor(Date.now() / 1000),
-          },
-          {
-            expiresIn: appConfig.jwt.duration1Yr,
-            secret: appConfig.jwt.refresh_token_secret,
-          },
-        );
-        console.log('req', req);
-
-        // Revoke old refresh token and store new one
-        await Promise.all([
-          this.refreshTokenModel.updateOne(
-            { _id: storedRefreshToken._id },
-            {
-              isRevoked: true,
-              revokedAt: new Date(),
-              revokedReason: 'Token rotation',
-            },
-          ),
-          this.storeRefreshToken(String(user._id), newRefreshToken, req),
-        ]);
-      }
-
-      // 9. Update last used timestamp
-      await this.refreshTokenModel.updateOne(
-        { _id: storedRefreshToken._id },
-        { lastUsedAt: new Date() },
-      );
-
-      // 10. Set response headers
+      // 8. Return access token (refresh token remains the same)
       res.setHeader('x-access-token', newAccessToken);
-      if (newRefreshToken) {
-        res.setHeader('x-refresh-token', newRefreshToken);
-      }
 
-      // Log successful refresh
       await this.securityLogger.logSecurityEvent(
         req,
         res,
@@ -194,13 +143,15 @@ export class TokenManager {
         'Token refresh successful',
       );
 
+      this.logger.log('✅ Token refresh successful');
+
       return {
         success: true,
-        user: user.toObject() as unknown as UserAdmin,
+        user: user.toObject() as unknown as UserAdmin | User ,
       };
-    } catch (refreshErr: any) {
-      this.logger.error('Token refresh failed', {
-        error: refreshErr.message,
+    } catch (err: any) {
+      this.logger.error('❌ Token refresh failed', {
+        error: err.message,
         ip: this.getClientIP(req),
       });
 
@@ -208,7 +159,7 @@ export class TokenManager {
         req,
         res,
         true,
-        `Token refresh failed: ${refreshErr.message}`,
+        `Token refresh failed: ${err.message}`,
       );
 
       res.status(HttpStatus.UNAUTHORIZED).json({
@@ -216,6 +167,7 @@ export class TokenManager {
         message: 'Token refresh failed',
         timestamp: new Date().toISOString(),
       });
+
       return { success: false };
     }
   }
@@ -225,16 +177,13 @@ export class TokenManager {
     return require('crypto').createHash('sha256').update(token).digest('hex');
   }
 
-  private shouldRotateRefreshToken(createdAt: Date): boolean {
-    const rotationInterval = 24 * 60 * 60 * 1000; // 24 hours
-    return Date.now() - createdAt.getTime() > rotationInterval;
-  }
-
   private async storeRefreshToken(
     userId: string,
+    role: UserRole,
     refreshToken: string,
     req?: Request,
-    expiresIn = '1d',
+    loginType?: boolean,
+    expiresIn = '365d',
   ): Promise<void> {
     const hashedToken = this.hashToken(refreshToken);
     const expiresMs = ms(expiresIn);
@@ -247,31 +196,33 @@ export class TokenManager {
     const ipAddress = req ? this.getClientIP(req) : '';
     const userAgent = req?.headers['user-agent'] || '';
 
-    const existingToken = await this.refreshTokenModel.findOne({
-      userId,
-      ipAddress,
-      userAgent,
-      isRevoked: false,
-    });
-
-    if (existingToken) {
-      existingToken.lastUsedAt = new Date();
-      existingToken.expiresAt = expiresAt;
-      existingToken.tokenHash = hashedToken;
-      await existingToken.save();
-    } else {
-      await this.refreshTokenModel.create({
-        tokenHash: hashedToken,
+    // Revoke any existing token for this device
+    await this.refreshTokenModel.updateMany(
+      {
         userId,
-        expiresAt,
-        createdAt: new Date(),
-        lastUsedAt: new Date(),
-        isRevoked: false,
-        userAgent,
+        role,
         ipAddress,
-      });
-    }
+        userAgent,
+        isRevoked: false,
+      },
+      { isRevoked: true },
+    );
+
+    // Create new refresh token record
+    await this.refreshTokenModel.create({
+      tokenHash: hashedToken,
+      userId,
+      role,
+      expiresAt,
+      createdAt: new Date(),
+      lastUsedAt: new Date(),
+      isRevoked: false,
+      userAgent,
+      ipAddress,
+      loginType,
+    });
   }
+
   private getClientIP(req: Request): string {
     const xfwd = (req.headers['x-forwarded-for'] as string | undefined)
       ?.split(',')[0]
@@ -283,93 +234,106 @@ export class TokenManager {
   }
 
   public async signTokens(
-    user: UserAdmin | User,
+    user: UserAdmin | User ,
     req: Request | AuthenticatedRequest,
-    options?: { shortRefresh?: boolean },
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+    options?: { shortRefresh?: boolean; loginType?: boolean },
+  ): Promise<{ accessToken: string; refreshToken?: string }> {
+    // 1. Always generate new access token
     const accessPayload = {
       sub: user._id,
+      phoneNumber: (user as any).phoneNumber ?? user.email,
       role: user.role,
       isActive: user.isActive,
       iat: Math.floor(Date.now() / 1000),
     };
 
-    const refreshPayload = {
-      sub: user._id,
-      type: 'refresh',
-      iat: Math.floor(Date.now() / 1000),
-    };
     const accessToken = this.jwtService.sign(accessPayload, {
       expiresIn: appConfig.jwt.duration10m,
       secret: appConfig.jwt.access_token_secret,
     });
-    const refreshExpiresIn = options?.shortRefresh ? '1h' : '365d';
-    console.log(refreshExpiresIn);
 
-    const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: refreshExpiresIn,
-      secret: appConfig.jwt.refresh_token_secret,
-    });
+    // 2. Only generate refresh token if loginType exists (login request)
+    let refreshToken: string | undefined;
 
-    await this.storeRefreshToken(
-      String(user._id),
-      refreshToken,
-      req,
-      refreshExpiresIn,
-    );
+    if (options?.loginType) {
+      const refreshExpiresIn = options?.shortRefresh
+        ? appConfig.jwt.duration1d
+        : appConfig.jwt.duration1Yr;
+
+      // 3. Revoke existing refresh token for this device (IP + UA)
+      const ipAddress = req ? this.getClientIP(req) : '';
+      const userAgent = req?.headers['user-agent'] || '';
+
+      const existingToken = await this.refreshTokenModel.findOne({
+        userId: String(user._id),
+        role: user.role,
+        ipAddress,
+        userAgent,
+        isRevoked: false,
+        expiresAt: { $gt: new Date() },
+      });
+
+      if (existingToken) {
+        existingToken.isRevoked = true;
+        await existingToken.save();
+      }
+
+      // 4. Generate new refresh token and store it
+      const refreshPayload = {
+        sub: user._id,
+        type: 'refresh',
+        role: user.role,
+        iat: Math.floor(Date.now() / 1000),
+        loginType: options.loginType,
+      };
+
+      refreshToken = this.jwtService.sign(refreshPayload, {
+        expiresIn: refreshExpiresIn,
+        secret: appConfig.jwt.refresh_token_secret,
+      });
+
+      await this.storeRefreshToken(
+        String(user._id),
+        user.role,
+        refreshToken,
+        req,
+        options.loginType,
+        refreshExpiresIn,
+      );
+    }
 
     return { accessToken, refreshToken };
   }
 
   private async trackSession(
     req: Request,
-    user: User | UserAdmin,
+    user: User | UserAdmin ,
     tokenHash: string,
   ): Promise<void> {
     const ipAddress = this.getClientIP(req);
     const userAgent = req.headers['user-agent'] || 'unknown';
 
+    // Just update lastUsedAt for the token
     const existingToken = await this.refreshTokenModel.findOne({
-      userId: user._id,
+      tokenHash,
+      userId: String(user._id),
+      role: user.role,
+      isRevoked: false,
       ipAddress,
       userAgent,
-      isRevoked: false,
     });
 
     if (existingToken) {
       existingToken.lastUsedAt = new Date();
       await existingToken.save();
-    } else {
-      await this.refreshTokenModel.updateMany(
-        {
-          userId: user._id,
-          isRevoked: false,
-        },
-        {
-          $set: {
-            isRevoked: true,
-            revokedAt: new Date(),
-            revokedReason: 'New login from another device or IP',
-          },
-        },
-      );
-
-      await this.refreshTokenModel.create({
-        tokenHash,
-        userId: user._id,
-        ipAddress,
-        userAgent,
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      });
     }
+    // If not found, it's already handled in handleTokenRefresh
   }
-
 
   private async findUserById(
     userId: string,
     role: UserRole,
-  ): Promise<(UserAdmin | User ) | null> {
+  ): Promise<(UserAdmin | User) | null> {
     let user: User | UserAdmin | null = null;
     if (role === UserRole.INSTRUCTOR || role === UserRole.STUDENT) {
       user = await this.userModel.findById(userId).exec();

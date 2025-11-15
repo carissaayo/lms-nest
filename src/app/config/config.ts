@@ -43,6 +43,7 @@ const config = () => {
       duration90d: env.JWT_EXPIRES_90_DAYS,
       duration10m: env.JWT_EXPIRES_TEN_MINS,
       secret_user: env.JWT_ACCESS_TOKEN_SECRET_USER,
+      duration1d: env.JWT_EXPIRES_ONE_DAY,
     },
     aws: {
       access_key: env.AWS_ACCESS_KEY_ID,
