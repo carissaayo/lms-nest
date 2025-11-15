@@ -39,6 +39,20 @@ export class InstructorCourseController {
     @UploadedFile() coverImage: Express.Multer.File,
     @Req() req: CustomRequest,
   ) {
+    if (typeof createCourseDto.learningOutcomes === 'string') {
+      createCourseDto.learningOutcomes = JSON.parse(
+        createCourseDto.learningOutcomes,
+      );
+    }
+
+    if (typeof createCourseDto.tags === 'string') {
+      createCourseDto.tags = JSON.parse(createCourseDto.tags);
+    }
+
+    if (typeof createCourseDto.requirements === 'string') {
+      createCourseDto.requirements = JSON.parse(createCourseDto.requirements);
+    }
+
     return this.instructorCourseService.createCourse(
       createCourseDto,
       coverImage,
@@ -53,8 +67,6 @@ export class InstructorCourseController {
   ) {
     return this.instructorCourseService.viewInstructorCourses(req, query);
   }
-
-  
 
   @Delete(':id')
   async deleteCourse(@Param('id') courseId: string, @Req() req: CustomRequest) {

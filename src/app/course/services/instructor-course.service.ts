@@ -22,6 +22,7 @@ import { customError } from 'src/libs/custom-handlers';
 
 import { Lesson, LessonDocument } from 'src/models/lesson.schema';
 import { TokenManager } from 'src/security/services/token-manager.service';
+import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
 
 @Injectable()
 export class InstructorCourseService {
@@ -29,6 +30,7 @@ export class InstructorCourseService {
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
+    @InjectModel(Enrollment.name) private enrollmentModel: Model<EnrollmentDocument>,
     private readonly tokenManager: TokenManager,
 
     private readonly emailService: EmailService,
@@ -42,14 +44,14 @@ export class InstructorCourseService {
     if (!createCourseDto) {
       throw customError.badRequest('body is missing');
     }
-  
-    const { title, description, category, price ,duration} = createCourseDto;
+
+    const { title, description, category, price, duration } = createCourseDto;
 
     if (!coverImage) {
       throw customError.badRequest('coverImage is required');
     }
-  
-    const instructor = await this.userModel.findOne({_id:req.userId});
+
+    const instructor = await this.userModel.findOne({ _id: req.userId });
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
@@ -62,13 +64,10 @@ export class InstructorCourseService {
     }
 
     const course = new this.courseModel({
-      title,
-      description,
-      category,
-      price,
+      ...createCourseDto,
       coverImage: uploadImg,
       instructorId: instructor.id,
-      duration,
+
       instructorName: `${instructor.firstName} ${instructor.lastName}`,
     });
 
@@ -115,7 +114,8 @@ export class InstructorCourseService {
     if (!instructor) {
       throw customError.notFound('Instructor not found');
     }
-    const { title, description, category, price ,duration} = updateCourseDto || {};
+    const { title, description, category, price, duration } =
+      updateCourseDto || {};
 
     if (category) {
       course.category = category;
@@ -238,17 +238,17 @@ export class InstructorCourseService {
         course.title,
       );
 
-     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
-       instructor,
-       req,
-     );
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        instructor,
+        req,
+      );
 
-     return {
-       accessToken,
-       refreshToken,
-       message: 'Course submitted successfully',
-       course,
-     };
+      return {
+        accessToken,
+        refreshToken,
+        message: 'Course submitted successfully',
+        course,
+      };
     } catch (error) {
       console.log(error);
       throw new Error(error.message || 'Internal Server Error');
@@ -256,7 +256,7 @@ export class InstructorCourseService {
   }
 
   async publishCourse(courseId: string, req: CustomRequest) {
-    const course = await this.courseModel.findOne({_id:courseId});
+    const course = await this.courseModel.findOne({ _id: courseId });
     if (!course) {
       throw customError.notFound('Course not found');
     }
@@ -284,17 +284,17 @@ export class InstructorCourseService {
         instructor.firstName,
         course.title,
       );
- const { accessToken, refreshToken } = await this.tokenManager.signTokens(
-   instructor,
-   req,
- );
+      const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+        instructor,
+        req,
+      );
 
- return {
-   accessToken,
-   refreshToken,
-   message: 'Course published successfully',
-   course,
- };
+      return {
+        accessToken,
+        refreshToken,
+        message: 'Course published successfully',
+        course,
+      };
     } catch (error) {
       console.log(error);
       throw new Error(error.message || 'Internal Server Error');
@@ -315,42 +315,45 @@ export class InstructorCourseService {
   }
 
   async viewInstructorCourses(req: CustomRequest, query: any) {
+    const instructor = await this.userModel.findOne({ _id: req.userId });
+    if (!instructor) throw customError.notFound('Instructor not found');
 
-    const instructor = await this.userModel.findOne({_id:req.userId})
-
-    if(!instructor)throw customError.notFound("Instructor not found");
-
-    const { status, title, sort, page = 1, limit = 10 } = query;
+    const { page = 1, limit = 10 } = query;
 
     const filter: any = {
       instructorId: instructor._id,
-      isDeleted:false,
+      isDeleted: false,
     };
-
-    // if (status) filter.status = status;
-    // if (title) filter.title = { $regex: title, $options: 'i' };
-
-    // let sortOption: any = {};
-    // switch (sort) {
-    //   case 'recent':
-    //     sortOption = { createdAt: -1 };
-    //     break;
-    //   case 'priceLowHigh':
-    //     sortOption = { price: 1 };
-    //     break;
-    //   case 'priceHighLow':
-    //     sortOption = { price: -1 };
-    //     break;
-    //   default:
-    //     sortOption = { createdAt: -1 };
-    // }
 
     const courses = await this.courseModel
       .find(filter)
-      .sort()
       .skip((page - 1) * limit)
       .limit(limit)
+      .lean() // important for modifying objects
       .exec();
+
+    // Attach enrollments count to each course
+    const courseIds = courses.map((c) => c._id);
+
+    const enrollmentCounts = await this.enrollmentModel.aggregate([
+      { $match: { course: { $in: courseIds } } },
+      { $group: { _id: '$course', count: { $sum: 1 } } },
+    ]);
+
+    // Convert aggregation result to a lookup map
+    const countMap = enrollmentCounts.reduce(
+      (acc, curr) => {
+        acc[curr._id.toString()] = curr.count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    // Attach to each course
+    const coursesWithEnrollments = courses.map((course) => ({
+      ...course,
+      enrollments: countMap[course._id.toString()] ?? 0,
+    }));
 
     const total = await this.courseModel.countDocuments(filter);
     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
@@ -363,7 +366,7 @@ export class InstructorCourseService {
       refreshToken,
       page: Number(page),
       results: total,
-      courses,
+      courses: coursesWithEnrollments,
       message: 'Your courses has been fetched successfully',
     };
   }

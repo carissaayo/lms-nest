@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsString,
   IsOptional,
@@ -8,10 +8,11 @@ import {
   IsNotEmpty,
   IsEnum,
   ValidateIf,
+  IsArray,
 } from 'class-validator';
 
 import { CourseCategory } from './course.interface';
-import { CourseStatus } from 'src/models/course.schema';
+import { CourseLanguage, CourseLevel, CourseStatus } from 'src/models/course.schema';
 
 export class CreateCourseDTO {
   @IsString()
@@ -33,6 +34,49 @@ export class CreateCourseDTO {
   @IsNotEmpty({ message: 'price is required' })
   @Type(() => Number)
   price!: number;
+
+  @IsEnum(CourseLanguage)
+  @IsNotEmpty({ message: 'Language is required' })
+  language!: CourseLanguage;
+
+  @IsEnum(CourseLevel)
+  @IsNotEmpty({ message: 'Level is required' })
+  level!: CourseLevel;
+
+  @IsArray()
+  @IsNotEmpty({ message: 'learningOutcomes array is required' })
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => {
+    try {
+      return typeof value === 'string' ? JSON.parse(value) : value;
+    } catch {
+      return value;
+    }
+  })
+  learningOutcomes: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => {
+    try {
+      return typeof value === 'string' ? JSON.parse(value) : value;
+    } catch {
+      return value;
+    }
+  })
+  tags: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => {
+    try {
+      return typeof value === 'string' ? JSON.parse(value) : value;
+    } catch {
+      return value;
+    }
+  })
+  requirements: string[];
 
   @IsNumber()
   @IsPositive()

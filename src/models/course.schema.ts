@@ -12,6 +12,21 @@ export enum CourseStatus {
   SUSPENDED = 'suspended',
 }
 
+export enum CourseLevel {
+ BEGINNER= 'Beginner',
+  INTERMEDIATE='Intermediate',
+  ADVANCED='Advanced',
+  ALL='All Levels',
+}
+export enum CourseLanguage {
+ ENGLISH= 'English',
+  SPANISH='Spanish',
+  FRENCH='French',
+  GERMAN='German',
+  MANDARIN='Mandarin',
+  ARABIC='Arabic',
+ PORTUGUESE= 'Portuguese',
+}
 @Schema({ timestamps: true })
 export class Course extends Document {
   @Prop({ required: true })
@@ -40,15 +55,18 @@ export class Course extends Document {
 
   @Prop({ type: Array, default: [] })
   learningOutcomes: [];
-  
+
+  @Prop({ type: Array, default: [] })
+  tags: [];
+
   @Prop({ required: true })
   coverImage: string;
 
-  @Prop({ required: true })
-  level: string;
+  @Prop({ type: String, enum: CourseLevel, required: true })
+  level: CourseLevel;
 
-  @Prop({ required: true })
-  language: string;
+  @Prop({ type: String, enum: CourseLanguage, required: true })
+  language: CourseLanguage;
 
   @Prop({ enum: CourseStatus, default: CourseStatus.PENDING })
   status: CourseStatus;

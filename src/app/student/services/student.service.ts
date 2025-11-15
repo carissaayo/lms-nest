@@ -76,7 +76,7 @@ export class StudentService {
     }
 
     try {
-      const url = appConfig.frontend_url;
+      const url = `${appConfig.frontend_url}/student/enrollments/`;
       const payment = await this.paymentService.initPaystackPayment(
         student.email,
         course.price,
