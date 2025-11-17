@@ -56,5 +56,11 @@ export const GET_ADMIN_PROFILE = (
     permissions: admin.permissions,
     phoneNumber: admin.phoneNumber,
     role: admin.role,
+    state: admin.state,
+    city: admin.city,
+    country: admin.country,
+    picture: admin.picture,
+    street: admin.street,
+    bio: admin.bio,
   };
 };

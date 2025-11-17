@@ -12,4 +12,5 @@ export interface ProfileInterface {
   country: string | null | undefined;
   picture: string | null | undefined;
   street: string | null | undefined;
+  bio:string|null|undefined;
 }

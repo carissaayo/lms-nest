@@ -41,7 +41,7 @@ export class UserAdmin extends Document {
 
 
   @Prop()
-  coumntry: string;
+  country: string;
 
   @Prop()
   picture: string;

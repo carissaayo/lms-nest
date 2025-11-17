@@ -7,6 +7,12 @@ export interface AdminProfileInterface {
   phoneNumber: string | null | undefined;
   role: string;
   permissions: string[] | null | undefined;
+  state: string | null | undefined;
+  city: string | null | undefined;
+  country: string | null | undefined;
+  picture: string | null | undefined;
+  street: string | null | undefined;
+  bio: string | null | undefined;
 }
 
 export enum PermissionsEnum {

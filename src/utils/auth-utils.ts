@@ -95,5 +95,6 @@ export const GET_PROFILE = (user: any): ProfileInterface => {
     country: user.country,
     picture: user.picture,
     street: user.street,
+    bio:user.bio,
   };
 };

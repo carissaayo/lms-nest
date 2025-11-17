@@ -5,21 +5,18 @@ import { Model } from 'mongoose';
 import { TokenManager } from 'src/security/services/token-manager.service';
 import { EmailService } from '../../email/email.service';
 import { UserAdmin, UserAdminDocument } from 'src/models/admin.schema';
-import { User, UserDocument } from 'src/models/user.schema';
+
 import { VerifyEmailDTO } from '../../auth/auth.dto';
-import { SuspendUserDTO } from '../admin.dto';
+
 import { AdminProfileInterface } from '../admin.interface';
-import { CustomRequest, generateToken, GET_PROFILE } from 'src/utils/auth-utils';
+import { CustomRequest } from 'src/utils/auth-utils';
 import { customError } from 'src/libs/custom-handlers';
 import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
-import { Course, CourseDocument } from 'src/models/course.schema';
-import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
-import { Earning, EarningDocument } from 'src/models/earning.schema';
-import { Payment, PaymentDocument } from 'src/models/payment.schema';
+
 import { UpdateUserDTO } from 'src/app/user/user.dto';
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from 'src/app/fileUpload/image-upload.service';
-import { ProfileInterface } from 'src/app/auth/auth.interface';
+
 
 
 @Injectable()
@@ -119,7 +116,7 @@ export class AdminUserService {
 
     await user.save();
     // build profile
-    const profile: ProfileInterface = GET_PROFILE(user);
+    const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
       user,
       req,
@@ -141,7 +138,7 @@ export class AdminUserService {
       throw customError.forbidden('Access Denied');
     }
 
-    const profile: ProfileInterface = GET_PROFILE(user);
+    const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
       user,
       req,
