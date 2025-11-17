@@ -31,27 +31,71 @@ export class AdminAdminsService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     private emailService: EmailService,
-            private readonly tokenManager: TokenManager,
-    
+    private readonly tokenManager: TokenManager,
   ) {}
 
-  async viewProfile(req: CustomRequest) {
-    console.log('viewProfile');
-
+  async getSingleAdmin(adminId: string, req: CustomRequest) {
     const user = await this.adminModel.findById(req.userId);
     if (!user) {
-      throw customError.forbidden('Access Denied');
+      throw customError.notFound('User not found');
     }
 
-    const profile: AdminProfileInterface = GET_ADMIN_PROFILE(user);
-
+    const admin = await this.adminModel.findOne({ _id: adminId });
+    if (!admin) throw customError.notFound('Admin not found');
+    
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
     return {
-      accessToken: req.token,
-      profile,
-      message: 'Profile fetched successfully',
+      accessToken,
+      refreshToken,
+      admin,
+      message: 'Admin fetched successfully',
     };
   }
 
+  async getAdmins(query: any, req: CustomRequest) {
+    const user = await this.adminModel.findById(req.userId);
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    const { search, status, page = 1, limit = 10 } = query;
+
+    const filter: any = {};
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+    const admins = await this.adminModel
+      .find( filter )
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * Number(limit))
+      .limit(Number(limit));
+
+    const total = await this.adminModel.countDocuments(filter);
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      user,
+      req,
+    );
+    return {
+      accessToken,
+      refreshToken,
+      admins: admins,
+      page: Number(page),
+      total,
+      message: 'Admins fetched successfully',
+    };
+  }
   async addAdminByEmail(dto: AddAnAdminDTO, req: CustomRequest) {
     const { email } = dto;
 
@@ -67,30 +111,28 @@ export class AdminAdminsService {
       throw customError.forbidden('Your account has been suspended');
     }
 
+    const newAdmin = new this.adminModel({
+      email,
+      signedUp: false,
+      isActive: false,
+      emailVerified: false,
+      status: AdminStatus.PENDING,
+    });
 
-      const newAdmin = new this.adminModel({
-        email,
-        signedUp: false,
-        isActive: false,
-        emailVerified: false,
-        status: AdminStatus.PENDING,
-      });
+    await newAdmin.save();
 
-      await newAdmin.save();
+    this.emailService.adminInvitationEmail(email);
 
- this.emailService.adminInvitationEmail(email);
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
 
-     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
-       admin,
-       req,
-     );
-
-     return {
-       accessToken,
-       refreshToken,
-       message: 'Admin has been added successfully',
-     };
-   
+    return {
+      accessToken,
+      refreshToken,
+      message: 'Admin has been added successfully',
+    };
   }
 
   async suspendAdmin(
@@ -115,49 +157,50 @@ export class AdminAdminsService {
     const user = await this.adminModel.findById(userId);
     if (!user) throw customError.notFound('User not found');
 
-    if (action === SuspendStatus.ACTIVATE && user.status === AdminStatus.APPROVED){
-      throw customError.badRequest("Admin is already approved")
+    if (
+      action === SuspendStatus.ACTIVATE &&
+      user.status === AdminStatus.APPROVED
+    ) {
+      throw customError.badRequest('Admin is already approved');
     }
 
-     if (
-       action === SuspendStatus.SUSPEND &&
-       user.status === AdminStatus.SUSPENDED
-     ) {
-       throw customError.badRequest('Admin is already suspended');
-     }
-      if (action === SuspendStatus.ACTIVATE) {
-        user.isActive = true;
-        user.status= AdminStatus.APPROVED
-      } else {
-        user.isActive = false;
-        user.status = AdminStatus.SUSPENDED;
+    if (
+      action === SuspendStatus.SUSPEND &&
+      user.status === AdminStatus.SUSPENDED
+    ) {
+      throw customError.badRequest('Admin is already suspended');
+    }
+    if (action === SuspendStatus.ACTIVATE) {
+      user.isActive = true;
+      user.status = AdminStatus.APPROVED;
+    } else {
+      user.isActive = false;
+      user.status = AdminStatus.SUSPENDED;
+    }
 
-      }
+    // user.actions = [...(user.actions || []), newAction];
+    // admin.actions = [...(admin.actions || []), newAdminAction];
 
-      // user.actions = [...(user.actions || []), newAction];
-      // admin.actions = [...(admin.actions || []), newAdminAction];
+    await user.save();
+    await admin.save();
 
-      await user.save();
-      await admin.save();
+    this.emailService.suspensionEmail(
+      user.email,
+      user.firstName,
+      action,
+      suspensionReason || '',
+    );
 
-      this.emailService.suspensionEmail(
-        user.email,
-        user.firstName,
-        action,
-        suspensionReason || '',
-      );
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
 
-     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
-       admin,
-       req,
-     );
-
-     return {
-       accessToken,
-       refreshToken,
-       message: 'User account has been updated.',
-     };
-   
+    return {
+      accessToken,
+      refreshToken,
+      message: 'User account has been updated.',
+    };
   }
 
   async assignPermission(
@@ -183,38 +226,35 @@ export class AdminAdminsService {
     const user = await this.adminModel.findById(userId);
     if (!user) throw customError.notFound('User not found');
 
+    if (!user.permissions) {
+      user.permissions = [];
+    }
 
-      if (!user.permissions) {
-        user.permissions = [];
-      }
+    let updatedPermissions: PermissionsEnum[] = [];
 
-      let updatedPermissions: PermissionsEnum[] = [];
+    if (action === PermissionsActions.ADD) {
+      updatedPermissions = [
+        ...new Set([...user.permissions, ...newPermissions]),
+      ];
+    } else if (action === PermissionsActions.REMOVE) {
+      updatedPermissions = user.permissions.filter(
+        (perm) => !newPermissions.includes(perm),
+      );
+    }
 
-      if (action === PermissionsActions.ADD) {
-        updatedPermissions = [
-          ...new Set([...user.permissions, ...newPermissions]),
-        ];
-      } else if (action === PermissionsActions.REMOVE) {
-        updatedPermissions = user.permissions.filter(
-          (perm) => !newPermissions.includes(perm),
-        );
-      }
+    user.permissions = updatedPermissions;
+    await user.save();
 
-      user.permissions = updatedPermissions;
-      await user.save();
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
 
-      
-     const { accessToken, refreshToken } = await this.tokenManager.signTokens(
-       admin,
-       req,
-     );
-
-     return {
-       accessToken,
-       refreshToken,
-       message: 'Admin permissions have been updated',
-     };
-  
+    return {
+      accessToken,
+      refreshToken,
+      message: 'Admin permissions have been updated',
+    };
   }
 
   async findAdminById(id: string) {

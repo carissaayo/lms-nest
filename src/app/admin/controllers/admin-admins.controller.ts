@@ -9,6 +9,7 @@ import {
   Patch,
   Param,
   Get,
+  Query,
 } from '@nestjs/common';
 
 import { RolesGuard } from '../../common/guards/role.guard';
@@ -31,25 +32,31 @@ import { PermissionsEnum } from '../admin.interface';
 import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
 import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 
-@Controller('admin-admins')
 
+@Controller('admin-admins')
 @UseGuards(RoleGuard, PermissionGuard)
 @RequireRoles(UserRole.ADMIN)
+@RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
 export class AdminAdminsController {
   constructor(private adminAdminService: AdminAdminsService) {}
 
-  @Get('profile')
-  async viewProfile(@Req() req: CustomRequest) {
-    return this.adminAdminService.viewProfile(req);
+  @Get(':adminId')
+  async getSingleAdmin(@Param('adminId') adminId: string, @Req() req: CustomRequest) {
+    return this.adminAdminService.getSingleAdmin(adminId, req);
+  }
+
+  @Get('')
+  async getAdmins(@Query() query: any, @Req() req: CustomRequest) {
+    return this.adminAdminService.getAdmins(query, req);
   }
 
   @Post('add-admin')
-  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
+  
   async addAdminByEmail(@Body() dto: AddAnAdminDTO, @Req() req: CustomRequest) {
     return this.adminAdminService.addAdminByEmail(dto, req);
   }
   @Patch(':userId/action')
-  @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
+  
   async suspendUser(
     @Param('userId') userId: string,
     @Body() suspendDto: SuspendUserDTO,
@@ -58,7 +65,7 @@ export class AdminAdminsController {
     return this.adminAdminService.suspendAdmin(userId, suspendDto, req);
   }
 
-  @RequirePermissions(PermissionsEnum.ADMIN_PERMISSIONS)
+  
   @Patch(':userId/permissions')
   async assignPermission(
     @Param('userId') userId: string,
