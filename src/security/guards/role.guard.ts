@@ -10,8 +10,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { UserRole } from 'src/app/user/user.interface';
 
-
-import { customError } from 'src/common/error-handling/custom-handlers';
+import { customError } from 'src/libs/custom-handlers';
 
 
 // 🎯 SIMPLE DECORATOR - Require user to have ONE of these roles
