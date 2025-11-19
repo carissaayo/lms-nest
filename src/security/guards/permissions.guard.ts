@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PermissionsEnum } from 'src/app/admin/admin.interface';
+import { customError } from 'src/libs/custom-handlers';
 
 
 
@@ -68,12 +69,8 @@ export class PermissionGuard implements CanActivate {
       );
 
       if (!hasAnyPermission) {
-        throw new ForbiddenException({
-          message: 'Insufficient permissions',
-          required: requiredPermissions,
-          userHas: userPermissions,
-          type: 'requires_any',
-        });
+        throw customError.forbidden(
+           'You do not have any permission yet');
       }
     }
 
@@ -84,17 +81,7 @@ export class PermissionGuard implements CanActivate {
       );
 
       if (!hasAllPermissions) {
-        const missingPermissions = requiredAllPermissions.filter(
-          (permission) => !userPermissions.includes(permission),
-        );
-
-        throw new ForbiddenException({
-          message: 'Insufficient permissions - missing required permissions',
-          required: requiredAllPermissions,
-          missing: missingPermissions,
-          userHas: userPermissions,
-          type: 'requires_all',
-        });
+         throw customError.forbidden('Insufficient permissions');
       }
     }
 
