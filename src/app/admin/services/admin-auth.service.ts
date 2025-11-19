@@ -74,6 +74,9 @@ export class AdminAuthService {
       existingUser.lastName = lastName;
       existingUser.emailCode = emailCode;
       existingUser.password = hashedPassword;
+      existingUser.emailVerified = true;
+      existingUser.isActive= true;
+      
       await existingUser.save();
      this.emailService.sendVerificationEmail(email, emailCode);
 

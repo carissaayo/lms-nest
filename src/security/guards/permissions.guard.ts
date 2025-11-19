@@ -4,7 +4,6 @@ import {
   ExecutionContext,
   Injectable,
   CanActivate,
-  ForbiddenException,
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
