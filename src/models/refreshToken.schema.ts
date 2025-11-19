@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { UserRole } from 'src/app/user/user.interface';
 
 
 
@@ -10,6 +11,9 @@ export class RefreshToken {
 
   @Prop({ required: true, type: Types.ObjectId, ref: 'UserAdmin', index: true })
   userId: Types.ObjectId;
+
+  @Prop({type:String,enum:UserRole, required:true})
+  role:UserRole
 
   @Prop({ required: true })
   expiresAt: Date;
