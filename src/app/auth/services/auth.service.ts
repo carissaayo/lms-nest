@@ -78,7 +78,10 @@ export class AuthService {
       role,
       emailCode,
     });
-
+     
+ 
+     user.emailVerified = true;
+     user.isActive = true;
     const savedUser = await user.save();
     const { emailVerified, _id } = savedUser;
 
