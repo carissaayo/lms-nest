@@ -2,8 +2,6 @@ import {
   Controller,
   Post,
   Body,
-  UsePipes,
-  ValidationPipe,
   UseGuards,
   Req,
   Patch,
@@ -12,21 +10,18 @@ import {
   Query,
 } from '@nestjs/common';
 
-import { RolesGuard } from '../../common/guards/role.guard';
+import { AdminAdminsService } from '../services/admin-admins.service';
+
 import { CustomRequest } from 'src/utils/auth-utils';
 
-import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../user/user.interface';
 
-import { PermissionsGuard } from '../../common/guards/permissions.gurad';
-import { Permissions } from '../../common/decorators/permissions.decorator';
+import { UserRole } from '../../user/user.interface';
 
 import {
   AddAnAdminDTO,
   AssignPermissionsDTO,
   SuspendUserDTO,
 } from '../admin.dto';
-import { AdminAdminsService } from '../services/admin-admins.service';
 import { PermissionsEnum } from '../admin.interface';
 
 import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';

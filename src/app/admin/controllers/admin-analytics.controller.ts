@@ -8,39 +8,22 @@ import {
   Req,
 } from '@nestjs/common';
 
-import { RolesGuard } from '../../common/guards/role.guard';
+import { AdminAnalyticsService } from '../services/admin-analytics.service';
+
+import { UserRole } from '../../user/user.interface';
+import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
+import { PermissionGuard, RequirePermissions } from 'src/security/guards/permissions.guard';
 import { CustomRequest } from 'src/utils/auth-utils';
 
-import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../user/user.interface';
-import {
-  AuthenticateTokenAdminGuard,
-  ReIssueTokenAdminGuard,
-} from 'src/app/common/guards/admin-auth.guard';
-
-import { PermissionsGuard } from '../../common/guards/permissions.gurad';
-import { Permissions } from '../../common/decorators/permissions.decorator';
-
+import { QueryString } from 'src/app/database/dbquery';
 import { PermissionsEnum } from '../admin.interface';
 
-import { QueryString } from 'src/app/database/dbquery';
-import { AdminAnalyticsService } from '../services/admin-analytics.service';
-import { RequireRoles, RoleGuard } from 'src/security/guards/role.guard';
-import { PermissionGuard } from 'src/security/guards/permissions.guard';
-
 @Controller('admin-analytics')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
-
 @UseGuards(RoleGuard, PermissionGuard)
 @RequireRoles(UserRole.ADMIN)
+@RequirePermissions(PermissionsEnum.ADMIN_ANALYTICS)
 export class AdminAnalyticsController {
   constructor(private adminAnalyticsService: AdminAnalyticsService) {}
-  // @RequirePermissions(PermissionsEnum.ADMIN_ADMINS)
 
   @Get('')
   getAdminAnalytics(@Query() query: QueryString, @Req() req: CustomRequest) {
