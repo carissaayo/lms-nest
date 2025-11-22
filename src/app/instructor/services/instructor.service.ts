@@ -148,7 +148,7 @@ export class InstructorService {
 
     // Get all instructor courses
     const allCourses = await this.courseModel.find({
-      instructor: instructor._id,
+      instructorId: instructor._id,
       ...dateFilter,
     });
 
