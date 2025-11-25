@@ -430,7 +430,7 @@ export class InstructorService {
     const { search, page = 1, limit = 10 } = query;
 
     // Get all instructor's courses
-    const courses = await this.courseModel.find({ instructor: instructor._id });
+    const courses = await this.courseModel.find({ instructorId: instructor._id });
     const courseIds = courses.map((course) => course._id);
 
     // Find all enrollments linked to the instructor’s courses
