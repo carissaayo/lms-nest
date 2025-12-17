@@ -18,6 +18,7 @@ import {
 } from 'src/models/enrollment.schema';
 import { User, UserDocument } from 'src/models/user.schema';
 import { Lesson, LessonDocument } from 'src/models/lesson.schema';
+import { Payment, PaymentDocument, PaymentStatus } from 'src/models/payment.schema';
 
 @Injectable()
 export class AdminCoursesService {
@@ -28,6 +29,7 @@ export class AdminCoursesService {
     private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Lesson.name) private lessonModel: Model<LessonDocument>,
+    @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     private emailService: EmailService,
   ) {}
 
@@ -88,55 +90,53 @@ export class AdminCoursesService {
       throw customError.forbidden('Instructor has been suspended');
     }
 
-
     if (course.status === action) {
       throw customError.forbidden(`Course is already ${action}.`);
     }
 
     try {
-switch (action) {
-  case CourseStatus.APPROVED: {
-    course.isApproved = true;
-    course.status = CourseStatus.APPROVED;
-    course.approvalDate = new Date();
-    course.approvedBy = admin._id as any;
-    course.approvedByName =
-      `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-    break;
-  }
+      switch (action) {
+        case CourseStatus.APPROVED: {
+          course.isApproved = true;
+          course.status = CourseStatus.APPROVED;
+          course.approvalDate = new Date();
+          course.approvedBy = admin._id as any;
+          course.approvedByName =
+            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+          break;
+        }
 
-  case CourseStatus.REJECTED: {
-    course.isApproved = false;
-    course.status = CourseStatus.REJECTED;
-    course.rejectionDate = new Date();
-    course.rejectedBy = admin._id as any;
-    course.rejectedByName =
-      `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-    course.rejectReason = dto.rejectReason ?? '';
-    break;
-  }
+        case CourseStatus.REJECTED: {
+          course.isApproved = false;
+          course.status = CourseStatus.REJECTED;
+          course.rejectionDate = new Date();
+          course.rejectedBy = admin._id as any;
+          course.rejectedByName =
+            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+          course.rejectReason = dto.rejectReason ?? '';
+          break;
+        }
 
-  case CourseStatus.SUSPENDED: {
-    course.isApproved = false;
-    course.status = CourseStatus.SUSPENDED;
-    course.suspensionDate = new Date();
-    course.suspendedBy = admin._id as any;
-    course.suspendedByName =
-      `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-    course.suspendReason = dto.suspendReason ?? '';
-    break;
-  }
+        case CourseStatus.SUSPENDED: {
+          course.isApproved = false;
+          course.status = CourseStatus.SUSPENDED;
+          course.suspensionDate = new Date();
+          course.suspendedBy = admin._id as any;
+          course.suspendedByName =
+            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+          course.suspendReason = dto.suspendReason ?? '';
+          break;
+        }
 
-  case CourseStatus.PENDING: {
-    course.isApproved = false;
-    course.status = CourseStatus.PENDING;
-    break;
-  }
+        case CourseStatus.PENDING: {
+          course.isApproved = false;
+          course.status = CourseStatus.PENDING;
+          break;
+        }
 
-  default:
-    throw customError.badRequest('Unsupported course action transition');
-}
-
+        default:
+          throw customError.badRequest('Unsupported course action transition');
+      }
 
       const newAdminAction = {
         action: `${action} course ${course.id}`,
@@ -148,7 +148,7 @@ switch (action) {
       await admin.save();
       await course.save();
 
- this.emailService.courseStatusEmail(
+      this.emailService.courseStatusEmail(
         instructor.email,
         instructor.firstName,
         course.title,
@@ -179,7 +179,9 @@ switch (action) {
       throw customError.notAcceptable('Course not found');
     }
 
-    const instructor = await this.userModel.findOne({ _id: course.instructorId });
+    const instructor = await this.userModel.findOne({
+      _id: course.instructorId,
+    });
     if (!instructor) {
       throw customError.notAcceptable('Instructor not found');
     }
@@ -212,6 +214,25 @@ switch (action) {
       .select('title duration position videoUrl noteUrl createdAt')
       .sort({ position: 1 })
       .lean();
+    // Calculate course revenue from successful payments
+    const revenueResult = await this.paymentModel.aggregate([
+      {
+        $match: {
+          course: course._id,
+          status: PaymentStatus.SUCCESS, // Only count successful payments
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$amount' },
+          totalTransactions: { $sum: 1 },
+        },
+      },
+    ]);
+
+
+    const courseRevenue = revenueResult[0]?.totalRevenue || 0;
     return {
       course: {
         id: course._id,
@@ -228,9 +249,10 @@ switch (action) {
         totalCourses: totalInstructorCourses,
         enrollments: totalCourseEnrollments,
         totalInstructorEnrollments,
-        // rating: avgRating,
-        // totalReviews,
+        rating: 0,
+        totalReviews: 0,
         lessons,
+        courseRevenue,
         createdAt: course.createdAt,
         updatedAt: course.updatedAt,
       },
