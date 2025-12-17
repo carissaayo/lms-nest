@@ -155,11 +155,11 @@ export class AdminCoursesService {
         action,
         rejectReason || '',
       );
-
+const formatted = await this.formatAdminSingleCourse(course);
       return {
         accessToken: req.token,
         message: 'Course has been updated successfully',
-        course,
+        course: formatted,
       };
     } catch (error) {
       console.log('Error', error);
@@ -231,8 +231,76 @@ export class AdminCoursesService {
       },
     ]);
 
+    const courseRevenue = revenueResult[0]?.totalRevenue || 0;
+    return {
+      course: {
+        id: course._id,
+        title: course.title,
+        description: course.description,
+        category: course.category,
+        duration: course.duration,
+        coverImage: course.coverImage,
+        price: course.price,
+        status: course.status,
+        rejectionReason: course.rejectReason,
+        suspensionReason: course.suspendReason,
+        instructor,
+        totalCourses: totalInstructorCourses,
+        enrollments: totalCourseEnrollments,
+        totalInstructorEnrollments,
+        rating: 0,
+        totalReviews: 0,
+        lessons,
+        courseRevenue,
+        createdAt: course.createdAt,
+        updatedAt: course.updatedAt,
+      },
+      message: 'Single course fetched successfully',
+    };
+  }
+
+  private async formatAdminSingleCourse(course: CourseDocument) {
+    const instructor = await this.userModel.findById(course.instructorId);
+    if (!instructor) {
+      throw customError.notAcceptable('Instructor not found');
+    }
+
+    const totalInstructorCourses = await this.courseModel.countDocuments({
+      instructor: instructor._id,
+    });
+
+    const totalCourseEnrollments = await this.enrollmentModel.countDocuments({
+      course: course._id,
+    });
+
+    const totalInstructorEnrollments =
+      await this.enrollmentModel.countDocuments({
+        user: instructor._id,
+      });
+
+    const lessons = await this.lessonModel
+      .find({ course: course._id })
+      .select('title duration position videoUrl noteUrl createdAt')
+      .sort({ position: 1 })
+      .lean();
+
+    const revenueResult = await this.paymentModel.aggregate([
+      {
+        $match: {
+          course: course._id,
+          status: PaymentStatus.SUCCESS,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$amount' },
+        },
+      },
+    ]);
 
     const courseRevenue = revenueResult[0]?.totalRevenue || 0;
+
     return {
       course: {
         id: course._id,
