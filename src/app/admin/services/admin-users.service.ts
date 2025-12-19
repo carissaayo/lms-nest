@@ -160,8 +160,10 @@ export class AdminUserService {
       page = 1,
       limit = 10,
     } = query;
+
     const admin = await this.adminModel.findById(req.userId);
     if (!admin) throw customError.notFound('Admin not found');
+
     const match: any = { isDeleted: false };
 
     if (role && role !== 'all') {
@@ -179,15 +181,17 @@ export class AdminUserService {
     const users = await this.userModel.aggregate([
       { $match: match },
 
-      // ---------- INSTRUCTOR STATS ----------
+      // ---------- INSTRUCTOR COURSES ----------
       {
         $lookup: {
           from: 'courses',
           localField: '_id',
           foreignField: 'instructorId',
-          as: 'courses',
+          as: 'instructorCourses',
         },
       },
+
+      // ---------- INSTRUCTOR EARNINGS ----------
       {
         $lookup: {
           from: 'earnings',
@@ -197,7 +201,7 @@ export class AdminUserService {
         },
       },
 
-      // ---------- STUDENT STATS ----------
+      // ---------- STUDENT PAYMENTS ----------
       {
         $lookup: {
           from: 'payments',
@@ -207,13 +211,30 @@ export class AdminUserService {
         },
       },
 
+      // ---------- INSTRUCTOR ENROLLMENTS ----------
+      {
+        $lookup: {
+          from: 'enrollments',
+          let: { courseIds: '$instructorCourses._id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ['$course', '$$courseIds'] },
+              },
+            },
+          ],
+          as: 'instructorEnrollments',
+        },
+      },
+
+      // ---------- ADD FIELDS ----------
       {
         $addFields: {
           // Instructor fields
           totalCourses: {
             $cond: [
               { $eq: ['$role', UserRole.INSTRUCTOR] },
-              { $size: '$courses' },
+              { $size: '$instructorCourses' },
               0,
             ],
           },
@@ -223,7 +244,7 @@ export class AdminUserService {
               {
                 $size: {
                   $filter: {
-                    input: '$courses',
+                    input: '$instructorCourses',
                     as: 'course',
                     cond: { $eq: ['$$course.isApproved', true] },
                   },
@@ -235,8 +256,8 @@ export class AdminUserService {
           totalEnrollments: {
             $cond: [
               { $eq: ['$role', UserRole.INSTRUCTOR] },
-              { $sum: '$courses.enrollments' },
-              { $size: '$payments' },
+              { $size: '$instructorEnrollments' }, // count students via enrollments
+              { $size: '$payments' }, // student total
             ],
           },
           totalEarnings: {
@@ -264,9 +285,10 @@ export class AdminUserService {
           password: 0,
           sessions: 0,
           actions: 0,
-          courses: 0,
+          instructorCourses: 0,
           earnings: 0,
           payments: 0,
+          instructorEnrollments: 0,
         },
       },
 
@@ -280,6 +302,7 @@ export class AdminUserService {
       admin,
       req,
     );
+
     return {
       page: Number(page),
       limit: Number(limit),
