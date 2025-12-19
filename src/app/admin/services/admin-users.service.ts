@@ -16,6 +16,8 @@ import { GET_ADMIN_PROFILE } from 'src/utils/admin-auth-utils';
 import { UpdateUserDTO } from 'src/app/user/user.dto';
 import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from 'src/app/fileUpload/image-upload.service';
+import { User, UserDocument } from 'src/models/user.schema';
+import { UserRole } from 'src/app/user/user.interface';
 
 
 
@@ -23,11 +25,10 @@ import { deleteImageS3, saveImageS3 } from 'src/app/fileUpload/image-upload.serv
 export class AdminUserService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private emailService: EmailService,
     private readonly tokenManager: TokenManager,
   ) {}
-
-
 
   async verifyEmail(verifyEmailDto: VerifyEmailDTO, req: CustomRequest) {
     const { emailCode } = verifyEmailDto;
@@ -149,6 +150,143 @@ export class AdminUserService {
       refreshToken,
       profile,
       message: 'Profile fetched successfully',
+    };
+  }
+
+  async viewUsers(query: any, req: CustomRequest) {
+    const {
+      search,
+      role, // optional: instructor | student | all
+      page = 1,
+      limit = 10,
+    } = query;
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
+    const match: any = { isDeleted: false };
+
+    if (role && role !== 'all') {
+      match.role = role;
+    }
+
+    if (search) {
+      match.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const users = await this.userModel.aggregate([
+      { $match: match },
+
+      // ---------- INSTRUCTOR STATS ----------
+      {
+        $lookup: {
+          from: 'courses',
+          localField: '_id',
+          foreignField: 'instructorId',
+          as: 'courses',
+        },
+      },
+      {
+        $lookup: {
+          from: 'earnings',
+          localField: '_id',
+          foreignField: 'instructor',
+          as: 'earnings',
+        },
+      },
+
+      // ---------- STUDENT STATS ----------
+      {
+        $lookup: {
+          from: 'payments',
+          localField: '_id',
+          foreignField: 'student',
+          as: 'payments',
+        },
+      },
+
+      {
+        $addFields: {
+          // Instructor fields
+          totalCourses: {
+            $cond: [
+              { $eq: ['$role', UserRole.INSTRUCTOR] },
+              { $size: '$courses' },
+              0,
+            ],
+          },
+          totalApprovedCourses: {
+            $cond: [
+              { $eq: ['$role', UserRole.INSTRUCTOR] },
+              {
+                $size: {
+                  $filter: {
+                    input: '$courses',
+                    as: 'course',
+                    cond: { $eq: ['$$course.isApproved', true] },
+                  },
+                },
+              },
+              0,
+            ],
+          },
+          totalEnrollments: {
+            $cond: [
+              { $eq: ['$role', UserRole.INSTRUCTOR] },
+              { $sum: '$courses.enrollments' },
+              { $size: '$payments' },
+            ],
+          },
+          totalEarnings: {
+            $cond: [
+              { $eq: ['$role', UserRole.INSTRUCTOR] },
+              { $sum: '$earnings.amount' },
+              0,
+            ],
+          },
+
+          // Student fields
+          totalPayments: {
+            $cond: [
+              { $eq: ['$role', UserRole.STUDENT] },
+              { $sum: '$payments.amount' },
+              0,
+            ],
+          },
+        },
+      },
+
+      // ---------- SHAPE RESPONSE ----------
+      {
+        $project: {
+          password: 0,
+          sessions: 0,
+          actions: 0,
+          courses: 0,
+          earnings: 0,
+          payments: 0,
+        },
+      },
+
+      { $sort: { createdAt: -1 } },
+      { $skip: (page - 1) * Number(limit) },
+      { $limit: Number(limit) },
+    ]);
+
+    const total = await this.userModel.countDocuments(match);
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
+    return {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      users,
+      accessToken,
+      refreshToken,
     };
   }
 }

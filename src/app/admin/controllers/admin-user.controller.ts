@@ -28,8 +28,6 @@ import { UpdateUserDTO } from 'src/app/user/user.dto';
 export class AdminUserController {
   constructor(private adminUserService: AdminUserService) {}
 
-
-
   @Get('profile')
   async getUserProfile(@Req() req: CustomRequest) {
     return this.adminUserService.viewProfile(req);
@@ -43,5 +41,9 @@ export class AdminUserController {
     @Req() req: CustomRequest,
   ) {
     return this.adminUserService.updateUser(updateProfile, picture, req);
+  }
+  @Get('users')
+  viewUsers(@Query() query: any, @Req() req: CustomRequest) {
+    return this.adminUserService.viewUsers(query, req);
   }
 }

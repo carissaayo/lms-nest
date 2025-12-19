@@ -44,14 +44,15 @@ export class AdminInstructorController {
 
   @Get('')
   viewInstructors(@Query() query: any, @Req() req: CustomRequest) {
-    return this.adminInstructorService.viewInstructors(query,req);
+    return this.adminInstructorService.viewInstructors(query, req);
   }
+
 
   @Get(':instructorId')
   getSingleInstructor(
     @Param('instructorId') instructorId: string,
-   @Req() req: CustomRequest,
+    @Req() req: CustomRequest,
   ) {
-    return this.adminInstructorService.getSingleInstructor(instructorId,req);
+    return this.adminInstructorService.getSingleInstructor(instructorId, req);
   }
 }

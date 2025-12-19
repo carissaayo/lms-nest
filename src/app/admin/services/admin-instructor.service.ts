@@ -130,11 +130,13 @@ export class AdminInstructorService {
   }
 
   async getSingleInstructor(id: string, req: CustomRequest) {
-        const admin = await this.adminModel.findById(req.userId);
-        if (!admin) throw customError.notFound('Admin not found');
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
     const instructor = await this.userModel
       .findById(id)
-      .select('firstName lastName email picture createdAt  bio country phone city country state status approvedByName rejectedByName rejectedDate approvedDate ')
+      .select(
+        'firstName lastName email picture createdAt  bio country phone city country state status approvedByName rejectedByName rejectedDate approvedDate ',
+      )
       .lean();
 
     if (!instructor) throw customError.notFound('Instructor not found');
@@ -172,30 +174,30 @@ export class AdminInstructorService {
     const totalRevenueAmount =
       totalRevenue.length > 0 ? totalRevenue[0].total : 0;
 
-  const { accessToken, refreshToken } = await this.tokenManager.signTokens(
-    admin,
-    req,
-  );
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
 
-  return {
-    accessToken,
-    refreshToken,
-    instructor: {
-      ...instructor,
-      courses,
-      stats: {
-        totalCourses: coursesCount,
-        totalEnrollments: totalEnrollments,
-        totalRevenue: totalRevenueAmount,
-        approvedCourses,
-        pendingCourses,
-        averageRating: 4.5,
-        totalReviews: 0,
+    return {
+      accessToken,
+      refreshToken,
+      instructor: {
+        ...instructor,
+        courses,
+        stats: {
+          totalCourses: coursesCount,
+          totalEnrollments: totalEnrollments,
+          totalRevenue: totalRevenueAmount,
+          approvedCourses,
+          pendingCourses,
+          averageRating: 4.5,
+          totalReviews: 0,
+        },
+        joinedDate: instructor.createdAt,
       },
-      joinedDate: instructor.createdAt,
-    },
-    message: 'Instructor details fetched successfully',
-  };
+      message: 'Instructor details fetched successfully',
+    };
   }
 
   async updateInstructorStatus(
@@ -217,75 +219,75 @@ export class AdminInstructorService {
       throw customError.badRequest(`Instructor is already ${status}.`);
     }
 
- 
-      switch (status) {
-        case UserStatus.APPROVED: {
-          instructor.approvalDate = new Date();
-          instructor.approvedBy = admin._id as any;
-          instructor.approvedByName =
-            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-          instructor.rejectionDate = undefined;
-          instructor.rejectedBy = undefined;
-          instructor.rejectedByName = undefined;
-          instructor.rejectReason = undefined;
-          instructor.suspensionDate = undefined;
-          instructor.suspendedBy = undefined;
-          instructor.suspendedByName = undefined;
-          instructor.suspendReason = undefined;
-          instructor.status = UserStatus.APPROVED;
+    switch (status) {
+      case UserStatus.APPROVED: {
+        instructor.approvalDate = new Date();
+        instructor.approvedBy = admin._id as any;
+        instructor.approvedByName =
+          `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+        instructor.rejectionDate = undefined;
+        instructor.rejectedBy = undefined;
+        instructor.rejectedByName = undefined;
+        instructor.rejectReason = undefined;
+        instructor.suspensionDate = undefined;
+        instructor.suspendedBy = undefined;
+        instructor.suspendedByName = undefined;
+        instructor.suspendReason = undefined;
+        instructor.status = UserStatus.APPROVED;
 
-          break;
-        }
-
-        case UserStatus.REJECTED: {
-          instructor.isActive = false;
-          instructor.status = UserStatus.REJECTED;
-          instructor.rejectionDate = new Date();
-          instructor.rejectedBy = admin._id as any;
-          instructor.rejectedByName =
-            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-          instructor.rejectReason = rejectReason ?? '';
-          break;
-        }
-
-        case UserStatus.SUSPENDED: {
-          instructor.isActive = false;
-          instructor.status = UserStatus.SUSPENDED;
-          instructor.suspensionDate = new Date();
-          instructor.suspendedBy = admin._id as any;
-          instructor.suspendedByName =
-            `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
-          instructor.suspendReason = suspendReason ?? '';
-          break;
-        }
-
-        case UserStatus.PENDING: {
-          instructor.isActive = false;
-          instructor.status = UserStatus.PENDING;
-          instructor.approvalDate = undefined;
-          break;
-        }
-
-        default:
-          throw customError.badRequest(
-            'Unsupported instructor status transition',
-          );
+        break;
       }
-    
-      await instructor.save();
 
-        const { accessToken, refreshToken } =
-          await this.tokenManager.signTokens(admin, req);
+      case UserStatus.REJECTED: {
+        instructor.isActive = false;
+        instructor.status = UserStatus.REJECTED;
+        instructor.rejectionDate = new Date();
+        instructor.rejectedBy = admin._id as any;
+        instructor.rejectedByName =
+          `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+        instructor.rejectReason = rejectReason ?? '';
+        break;
+      }
 
-        return {
-          accessToken,
-          refreshToken,
-          message: `Instructor has been ${status} successfully`,
-          instructor,
-        };
-    
+      case UserStatus.SUSPENDED: {
+        instructor.isActive = false;
+        instructor.status = UserStatus.SUSPENDED;
+        instructor.suspensionDate = new Date();
+        instructor.suspendedBy = admin._id as any;
+        instructor.suspendedByName =
+          `${admin.firstName || ''} ${admin.lastName || ''}`.trim();
+        instructor.suspendReason = suspendReason ?? '';
+        break;
+      }
+
+      case UserStatus.PENDING: {
+        instructor.isActive = false;
+        instructor.status = UserStatus.PENDING;
+        instructor.approvalDate = undefined;
+        break;
+      }
+
+      default:
+        throw customError.badRequest(
+          'Unsupported instructor status transition',
+        );
+    }
+
+    await instructor.save();
+
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      message: `Instructor has been ${status} successfully`,
+      instructor,
+    };
   }
 
-  
+ 
 }
 
