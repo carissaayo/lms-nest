@@ -345,7 +345,7 @@ export class AdminUserService {
     if (user.role === UserRole.INSTRUCTOR) {
       const courses = await this.courseModel
         .find({ instructorId: user._id, isDeleted: false })
-        .select('title coverImage price enrollments rating status')
+        .select('title coverImage price enrollments rating status instructorName')
         .lean();
 
       const [
