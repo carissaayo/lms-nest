@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 
 import { TokenManager } from 'src/security/services/token-manager.service';
 import { EmailService } from '../../email/email.service';
@@ -19,9 +20,10 @@ import { deleteImageS3, saveImageS3 } from 'src/app/fileUpload/image-upload.serv
 import { User, UserDocument } from 'src/models/user.schema';
 import { UserRole } from 'src/app/user/user.interface';
 import { Course, CourseDocument, CourseStatus } from 'src/models/course.schema';
-import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
+import { Enrollment, EnrollmentDocument, EnrollmentStatus } from 'src/models/enrollment.schema';
 import { Earning, EarningDocument } from 'src/models/earning.schema';
 import { Payment, PaymentDocument, PaymentStatus } from 'src/models/payment.schema';
+import { Withdrawal, WithdrawalDocument } from 'src/models/withdrawal.schema';
 
 
 
@@ -35,6 +37,8 @@ export class AdminUserService {
     private enrollmentModel: Model<EnrollmentDocument>,
     @InjectModel(Earning.name)
     private earningModel: Model<EarningDocument>,
+    @InjectModel(Withdrawal.name)
+    private withdrawalModel: Model<WithdrawalDocument>,
     @InjectModel(Payment.name)
     private paymentModel: Model<PaymentDocument>,
     private emailService: EmailService,
@@ -334,19 +338,52 @@ export class AdminUserService {
         'firstName lastName email picture role status createdAt bio country phone city state specialization',
       )
       .lean();
-
     if (!user) throw customError.notFound('User not found');
 
     let payload: any = {};
 
-    // ==========================
-    // INSTRUCTOR
-    // ==========================
     if (user.role === UserRole.INSTRUCTOR) {
-      const courses = await this.courseModel
+      const allCourses = await this.courseModel
         .find({ instructorId: user._id, isDeleted: false })
-        .select('title coverImage price enrollments rating status instructorName')
+        .select('title coverImage price rating status instructorName')
         .lean();
+
+      const courses = allCourses.slice(0, 5);
+
+      const courseIds = courses.map((c) => {
+        const id = c._id;
+        return typeof id === 'string'
+          ? new mongoose.Types.ObjectId(id)
+          : id instanceof mongoose.Types.ObjectId
+            ? id
+            : new mongoose.Types.ObjectId(id.toString());
+      });
+
+      const enrollmentsPerCourse = await this.enrollmentModel.aggregate([
+        {
+          $match: {
+            course: { $in: courseIds },
+          },
+        },
+        {
+          $group: {
+            _id: '$course',
+            students: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const enrollmentMap = new Map<string, number>(
+        enrollmentsPerCourse.map((e) => [e._id.toString(), e.students]),
+      );
+
+      const coursesWithStudents = courses.map((course) => {
+        const courseId = course._id?.toString() || '';
+        return {
+          ...course,
+          students: enrollmentMap.get(courseId) || 0,
+        };
+      });
 
       const [
         totalCourses,
@@ -354,10 +391,20 @@ export class AdminUserService {
         totalRevenue,
         approvedCourses,
         pendingCourses,
+        withdrawals,
       ] = await Promise.all([
         this.courseModel.countDocuments({ instructorId: user._id }),
         this.enrollmentModel.countDocuments({
-          course: { $in: courses.map((c) => c._id) },
+          course: {
+            $in: allCourses.map((c) => {
+              const id = c._id;
+              return typeof id === 'string'
+                ? new mongoose.Types.ObjectId(id)
+                : id instanceof mongoose.Types.ObjectId
+                  ? id
+                  : new mongoose.Types.ObjectId(id.toString());
+            }),
+          },
         }),
         this.earningModel.aggregate([
           { $match: { instructor: user._id } },
@@ -371,12 +418,19 @@ export class AdminUserService {
           instructorId: user._id,
           status: CourseStatus.PENDING,
         }),
+        this.withdrawalModel
+          .find({ instructor: user._id })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .select('amount status method createdAt')
+          .lean(),
       ]);
 
       payload = {
         instructor: {
           ...user,
-          courses,
+          courses: coursesWithStudents,
+          withdrawals,
           stats: {
             totalCourses,
             totalEnrollments,
@@ -391,27 +445,21 @@ export class AdminUserService {
       };
     }
 
-    // ==========================
-    // STUDENT
-    // ==========================
     if (user.role === UserRole.STUDENT) {
-      const enrollments = await this.enrollmentModel
+      const allEnrollments = await this.enrollmentModel
         .find({ user: user._id })
-        .populate({
-          path: 'course',
-          select: 'title coverImage price',
-        })
+        .populate({ path: 'course', select: 'title coverImage price' })
+        .sort({ createdAt: -1 })
         .lean();
+      const enrollments = allEnrollments.slice(0, 5);
 
-      const paymentHistory = await this.paymentModel
+      const allPayments = await this.paymentModel
         .find({ student: user._id })
-        .populate({
-          path: 'course',
-          select: 'title',
-        })
+        .populate({ path: 'course', select: 'title' })
         .select('amount status paymentMethod createdAt')
         .sort({ createdAt: -1 })
         .lean();
+      const paymentHistory = allPayments.slice(0, 5);
 
       const [totalEnrollments, completedCourses, totalSpent, averageProgress] =
         await Promise.all([
