@@ -18,6 +18,10 @@ import { singleImageValidation } from 'src/utils/file-validation';
 import { deleteImageS3, saveImageS3 } from 'src/app/fileUpload/image-upload.service';
 import { User, UserDocument } from 'src/models/user.schema';
 import { UserRole } from 'src/app/user/user.interface';
+import { Course, CourseDocument, CourseStatus } from 'src/models/course.schema';
+import { Enrollment, EnrollmentDocument } from 'src/models/enrollment.schema';
+import { Earning, EarningDocument } from 'src/models/earning.schema';
+import { Payment, PaymentDocument, PaymentStatus } from 'src/models/payment.schema';
 
 
 
@@ -26,6 +30,13 @@ export class AdminUserService {
   constructor(
     @InjectModel(UserAdmin.name) private adminModel: Model<UserAdminDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+    @InjectModel(Enrollment.name)
+    private enrollmentModel: Model<EnrollmentDocument>,
+    @InjectModel(Earning.name)
+    private earningModel: Model<EarningDocument>,
+    @InjectModel(Payment.name)
+    private paymentModel: Model<PaymentDocument>,
     private emailService: EmailService,
     private readonly tokenManager: TokenManager,
   ) {}
@@ -310,6 +321,143 @@ export class AdminUserService {
       users,
       accessToken,
       refreshToken,
+    };
+  }
+
+  async getSingleUser(id: string, req: CustomRequest) {
+    const admin = await this.adminModel.findById(req.userId);
+    if (!admin) throw customError.notFound('Admin not found');
+
+    const user = await this.userModel
+      .findById(id)
+      .select(
+        'firstName lastName email picture role status createdAt bio country phone city state specialization',
+      )
+      .lean();
+
+    if (!user) throw customError.notFound('User not found');
+
+    let payload: any = {};
+
+    // ==========================
+    // INSTRUCTOR
+    // ==========================
+    if (user.role === UserRole.INSTRUCTOR) {
+      const courses = await this.courseModel
+        .find({ instructorId: user._id, isDeleted: false })
+        .select('title coverImage price enrollments rating status')
+        .lean();
+
+      const [
+        totalCourses,
+        totalEnrollments,
+        totalRevenue,
+        approvedCourses,
+        pendingCourses,
+      ] = await Promise.all([
+        this.courseModel.countDocuments({ instructorId: user._id }),
+        this.enrollmentModel.countDocuments({
+          course: { $in: courses.map((c) => c._id) },
+        }),
+        this.earningModel.aggregate([
+          { $match: { instructor: user._id } },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]),
+        this.courseModel.countDocuments({
+          instructorId: user._id,
+          status: CourseStatus.APPROVED,
+        }),
+        this.courseModel.countDocuments({
+          instructorId: user._id,
+          status: CourseStatus.PENDING,
+        }),
+      ]);
+
+      payload = {
+        instructor: {
+          ...user,
+          courses,
+          stats: {
+            totalCourses,
+            totalEnrollments,
+            totalRevenue: totalRevenue[0]?.total || 0,
+            approvedCourses,
+            pendingCourses,
+            averageRating: 4.5,
+            totalReviews: 0,
+          },
+          joinedDate: user.createdAt,
+        },
+      };
+    }
+
+    // ==========================
+    // STUDENT
+    // ==========================
+    if (user.role === UserRole.STUDENT) {
+      const enrollments = await this.enrollmentModel
+        .find({ user: user._id })
+        .populate({
+          path: 'course',
+          select: 'title coverImage price',
+        })
+        .lean();
+
+      const paymentHistory = await this.paymentModel
+        .find({ student: user._id })
+        .populate({
+          path: 'course',
+          select: 'title',
+        })
+        .select('amount status paymentMethod createdAt')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const [totalEnrollments, completedCourses, totalSpent, averageProgress] =
+        await Promise.all([
+          this.enrollmentModel.countDocuments({ user: user._id }),
+          this.enrollmentModel.countDocuments({
+            user: user._id,
+            status: 'completed',
+          }),
+          this.paymentModel.aggregate([
+            { $match: { student: user._id, status: PaymentStatus.SUCCESS } },
+            { $group: { _id: null, total: { $sum: '$amount' } } },
+          ]),
+          this.enrollmentModel.aggregate([
+            { $match: { user: user._id } },
+            { $group: { _id: null, avgProgress: { $avg: '$progress' } } },
+          ]),
+        ]);
+
+      payload = {
+        student: {
+          ...user,
+          enrollments,
+          paymentHistory,
+          stats: {
+            totalEnrollments,
+            completedCourses,
+            totalSpent: totalSpent[0]?.total || 0,
+            averageProgress: averageProgress[0]
+              ? Math.round(averageProgress[0].avgProgress)
+              : 0,
+          },
+          joinedDate: user.createdAt,
+        },
+      };
+    }
+
+    const { accessToken, refreshToken } = await this.tokenManager.signTokens(
+      admin,
+      req,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      ...payload,
+      message: 'User details fetched successfully',
     };
   }
 }

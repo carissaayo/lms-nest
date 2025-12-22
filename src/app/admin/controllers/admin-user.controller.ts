@@ -46,4 +46,9 @@ export class AdminUserController {
   viewUsers(@Query() query: any, @Req() req: CustomRequest) {
     return this.adminUserService.viewUsers(query, req);
   }
+
+  @Get('users/:id')
+  viewSingleUser(@Param("id") id: string, @Req() req: CustomRequest) {
+    return this.adminUserService.getSingleUser(id, req);
+  }
 }
