@@ -42,12 +42,12 @@ export class AdminUserController {
   ) {
     return this.adminUserService.updateUser(updateProfile, picture, req);
   }
-  @Get('users')
+  @Get('')
   viewUsers(@Query() query: any, @Req() req: CustomRequest) {
     return this.adminUserService.viewUsers(query, req);
   }
 
-  @Get('users/:id')
+  @Get('/:id')
   viewSingleUser(@Param("id") id: string, @Req() req: CustomRequest) {
     return this.adminUserService.getSingleUser(id, req);
   }
