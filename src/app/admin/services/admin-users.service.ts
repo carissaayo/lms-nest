@@ -448,7 +448,7 @@ export class AdminUserService {
     if (user.role === UserRole.STUDENT) {
       const allEnrollments = await this.enrollmentModel
         .find({ user: user._id })
-        .populate({ path: 'course', select: 'title coverImage price' })
+        .populate({ path: 'course', select: 'title coverImage price, instructorName' })
         .sort({ createdAt: -1 })
         .lean();
       const enrollments = allEnrollments.slice(0, 5);
