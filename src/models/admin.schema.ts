@@ -8,11 +8,10 @@ import {
 import { PermissionsEnum } from 'src/app/admin/admin.interface';
 import { UserRole } from 'src/app/user/user.interface';
 
-
 export enum AdminStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
-  SUSPENDED="suspended"
+  SUSPENDED = 'suspended',
 }
 
 @Schema({ timestamps: true })
@@ -37,8 +36,6 @@ export class UserAdmin extends Document {
 
   @Prop()
   street: string;
-
-
 
   @Prop()
   country: string;
@@ -144,4 +141,7 @@ export class UserAdmin extends Document {
 
 export const UserAdminSchema = SchemaFactory.createForClass(UserAdmin);
 
-export type UserAdminDocument = HydratedDocument<UserAdmin>;
+export type UserAdminDocument = HydratedDocument<UserAdmin> & {
+  createdAt: Date;
+  updatedAt: Date;
+};

@@ -62,5 +62,8 @@ export const GET_ADMIN_PROFILE = (
     picture: admin.picture,
     street: admin.street,
     bio: admin.bio,
+    lastLogin:admin.lastLogin,
+    createdAt:admin.createdAt,
+    status:admin.status
   };
 };

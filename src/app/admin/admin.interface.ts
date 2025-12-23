@@ -13,6 +13,9 @@ export interface AdminProfileInterface {
   picture: string | null | undefined;
   street: string | null | undefined;
   bio: string | null | undefined;
+  createdAt: Date | null | undefined;
+  lastLogin: Date | null | undefined;
+  status: string | null | undefined;
 }
 
 export enum PermissionsEnum {
