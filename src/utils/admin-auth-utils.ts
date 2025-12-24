@@ -64,6 +64,7 @@ export const GET_ADMIN_PROFILE = (
     bio: admin.bio,
     lastLogin:admin.lastLogin,
     createdAt:admin.createdAt,
-    status:admin.status
+    status:admin.status,
+    postalCode:admin.postalCode
   };
 };

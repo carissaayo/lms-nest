@@ -16,6 +16,7 @@ export interface AdminProfileInterface {
   createdAt: Date | null | undefined;
   lastLogin: Date | null | undefined;
   status: string | null | undefined;
+  postalCode: string | null | undefined;
 }
 
 export enum PermissionsEnum {
