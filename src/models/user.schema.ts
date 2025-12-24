@@ -46,7 +46,8 @@ export class User extends Document {
 
   @Prop({ type: String })
   bio: string | null;
-
+  @Prop({ type: String })
+  postalCode: string | null;
   @Prop({ type: String })
   passwordResetCode: string | null;
 

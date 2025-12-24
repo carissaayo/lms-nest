@@ -46,6 +46,9 @@ export class UserAdmin extends Document {
   @Prop()
   bio: string;
 
+  @Prop({ type: String })
+  postalCode: string | null;
+  
   @Prop()
   phoneNumber: string;
 
