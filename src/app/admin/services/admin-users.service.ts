@@ -99,6 +99,7 @@ export class AdminUserService {
       'country',
       'street',
       'bio',
+      'postalCode'
     ];
     for (const key of Object.keys(updateProfile)) {
       if (!allowedFields.includes(key)) delete updateProfile[key];
