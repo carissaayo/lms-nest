@@ -12,6 +12,8 @@ services:
     volumes:
       - /usr/src/app/node_modules
     command: npm run start:dev
+    depends_on:
+      - mongodb
     develop:
       watch:
         - action: sync
@@ -20,3 +22,19 @@ services:
         - action: sync+restart
           path: ./package.json
           target: /usr/src/app/package.json
+
+  mongodb:
+    image: mongo:7
+    container_name: lms-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: pass123
+      MONGO_INITDB_DATABASE: lms
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
