@@ -1,0 +1,22 @@
+services:
+  lms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: my-app/lms:latest-dev
+    container_name: lms
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /usr/src/app/src
+        - action: sync+restart
+          path: ./package.json
+          target: /usr/src/app/package.json

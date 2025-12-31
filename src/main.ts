@@ -51,14 +51,14 @@ async function bootstrap() {
   });
 
   
-
+  
   const port = process.env.PORT || 3000;
   await app.listen(port);
-    const serverUrl =
-      process.env.NODE_ENV === 'production'
-        ? process.env.BASE_URL
-        : `http://localhost:${port}`;
-
+  const serverUrl =
+  process.env.NODE_ENV === 'production'
+  ? process.env.BASE_URL
+  : `http://localhost:${port}`;
+  
     console.log(`Server running on ${serverUrl}`);
 }
 
